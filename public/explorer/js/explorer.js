@@ -7,6 +7,9 @@ import { getSdk } from './sdk.js';
 const CREDITS_PER_DASH = 100_000_000_000n;
 export const creditsToDash = (c) => (Number(c ?? 0n) / Number(CREDITS_PER_DASH)).toFixed(4);
 const bytesToHex = (u8) => (u8 ? Array.from(u8, (b) => b.toString(16).padStart(2, '0')).join('') : '');
+const str = (x) => (typeof x === 'string' ? x : x?.toString?.());
+// DPNS system contract on testnet (stable across testnet resets).
+const DPNS_CONTRACT = 'GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec';
 
 // Pull the interesting bits out of a *WithProof response.
 function proofMeta(resp) {
@@ -59,19 +62,69 @@ export async function lookupIdentity(id, { proof = false } = {}) {
 export async function lookupName(label) {
   const sdk = await getSdk();
   const clean = label.replace(/\.dash$/i, '').trim().toLowerCase();
-  const owner = await sdk.dpns.resolveName(clean);
+  const [owner, valid, contested] = await Promise.all([
+    sdk.dpns.resolveName(clean),
+    sdk.dpns.isValidUsername(clean).catch(() => false),
+    sdk.dpns.isContestedUsername(clean).catch(() => false),
+  ]);
+  // Contested (short/premium) names are decided by masternode vote — pull the
+  // contenders and tallies. Only contestable labels have a contested index.
+  const contest = contested ? await getContest(clean).catch(() => undefined) : undefined;
+
   if (owner) {
-    return { username: clean, registered: true, identityId: typeof owner === 'string' ? owner : owner.toString() };
+    return { username: clean, registered: true, identityId: str(owner), valid: true, contested, contest };
   }
-  // Not registered — report validity / availability / contested instead.
-  const valid = await sdk.dpns.isValidUsername(clean).catch(() => false);
-  const [contested, available] = valid
-    ? await Promise.all([
-        sdk.dpns.isContestedUsername(clean).catch(() => false),
-        sdk.dpns.isNameAvailable(clean).catch(() => undefined),
-      ])
-    : [false, false];
-  return { username: clean, registered: false, valid, contested, available };
+  const available = valid ? await sdk.dpns.isNameAvailable(clean).catch(() => undefined) : false;
+  return { username: clean, registered: false, valid, contested, available, contest };
+}
+
+async function getContest(label) {
+  const sdk = await getSdk();
+  const norm = await sdk.dpns.convertToHomographSafe(label);
+  const state = await sdk.voting.contestedResourceVoteState({
+    dataContractId: DPNS_CONTRACT,
+    documentTypeName: 'domain',
+    indexName: 'parentNameAndLabel',
+    indexValues: ['dash', norm],
+    resultType: 'documentsAndVoteTally',
+  });
+  const contenders = (state.contenders || []).map((c) => ({
+    identityId: c.identityId?.toString?.(),
+    votes: c.voteTally ?? 0,
+  }));
+  return {
+    normalizedLabel: norm,
+    contenders,
+    abstain: state.abstainVoteTally ?? 0,
+    lock: state.lockVoteTally ?? 0,
+    winner: state.winner?.identityId?.toString?.(),
+  };
+}
+
+export async function lookupToken(tokenId) {
+  const sdk = await getSdk();
+  const info = await sdk.tokens.contractInfo(tokenId);
+  if (!info) return null; // token does not exist
+  const contractId = str(info.contractId);
+  const position = info.tokenContractPosition;
+
+  let config, supply, paused;
+  try { const c = await sdk.contracts.fetch(contractId); config = c?.tokens?.[position]; } catch { /* ignore */ }
+  try { const s = await sdk.tokens.totalSupply(tokenId); supply = s?.toObject ? s.toObject() : { totalSupply: s?.totalSupply }; } catch { /* ignore */ }
+  try { const st = await sdk.tokens.statuses([tokenId]); paused = [...st.values()][0]?.isPaused; } catch { /* ignore */ }
+
+  // Defensive extraction — token config shape may vary by contract version.
+  const loc = config?.conventions?.localizations?.en || config?.localizations?.en;
+  return {
+    id: str(tokenId),
+    contractId,
+    position,
+    name: loc?.singularForm || loc?.pluralForm,
+    decimals: config?.conventions?.decimals ?? config?.decimals,
+    paused,
+    supply,
+    config,
+  };
 }
 
 export async function lookupContract(id, { proof = false } = {}) {

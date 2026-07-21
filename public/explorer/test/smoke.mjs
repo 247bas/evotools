@@ -2,7 +2,7 @@
 // Run: node public/explorer/test/smoke.mjs
 import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
-  countDocuments, networkInfo, creditsToDash,
+  countDocuments, networkInfo, lookupToken, creditsToDash,
 } from '../js/explorer.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
@@ -42,11 +42,16 @@ console.log('\n5. Count (expected to need a countable index)');
 const cnt = await safe('countDocuments', () => countDocuments(CONTRACT, 'note'));
 console.log(cnt === null ? '  ·  count unavailable (no countable index) — handled' : `  ✅ count = ${cnt}`);
 
-console.log('\n6. DPNS: registered vs available');
+console.log('\n6. DPNS: registered vs available + contest state');
 const reg = await safe('lookupName(dash)', () => lookupName('dash'));
 check(reg?.registered && reg.identityId, `dash -> ${reg?.identityId}`);
+check(reg?.contest && Array.isArray(reg.contest.contenders), `dash is contested: ${reg?.contest?.contenders?.length} contender(s), abstain ${reg?.contest?.abstain}, lock ${reg?.contest?.lock}, winner ${reg?.contest?.winner ?? '—'}`);
 const free = await safe('lookupName(random)', () => lookupName('evotools-free-' + Math.random().toString(36).slice(2, 8)));
 check(free && free.registered === false, `random name: registered=${free?.registered} valid=${free?.valid} available=${free?.available} contested=${free?.contested}`);
+
+console.log('\n7. Token lookup (graceful not-found — no live token after testnet reset)');
+const tok = await safe('lookupToken', () => lookupToken('AxAYWyXV6mrm8Sq7vc7wEM18wtL8a8rgj64SM3SDmzsB'));
+check(tok === null, 'non-existent token -> null (handled)');
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

@@ -5,7 +5,7 @@
 
 import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
-  countDocuments, networkInfo, creditsToDash,
+  countDocuments, networkInfo, lookupToken, creditsToDash,
 } from './explorer.js';
 
 const $ = (id) => document.getElementById(id);
@@ -17,11 +17,12 @@ const el = (tag, cls, text) => {
 };
 const jsonPretty = (o) => JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? `${v}` : v), 2);
 const EXPLORER = 'https://testnet.platform-explorer.com';
-const KINDS = ['identity', 'name', 'contract'];
+const KINDS = ['identity', 'name', 'contract', 'token'];
 const PLACEHOLDER = {
   identity: 'Identity ID (base58, e.g. 3pdTAJ…)',
   name: 'DPNS name (e.g. alice or alice.dash)',
   contract: 'Data contract ID (base58)',
+  token: 'Token ID (base58)',
 };
 let networkShown = false;
 
@@ -154,6 +155,59 @@ function renderName(data) {
   } else {
     card.append(el('div', 'note warn', `${data.username}.dash is taken or not available.`));
   }
+  const cp = contestPanel(data);
+  if (cp) card.append(cp);
+  return card;
+}
+
+function contestPanel(data) {
+  const c = data.contest;
+  if (!c || !c.contenders?.length) return null;
+  const d = el('div', 'ex-contest');
+  d.append(el('div', 'ex-contest-head', '⚖ Contested name — decided by masternode vote'));
+  d.append(el('div', 'ex-sub', 'Short or premium names go through a masternode vote instead of first-come-first-served. Contenders and vote tallies:'));
+  const list = el('div', 'ex-contenders');
+  for (const ct of c.contenders) {
+    const row = el('div', 'ex-contender');
+    if (c.winner && ct.identityId === c.winner) row.append(el('span', 'ex-badge win', 'winner'));
+    row.append(el('span', 'ex-contender-id mono', ct.identityId));
+    row.append(el('span', 'ex-votes', `${ct.votes} vote${ct.votes === 1 ? '' : 's'}`));
+    const b = el('button', 'btn ghost sm', 'View');
+    b.addEventListener('click', () => { $('kind').value = 'identity'; $('q').value = ct.identityId; search(); });
+    row.append(b);
+    list.append(row);
+  }
+  d.append(list);
+  d.append(stats([['Abstain', String(c.abstain)], ['Lock', String(c.lock)]]));
+  return d;
+}
+
+function renderToken(data) {
+  const card = el('div', 'ex-card panel');
+  card.append(el('h2', null, data.name || 'Token'));
+  card.append(field('Token ID', data.id));
+
+  const pairs = [];
+  if (data.decimals != null) pairs.push(['Decimals', String(data.decimals)]);
+  if (data.supply?.totalSupply != null) pairs.push(['Total supply', String(data.supply.totalSupply)]);
+  pairs.push(['Status', data.paused ? 'Paused' : 'Active']);
+  card.append(stats(pairs));
+
+  const cf = el('div', 'ex-field');
+  cf.append(el('div', 'ex-label', `Contract (token #${data.position})`));
+  const row = el('div', 'ex-value-row');
+  row.append(el('div', 'ex-value mono', data.contractId));
+  const b = el('button', 'btn ghost sm', 'View contract');
+  b.addEventListener('click', () => { $('kind').value = 'contract'; $('q').value = data.contractId; search(); });
+  row.append(b);
+  cf.append(row);
+  card.append(cf);
+
+  card.append(snippet(
+    `const info = await sdk.tokens.contractInfo('${data.id}');\nconst supply = await sdk.tokens.totalSupply('${data.id}');`,
+  ));
+  if (data.config) card.append(rawBlock(data.config, 'Token config (JSON)'));
+  if (data.supply) card.append(rawBlock(data.supply, 'Supply (JSON)'));
   return card;
 }
 
@@ -296,6 +350,9 @@ async function search() {
     } else if (kind === 'name') {
       const d = await lookupName(q);
       node = d ? renderName(d) : notFound('Could not look up that name.');
+    } else if (kind === 'token') {
+      const d = await lookupToken(q);
+      node = d ? renderToken(d) : notFound('No token with that ID (it may not exist on the current testnet).');
     } else {
       const d = await lookupContract(q, opts);
       node = d ? renderContract(d) : notFound('No contract with that ID.');
