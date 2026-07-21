@@ -41,7 +41,8 @@ export async function lookupIdentity(id, { proof = false } = {}) {
   let name;
   let names = [];
   try { name = await sdk.dpns.username(id); } catch { /* none */ }
-  try { names = await sdk.dpns.usernames({ identityId: id }); } catch { /* none */ }
+  // Default limit is 10; 100 is the max the query allows.
+  try { names = await sdk.dpns.usernames({ identityId: id, limit: 100 }); } catch { /* none */ }
 
   const keys = identity.publicKeys.map((k) => ({
     id: k.keyId, purpose: k.purpose, securityLevel: k.securityLevel, type: k.keyType,

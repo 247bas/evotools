@@ -122,7 +122,8 @@ function renderIdentity(data) {
 
   if (data.names && data.names.length) {
     const n = el('div', 'ex-field');
-    n.append(el('div', 'ex-label', `DPNS names (${data.names.length})`));
+    const cap = data.names.length >= 100 ? ' — first 100' : '';
+    n.append(el('div', 'ex-label', `DPNS names (${data.names.length}${cap})`));
     const list = el('div', 'ex-names');
     for (const nm of data.names) list.append(el('span', 'ex-name-chip mono', nm));
     n.append(list);
@@ -143,7 +144,7 @@ function renderIdentity(data) {
   if (pp) card.append(pp);
   card.append(extLink(`/identity/${data.id}`, 'View on Platform Explorer'));
   card.append(snippet(
-    `const sdk = EvoSDK.${sdkInit()}();\nawait sdk.connect();\nconst identity = await sdk.identities.${data.proof ? 'fetchWithProof' : 'fetch'}('${data.id}');\nconst names = await sdk.dpns.usernames({ identityId: '${data.id}' });`,
+    `const sdk = EvoSDK.${sdkInit()}();\nawait sdk.connect();\nconst identity = await sdk.identities.${data.proof ? 'fetchWithProof' : 'fetch'}('${data.id}');\nconst names = await sdk.dpns.usernames({ identityId: '${data.id}', limit: 100 });`,
   ));
   card.append(rawBlock(data.raw));
   return card;
