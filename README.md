@@ -25,13 +25,15 @@ and a shared vendored SDK.
 
 ```
 evotools/
-├─ index.html            the hub homepage
-├─ shared/
-│  ├─ theme.css          design tokens + shared components
-│  ├─ nav.js             injects the top nav + footer on every page
-│  └─ vendor/evo-sdk.module.js   @dashevo/evo-sdk v4, shared by all tools
-├─ onboard/              → /onboard
-└─ (playground, explorer, name … as they ship)
+├─ public/               the deployed site (Cloudflare Workers static assets)
+│  ├─ index.html         the hub homepage
+│  ├─ shared/
+│  │  ├─ theme.css       design tokens + shared components
+│  │  ├─ nav.js          injects the top nav + footer on every page
+│  │  └─ vendor/evo-sdk.module.js   @dashevo/evo-sdk v4, shared by all tools
+│  └─ onboard/           → /onboard   (playground, explorer, name … as they ship)
+├─ wrangler.jsonc        assets.directory = "public"
+└─ package.json
 ```
 
 Each web tool imports `/shared/theme.css`, `/shared/nav.js`, and the SDK from
@@ -41,15 +43,17 @@ Each web tool imports `/shared/theme.css`, `/shared/nav.js`, and the SDK from
 
 ```bash
 npm install            # only to (re)vendor the SDK; the site itself has no deps
-npm run serve          # python3 -m http.server 8000  → http://localhost:8000
-npm run vendor         # re-copy the SDK into shared/vendor after an SDK update
+npm run serve          # serves public/ at http://localhost:8000  (try /onboard/)
+npm run vendor         # re-copy the SDK into public/shared/vendor after an update
 npm run test:onboard   # headless check of onboard's core flow against testnet
 ```
 
 ## Deploy
 
-Cloudflare Pages, no build command — publish the folder. Root = `evotools/`, so
-`/onboard/` and `/shared/…` resolve as-is.
+Cloudflare Workers static assets, connected to this GitHub repo. No build
+command; `wrangler.jsonc` serves the `public/` directory, so `.git`,
+`node_modules` and tooling stay out of the upload. Deploy command:
+`npx wrangler deploy`. Custom domain: evotools.dev.
 
 ## Credit
 
