@@ -72,6 +72,21 @@ code {
   padding: 28px 20px; margin-top: 32px; border-top: 1px solid var(--border);
 }
 .evo-footer a { color: var(--muted); }
+.evo-footer .built-on { margin-bottom: 8px; }
+
+/* ── official Dash logo + "Built on Dash" ─────────────────────────────────── */
+.dash-logo { display: inline-flex; align-items: center; color: var(--blue); }
+.dash-logo svg { height: 15px; width: auto; fill: currentColor; display: block; }
+.built-on { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); }
+.built-on a { display: inline-flex; align-items: center; gap: 7px; }
+.built-on a:hover { text-decoration: none; }
+.built-badge {
+  display: inline-flex; align-items: center; gap: 9px;
+  border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px;
+  color: var(--muted); font-size: 0.9rem;
+}
+.built-badge .dash-logo svg { height: 17px; }
+a.built-badge:hover { text-decoration: none; }
 
 /* ── buttons ──────────────────────────────────────────────────────────────── */
 .btn {
