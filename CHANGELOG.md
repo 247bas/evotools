@@ -11,6 +11,9 @@ rather than installable releases.
 - **Mobile** — the top nav collapses into a hamburger menu below 760px instead of
   overflowing. The fixed "testnet" badge is hidden on the playground (it has its
   own network toggle now).
+- **Visual polish** — a distinct line icon per tool on the hub (inline SVG, Dash
+  blue), a soft blue hero glow and a faint dot-grid texture site-wide, a "Built
+  on" pill in the hero, and richer card hover (accent border + glow).
 
 ## 1.0.0 — 2026-07-21
 

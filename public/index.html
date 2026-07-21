@@ -26,27 +26,40 @@
     .hero p { color: var(--muted); font-size: 1.05rem; max-width: 560px; margin: 0 auto 10px; }
     .hero .sub { font-size: 0.9rem; }
     .hero .cta { margin-top: 22px; }
-    .hero-built { margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 11px; }
+    .hero-built {
+      margin-top: 22px; display: inline-flex; align-items: center; gap: 11px;
+      padding: 9px 18px; border: 1px solid var(--border); border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+    }
     .hero-built .lbl { color: var(--muted); font-size: 0.92rem; }
-    .hero-built .evo-logo { height: 34px; }
+    .hero-built .evo-logo { height: 30px; }
     .hero-built a:hover { opacity: 0.85; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 8px; }
     @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 1.9rem; } }
     .tool {
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 10px;
       background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-      padding: 22px; transition: border-color 0.2s, transform 0.1s; color: inherit;
+      padding: 22px; transition: border-color 0.2s, transform 0.1s, box-shadow 0.2s; color: inherit;
     }
-    a.tool:hover { border-color: rgba(0, 141, 228, 0.4); text-decoration: none; transform: translateY(-2px); }
+    a.tool:hover { border-color: rgba(0, 141, 228, 0.5); text-decoration: none; transform: translateY(-2px); box-shadow: 0 10px 34px rgba(0, 141, 228, 0.1); }
+    a.tool:hover .tool-icon { background: rgba(0, 141, 228, 0.2); border-color: rgba(0, 141, 228, 0.5); }
     .tool.soon { opacity: 0.72; }
-    .tool-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .tool-head h3 { font-size: 1.1rem; color: var(--text); }
+    .tool-head { display: flex; align-items: center; gap: 12px; }
+    .tool-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; color: var(--blue);
+      background: rgba(0, 141, 228, 0.12); border: 1px solid rgba(0, 141, 228, 0.28);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .tool-icon svg { width: 22px; height: 22px; }
+    .tool-head h3 { flex: 1; font-size: 1.1rem; color: var(--text); }
     .tool p { color: var(--muted); font-size: 0.9rem; margin: 0; }
     .badge { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
     .badge.live { color: var(--ok); border-color: rgba(40, 167, 69, 0.5); }
     .badge.soon { color: var(--muted); border-color: var(--border); }
     .badge.ext { color: var(--blue); border-color: rgba(0, 141, 228, 0.4); }
-    .section-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 26px 0 6px; }
+    .section-label { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 28px 0 12px; }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
   </style>
 </head>
 <body>
@@ -65,27 +78,45 @@
     <div class="section-label">Live</div>
     <div class="grid">
       <a class="tool" href="/onboard/">
-        <div class="tool-head"><h3>Onboard</h3><span class="badge live">Live</span></div>
+        <div class="tool-head">
+          <span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="3.4"/><path d="M4.5 19a5.5 5.5 0 0 1 11 0"/><path d="M19 5.5v4M17 7.5h4"/></svg></span>
+          <h3>Onboard</h3><span class="badge live">Live</span>
+        </div>
         <p>Generate a wallet, fund it, mint an identity and claim a <code>.dash</code> name — then walk away with a ready <code>.env</code>.</p>
       </a>
       <a class="tool" href="/playground/">
-        <div class="tool-head"><h3>Playground</h3><span class="badge live">Live</span></div>
-        <p>Run the cookbook recipes live against testnet, right in your browser. Edit and run — no install.</p>
+        <div class="tool-head">
+          <span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M7 10l2.5 2.5L7 15"/><path d="M12.5 15H17"/></svg></span>
+          <h3>Playground</h3><span class="badge live">Live</span>
+        </div>
+        <p>Run the cookbook recipes live against testnet or mainnet, right in your browser. Edit and run — no install.</p>
       </a>
       <a class="tool" href="/explorer/">
-        <div class="tool-head"><h3>Explorer</h3><span class="badge live">Live</span></div>
-        <p>Look up identities, DPNS names, data contracts and documents on testnet — with the SDK snippet that fetched each one.</p>
+        <div class="tool-head">
+          <span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></svg></span>
+          <h3>Explorer</h3><span class="badge live">Live</span>
+        </div>
+        <p>Look up identities, DPNS names, data contracts and documents on testnet and mainnet — with the SDK snippet that fetched each one.</p>
       </a>
       <a class="tool" href="/name/">
-        <div class="tool-head"><h3>dash-name</h3><span class="badge live">Live</span></div>
+        <div class="tool-head">
+          <span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 12.9l7.5-7.5a2 2 0 0 1 1.4-.6H18a2 2 0 0 1 2 2V16a2 2 0 0 1-.6 1.4l-7.5 7.5"/><path d="M3.6 12.9l4.5 4.5a2 2 0 0 0 2.8 0l1.5-1.5"/><circle cx="15.5" cy="8.5" r="1.3"/></svg></span>
+          <h3>dash-name</h3><span class="badge live">Live</span>
+        </div>
         <p>Claim a <code>.dash</code> username for your identity — check and register, on testnet or mainnet.</p>
       </a>
       <a class="tool" href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener">
-        <div class="tool-head"><h3>Cookbook</h3><span class="badge ext">GitHub ↗</span></div>
+        <div class="tool-head">
+          <span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C12 5 10.4 4 8.3 4H4v13h4.3c2.1 0 3.7 1 3.7 2.5"/><path d="M12 6.5C12 5 13.6 4 15.7 4H20v13h-4.3c-2.1 0-3.7 1-3.7 2.5"/></svg></span>
+          <h3>Cookbook</h3><span class="badge ext">GitHub ↗</span>
+        </div>
         <p>Verified, runnable recipes for <code>@dashevo/evo-sdk</code> v4 — tested against testnet, ready to copy and run.</p>
       </a>
       <a class="tool" href="https://github.com/247bas/create-evo-app" target="_blank" rel="noopener">
-        <div class="tool-head"><h3>create-evo-app</h3><span class="badge ext">GitHub ↗</span></div>
+        <div class="tool-head">
+          <span class="tool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8l8 4.4v9.6L12 21.2 4 16.8V7.2z"/><path d="M4 7.4l8 4.4 8-4.4"/><path d="M12 11.8V21"/></svg></span>
+          <h3>create-evo-app</h3><span class="badge ext">GitHub ↗</span>
+        </div>
         <p>Scaffold a working Dash Platform app in one command — <code>npm create evo-app</code>. SDK wired up, identity handling in place.</p>
       </a>
     </div>
