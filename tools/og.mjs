@@ -10,9 +10,11 @@ const card = (title, subtitle) => `<svg xmlns="http://www.w3.org/2000/svg" width
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="10" fill="#008de4"/>
   <g transform="translate(80,64)">
-    <path d="M22 0 L44 22 L22 44 L0 22 Z" fill="#008de4"/>
-    <path d="M22 13 L31 22 L22 31 L13 22 Z" fill="#0f1524"/>
-    <text x="60" y="34" font-size="40" font-weight="700" fill="#e6e9ef">evotools</text>
+    <g fill="none" stroke="#008de4" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9.2" y="9.2" width="25.6" height="25.6" rx="6.4" transform="rotate(45 22 22)"/>
+      <path d="M18.3 17.4 L23.8 22 L18.3 26.6"/>
+    </g>
+    <text x="62" y="34" font-size="40" font-weight="700"><tspan fill="#008de4">evo</tspan><tspan fill="#e6e9ef">tools</tspan></text>
   </g>
   <text x="80" y="342" font-size="92" font-weight="700" fill="#ffffff">${esc(title)}</text>
   <text x="80" y="410" font-size="36" fill="#9aa4b8">${esc(subtitle)}</text>
@@ -33,7 +35,7 @@ for (const [name, [title, sub]] of Object.entries(CARDS)) {
   console.log(`public/og/${name}.png  ${(png.length / 1024).toFixed(0)}KB`);
 }
 
-const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#0f1524"/><path d="M16 5 L27 16 L16 27 L5 16 Z" fill="#008de4"/><path d="M16 11 L21 16 L16 21 L11 16 Z" fill="#0f1524"/></svg>`;
+const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#0f1524"/><g fill="none" stroke="#008de4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6.7" y="6.7" width="18.6" height="18.6" rx="4.7" transform="rotate(45 16 16)"/><path d="M13.3 12.7 L17.3 16 L13.3 19.3"/></g></svg>`;
 const iconPng = new Resvg(icon, { fitTo: { mode: 'width', value: 180 } }).render().asPng();
 writeFileSync('public/apple-touch-icon.png', iconPng);
 console.log(`public/apple-touch-icon.png  ${(iconPng.length / 1024).toFixed(0)}KB`);

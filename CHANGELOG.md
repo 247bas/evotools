@@ -14,6 +14,11 @@ rather than installable releases.
 - **Visual polish** — a distinct line icon per tool on the hub (inline SVG, Dash
   blue), a soft blue hero glow and a faint dot-grid texture site-wide, a "Built
   on" pill in the hero, and richer card hover (accent border + glow).
+- **Logo** — a real mark: an outline diamond holding a `>` prompt, with the
+  wordmark's "evo" in Dash blue. Rolled through the nav, hub hero, `favicon.svg`,
+  the apple-touch icon and the social cards.
+- **dash-name** — an "SDK snippet" dropdown (like the explorer) under the name
+  check and in the claim panel, showing the exact evo-sdk calls with a copy button.
 
 ## 1.0.0 — 2026-07-21
 

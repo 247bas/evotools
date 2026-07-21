@@ -24,10 +24,15 @@ const EXTERNAL = [
 const here = location.pathname;
 const isActive = (href) => here === href || (href !== '/' && here.startsWith(href));
 
+// evotools mark: an outline diamond holding a > prompt. Uses currentColor so it
+// takes the brand blue. The same mark is in favicon.svg and the OG cards.
+export const MARK =
+  '<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="10" y="10" width="28" height="28" rx="7" transform="rotate(45 24 24)" stroke="currentColor" stroke-width="3"/><path d="M20 19l6 5-6 5" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 const nav = document.createElement('nav');
 nav.className = 'evo-nav';
 nav.innerHTML = `
-  <a class="brand" href="/"><span class="logo">◈</span> evotools</a>
+  <a class="brand" href="/"><span class="logo">${MARK}</span><span class="brand-wm"><span class="ev">evo</span>tools</span></a>
   <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
     <span></span><span></span><span></span>
   </button>
