@@ -4,6 +4,7 @@ import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
   countDocuments, networkInfo, lookupToken, creditsToDash,
 } from '../js/explorer.js';
+import { setNetwork } from '../js/sdk.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
 let failed = 0;
@@ -52,6 +53,15 @@ check(free && free.registered === false, `random name: registered=${free?.regist
 console.log('\n7. Token lookup (graceful not-found — no live token after testnet reset)');
 const tok = await safe('lookupToken', () => lookupToken('AxAYWyXV6mrm8Sq7vc7wEM18wtL8a8rgj64SM3SDmzsB'));
 check(tok === null, 'non-existent token -> null (handled)');
+
+console.log('\n8. Mainnet (read-only) — switch network');
+setNetwork('mainnet');
+const mnet = await safe('networkInfo@mainnet', networkInfo);
+check(mnet && typeof mnet.epoch === 'number', `mainnet epoch ${mnet?.epoch}, protocol v${mnet?.protocolVersion}`);
+const mn = await safe('lookupName(dash)@mainnet', () => lookupName('dash'));
+check(mn?.registered && mn.identityId, `mainnet dash -> ${mn?.identityId}`);
+const mi = mn?.identityId ? await safe('lookupIdentity@mainnet', () => lookupIdentity(mn.identityId)) : null;
+check(typeof mi?.balance === 'bigint', `mainnet identity balance ${creditsToDash(mi?.balance)} DASH, ${mi?.keys?.length} keys`);
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

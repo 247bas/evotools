@@ -7,6 +7,7 @@ import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
   countDocuments, networkInfo, lookupToken, creditsToDash,
 } from './explorer.js';
+import { setNetwork, getNetwork } from './sdk.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -23,6 +24,18 @@ const PLACEHOLDER = {
   name: 'DPNS name (e.g. alice or alice.dash)',
   contract: 'Data contract ID (base58)',
   token: 'Token ID (base58)',
+};
+const EXAMPLES = {
+  testnet: [
+    { kind: 'name', q: 'dash', label: 'dash' },
+    { kind: 'contract', q: '9VBe2fiVZDZz7B3JwT64TFUr52gGYTrq6vPSvzVfdb3y', label: 'cookbook contract' },
+    { kind: 'identity', q: '3pdTAJ4oCVSYKSr2X3BLQR8pjuzUDdzUa5yB5HfREJhk', label: 'an identity' },
+  ],
+  mainnet: [
+    { kind: 'name', q: 'dash', label: 'dash' },
+    { kind: 'name', q: 'dashpay', label: 'dashpay' },
+    { kind: 'identity', q: 'Bt5vvxCx1bHJuKfP9gX2uMx6JZhuQBjgLYR8hXG2FjF', label: "dash's identity" },
+  ],
 };
 let networkShown = false;
 
@@ -308,17 +321,19 @@ async function showNetwork() {
   networkShown = true;
   try {
     const n = await networkInfo();
-    $('net').textContent = `testnet · epoch ${n.epoch} · protocol v${n.protocolVersion}`;
+    $('net').textContent = `${getNetwork()} · epoch ${n.epoch} · protocol v${n.protocolVersion}`;
   } catch { networkShown = false; }
 }
 
 // ── permalinks ───────────────────────────────────────────────────────────────
 function syncUrl(kind, q) {
   const proof = $('proof').checked ? '&proof=1' : '';
-  history.replaceState(null, '', `?kind=${kind}&q=${encodeURIComponent(q)}${proof}`);
+  const net = getNetwork() === 'mainnet' ? '&net=mainnet' : '';
+  history.replaceState(null, '', `?kind=${kind}&q=${encodeURIComponent(q)}${proof}${net}`);
 }
 function loadFromUrl() {
   const p = new URLSearchParams(location.search);
+  if (p.get('net') === 'mainnet') { setNetwork('mainnet'); $('netsel').value = 'mainnet'; }
   const kind = p.get('kind');
   const q = p.get('q');
   if (p.get('proof') === '1') $('proof').checked = true;
@@ -369,11 +384,32 @@ async function search() {
 }
 
 // ── wiring ───────────────────────────────────────────────────────────────────
+function renderExamples() {
+  const box = $('examples');
+  box.replaceChildren(el('span', null, 'Try: '));
+  EXAMPLES[getNetwork()].forEach((e, i) => {
+    if (i) box.append(document.createTextNode(' · '));
+    const a = el('a', null, e.label);
+    a.href = '#';
+    a.addEventListener('click', (ev) => { ev.preventDefault(); $('kind').value = e.kind; $('q').value = e.q; $('q').placeholder = PLACEHOLDER[e.kind]; search(); });
+    box.append(a);
+  });
+}
+
 $('kind').addEventListener('change', () => { $('q').placeholder = PLACEHOLDER[$('kind').value]; });
 $('searchBtn').addEventListener('click', search);
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
-document.querySelectorAll('.ex-examples a').forEach((a) => {
-  a.addEventListener('click', (e) => { e.preventDefault(); $('kind').value = a.dataset.kind; $('q').value = a.dataset.q; $('q').placeholder = PLACEHOLDER[a.dataset.kind]; search(); });
+$('netsel').addEventListener('change', () => {
+  setNetwork($('netsel').value);
+  networkShown = false;
+  $('net').textContent = '';
+  $('results').replaceChildren();
+  $('err').hidden = true;
+  renderExamples();
+  const q = $('q').value.trim();
+  syncUrl($('kind').value, q);
+  if (q) search();
 });
 $('q').placeholder = PLACEHOLDER.identity;
 loadFromUrl();
+renderExamples();

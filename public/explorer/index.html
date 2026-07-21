@@ -27,16 +27,17 @@
     </div>
 
     <div class="ex-controls">
-      <label class="ex-proof"><input type="checkbox" id="proof" /> Verify with proof</label>
+      <div class="ex-left">
+        <select id="netsel" class="ex-netsel" aria-label="Network">
+          <option value="testnet">testnet</option>
+          <option value="mainnet">mainnet</option>
+        </select>
+        <label class="ex-proof"><input type="checkbox" id="proof" /> Verify with proof</label>
+      </div>
       <span class="ex-net" id="net"></span>
     </div>
 
-    <div class="ex-examples">
-      Try:
-      <a href="#" data-kind="name" data-q="dash">dash</a> ·
-      <a href="#" data-kind="contract" data-q="9VBe2fiVZDZz7B3JwT64TFUr52gGYTrq6vPSvzVfdb3y">cookbook contract</a> ·
-      <a href="#" data-kind="identity" data-q="3pdTAJ4oCVSYKSr2X3BLQR8pjuzUDdzUa5yB5HfREJhk">an identity</a>
-    </div>
+    <div class="ex-examples" id="examples"></div>
 
     <div class="error" id="err" hidden></div>
     <div id="results"></div>
