@@ -3,6 +3,12 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
+## Unreleased
+
+- **Playground** — a testnet / mainnet toggle. It re-points the recipe's `EvoSDK`
+  factory calls to the chosen network (comments, log strings and example data are
+  left as-is), with a real-funds warning when mainnet is selected.
+
 ## 1.0.0 — 2026-07-21
 
 The first complete release. The full suite is live at **evotools.dev**.

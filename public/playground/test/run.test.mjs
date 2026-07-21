@@ -1,7 +1,7 @@
 // Validates transform() + the "recipe runs against the vendored SDK" premise.
 // Skips the browser Blob layer; imports the transformed code directly in Node.
 // Run: node public/playground/test/run.test.mjs
-import { transform } from '../js/run.js';
+import { transform, applyNetwork } from '../js/run.js';
 import { pathToFileURL } from 'node:url';
 import { writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -48,6 +48,24 @@ r10.out.includes('New testnet wallet generated') ? ok('ran the no-mnemonic branc
 /tdash1[a-z0-9]+/.test(r10.out) ? ok('printed a platform address') : bad('no platform address in output');
 r10.out.includes('bridge.thepasta.org') ? ok('printed the funding URL') : bad('no funding URL');
 r10.exitedClean ? ok('exited cleanly at process.exit(0)') : bad('did not exit cleanly');
+
+console.log('\n3. applyNetwork() rewrites the SDK factory, not comments/data');
+{
+  const t = [
+    `const NETWORK = 'testnet';`,
+    `const sdk = EvoSDK.testnetTrusted();`,
+    `const proof = EvoSDK.testnet();`,
+    `// a long-lived testnet identity stays a comment`,
+    `console.log('New testnet wallet generated');`,
+  ].join('\n');
+  const m = applyNetwork(t, 'mainnet');
+  m.includes('EvoSDK.mainnetTrusted()') ? ok('testnetTrusted → mainnetTrusted') : bad('trusted factory not switched');
+  m.includes('EvoSDK.mainnet()') ? ok('proof-mode testnet() → mainnet()') : bad('proof factory not switched');
+  m.includes("NETWORK = 'mainnet'") ? ok("NETWORK = 'testnet' literal switched") : bad('network literal not switched');
+  m.includes('// a long-lived testnet identity stays a comment') ? ok('comment left untouched') : bad('rewrote a comment');
+  m.includes("'New testnet wallet generated'") ? ok('log substring left untouched') : bad('rewrote a log substring');
+  applyNetwork(m, 'testnet') === t ? ok('round-trips back to the testnet original') : bad('not reversible');
+}
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

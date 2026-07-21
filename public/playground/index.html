@@ -24,8 +24,8 @@
   <div class="wrap pg-wrap">
     <p class="tagline">
       Run the <a href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener">evo-cookbook</a>
-      recipes live against Dash testnet — edit the code and hit run. It executes
-      in your browser against the real network, no install. Recipes marked
+      recipes live against Dash testnet or mainnet — edit the code and hit run. It
+      executes in your browser against the real network, no install. Recipes marked
       <span class="dollar">$</span> need a funded identity to fully run.
     </p>
 
@@ -41,9 +41,19 @@
         <div class="pg-toolbar">
           <button class="btn primary" id="runBtn">▶ Run</button>
           <button class="btn ghost sm" id="resetBtn">Reset</button>
+          <div class="pg-net" id="netToggle" role="group" aria-label="Network">
+            <button class="pg-net-btn active" data-net="testnet">Testnet</button>
+            <button class="pg-net-btn" data-net="mainnet">Mainnet</button>
+          </div>
           <button class="btn ghost sm" id="envToggle">Environment</button>
           <a class="btn ghost sm" id="viewSource" href="#" target="_blank" rel="noopener">View on GitHub ↗</a>
           <span class="pg-hint">⌘/Ctrl + Enter</span>
+        </div>
+
+        <div class="pg-warn" id="mainnetWarn" hidden>
+          Mainnet talks to real data and real DASH. The recipes use testnet example
+          values, so some lookups may return nothing, and <span class="dollar">$</span>
+          write recipes would spend real funds.
         </div>
 
         <div class="pg-env" id="envBox" hidden>

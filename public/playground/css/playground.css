@@ -34,6 +34,24 @@
 .pg-hint { color: var(--muted); font-size: 0.75rem; font-family: var(--mono); margin-left: auto; }
 #envToggle.active { border-color: var(--blue); color: var(--blue); }
 
+/* Network toggle */
+.pg-net { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.pg-net-btn {
+  background: var(--card); color: var(--muted); border: 0; cursor: pointer;
+  font-family: inherit; font-size: 0.8rem; padding: 7px 13px; transition: background 0.15s, color 0.15s;
+}
+.pg-net-btn + .pg-net-btn { border-left: 1px solid var(--border); }
+.pg-net-btn:hover { color: var(--text); }
+.pg-net-btn.active { background: rgba(0, 141, 228, 0.14); color: var(--blue); }
+
+/* Mainnet warning */
+.pg-warn {
+  margin-bottom: 12px; padding: 9px 12px; border-radius: 8px; line-height: 1.5;
+  background: rgba(240, 185, 11, 0.08); border: 1px solid rgba(240, 185, 11, 0.35);
+  color: var(--warn); font-size: 0.82rem;
+}
+.pg-warn .dollar { font-family: var(--mono); font-weight: 700; }
+
 /* Environment */
 .pg-env { margin-bottom: 12px; }
 .pg-env label { display: block; color: var(--muted); font-size: 0.82rem; margin-bottom: 6px; }

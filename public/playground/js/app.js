@@ -1,10 +1,13 @@
 // evo-playground — pick a recipe, edit it, run it live against testnet.
 
 import { RECIPES, fetchRecipe, githubUrl } from './recipes.js';
-import { runCode } from './run.js';
+import { runCode, applyNetwork } from './run.js';
 
 const $ = (id) => document.getElementById(id);
-const state = { recipe: null, original: '', running: false };
+const state = { recipe: null, original: '', running: false, network: 'testnet' };
+
+// Put source in the editor pointed at the current network.
+const setEditor = (src) => { $('codeEditor').value = applyNetwork(src, state.network); };
 
 // ── recipe list ──────────────────────────────────────────────────────────────
 function renderList() {
@@ -32,7 +35,7 @@ async function selectRecipe(id) {
   try {
     const src = await fetchRecipe(r.file);
     state.original = src;
-    $('codeEditor').value = src;
+    setEditor(src);
   } catch (e) {
     $('codeEditor').value = `// ${e.message}`;
   }
@@ -92,9 +95,22 @@ async function run() {
   }
 }
 
+// ── network toggle ───────────────────────────────────────────────────────────
+function setNetwork(net) {
+  if (net === state.network) return;
+  // Re-point the current editor content (keeps any edits) instead of reloading.
+  $('codeEditor').value = applyNetwork($('codeEditor').value, net);
+  state.network = net;
+  $('netToggle').querySelectorAll('.pg-net-btn').forEach((el) =>
+    el.classList.toggle('active', el.dataset.net === net));
+  $('mainnetWarn').hidden = net !== 'mainnet';
+}
+$('netToggle').querySelectorAll('.pg-net-btn').forEach((el) =>
+  el.addEventListener('click', () => setNetwork(el.dataset.net)));
+
 // ── wiring ───────────────────────────────────────────────────────────────────
 $('runBtn').addEventListener('click', run);
-$('resetBtn').addEventListener('click', () => { $('codeEditor').value = state.original; });
+$('resetBtn').addEventListener('click', () => { setEditor(state.original); });
 $('envToggle').addEventListener('click', () => {
   const box = $('envBox');
   box.hidden = !box.hidden;

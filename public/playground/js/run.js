@@ -36,6 +36,18 @@ export function transform(source, { sdkUrl = SDK_URL, env = {} } = {}) {
   return `${evoImports.join('\n')}\n${shims}\n${body}`;
 }
 
+// Point a recipe's EvoSDK factory calls at a network ('testnet' | 'mainnet').
+// Only the factory identifiers and the bare `'testnet'`/`'mainnet'` string
+// literals are touched — comments, log strings and example data (names, ids)
+// are left as-is. Idempotent and direction-independent, so it's safe to run on
+// code the user has already edited or already switched once.
+export function applyNetwork(source, net) {
+  return source
+    .replace(/\b(?:testnet|mainnet)Trusted\b/g, `${net}Trusted`)          // EvoSDK.testnetTrusted()
+    .replace(/(EvoSDK\s*\.\s*)(?:testnet|mainnet)(\s*\()/g, `$1${net}$2`)  // EvoSDK.testnet()  (proof mode)
+    .replace(/(['"])(?:testnet|mainnet)\1/g, `$1${net}$1`);               // const NETWORK = 'testnet'
+}
+
 // Format a console arg the way a dev expects, including bigints.
 export function fmt(v) {
   if (typeof v === 'string') return v;
