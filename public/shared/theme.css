@@ -64,7 +64,34 @@ code {
   font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--warn); border: 1px solid var(--warn); border-radius: 999px; padding: 3px 9px;
 }
-@media (max-width: 560px) { .evo-nav .links a.hide-sm { display: none; } }
+
+/* hamburger button — hidden on desktop, shown on narrow screens */
+.evo-nav .nav-toggle {
+  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  width: 40px; height: 36px; padding: 8px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
+}
+.evo-nav .nav-toggle span {
+  display: block; width: 100%; height: 2px; border-radius: 2px; background: var(--text);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.evo-nav.open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.evo-nav.open .nav-toggle span:nth-child(2) { opacity: 0; }
+.evo-nav.open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Below 760px the links collapse into a dropdown under the bar. */
+@media (max-width: 760px) {
+  .evo-nav { flex-wrap: wrap; }
+  .evo-nav .nav-toggle { display: flex; }
+  .evo-nav .links {
+    order: 3; flex-basis: 100%; display: none;
+    flex-direction: column; align-items: flex-start; gap: 2px; padding-top: 8px;
+  }
+  .evo-nav.open .links { display: flex; }
+  .evo-nav .links a { width: 100%; padding: 11px 4px; }
+  .evo-nav .links a.hide-sm { display: block; }
+  .evo-nav .net-badge { margin: 8px 0 4px; }
+}
 
 /* ── shared footer (injected by shared/nav.js) ────────────────────────────── */
 .evo-footer {

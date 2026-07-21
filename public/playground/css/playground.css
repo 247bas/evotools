@@ -34,6 +34,9 @@
 .pg-hint { color: var(--muted); font-size: 0.75rem; font-family: var(--mono); margin-left: auto; }
 #envToggle.active { border-color: var(--blue); color: var(--blue); }
 
+/* the playground has its own network toggle — hide the global testnet badge */
+.evo-nav .net-badge { display: none; }
+
 /* Network toggle */
 .pg-net { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .pg-net-btn {

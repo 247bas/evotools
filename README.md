@@ -12,11 +12,11 @@ together. Testnet-first, open source, by [247bas](https://github.com/247bas).
 | Tool | What it does | Status |
 |------|--------------|--------|
 | [Onboard](public/onboard/) | Wallet → fund → identity → `.dash` name → ready `.env` | Live |
-| [Playground](public/playground/) | Run the cookbook recipes live in the browser | Live |
-| [Explorer](public/explorer/) | Look up identities, DPNS names, contracts and documents, with proofs | Live |
+| [Playground](public/playground/) | Run the cookbook recipes live in the browser, on testnet or mainnet | Live |
+| [Explorer](public/explorer/) | Look up identities, DPNS names, contracts, tokens and documents on testnet and mainnet, with proofs | Live |
+| [dash-name](public/name/) | Check and claim a `.dash` username for your identity, on testnet or mainnet | Live |
 | [Cookbook](https://github.com/247bas/evo-cookbook) | Verified, runnable `@dashevo/evo-sdk` v4 recipes | Live (own repo) |
 | [create-evo-app](https://github.com/247bas/create-evo-app) | Scaffold a Dash Platform app: `npm create evo-app` | Live (own repo) |
-| dash-name | Claim your `.dash` username with a clean UI | Planned |
 
 ## Structure
 
@@ -31,7 +31,11 @@ evotools/
 │  │  ├─ theme.css       design tokens + shared components
 │  │  ├─ nav.js          injects the top nav + footer on every page
 │  │  └─ vendor/evo-sdk.module.js   @dashevo/evo-sdk v4, shared by all tools
-│  └─ onboard/           → /onboard   (playground, explorer, name … as they ship)
+│  ├─ onboard/           → /onboard
+│  ├─ playground/        → /playground
+│  ├─ explorer/          → /explorer
+│  ├─ name/              → /name   (dash-name)
+│  └─ about/             → /about
 ├─ wrangler.jsonc        assets.directory = "public"
 └─ package.json
 ```
@@ -46,6 +50,8 @@ npm install            # only to (re)vendor the SDK; the site itself has no deps
 npm run serve          # serves public/ at http://localhost:8000  (try /onboard/)
 npm run vendor         # re-copy the SDK into public/shared/vendor after an update
 npm run test:onboard   # headless check of onboard's core flow against testnet
+npm run test:explorer  # headless check of the explorer lookups
+npm run test:name      # headless check of dash-name check/register
 ```
 
 ## Deploy

@@ -28,11 +28,24 @@ const nav = document.createElement('nav');
 nav.className = 'evo-nav';
 nav.innerHTML = `
   <a class="brand" href="/"><span class="logo">◈</span> evotools</a>
-  <div class="links">
+  <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="links" id="nav-links">
     ${TOOLS.map((t) => `<a href="${t.href}"${isActive(t.href) ? ' style="color:var(--text)"' : ''}>${t.label}</a>`).join('')}
     ${EXTERNAL.map((t) => `<a href="${t.href}" target="_blank" rel="noopener"${t.hideSm ? ' class="hide-sm"' : ''}>${t.label} ↗</a>`).join('')}
     <span class="net-badge">testnet</span>
   </div>`;
+
+// Mobile: the links collapse behind a hamburger. Toggle open/closed, and close
+// again once a link is tapped so navigating within a page feels right.
+const toggle = nav.querySelector('.nav-toggle');
+const setOpen = (open) => {
+  nav.classList.toggle('open', open);
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+};
+toggle.addEventListener('click', () => setOpen(!nav.classList.contains('open')));
+nav.querySelectorAll('.links a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
 
 const footer = document.createElement('footer');
 footer.className = 'evo-footer';

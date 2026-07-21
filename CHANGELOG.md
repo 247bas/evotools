@@ -8,6 +8,9 @@ rather than installable releases.
 - **Playground** — a testnet / mainnet toggle. It re-points the recipe's `EvoSDK`
   factory calls to the chosen network (comments, log strings and example data are
   left as-is), with a real-funds warning when mainnet is selected.
+- **Mobile** — the top nav collapses into a hamburger menu below 760px instead of
+  overflowing. The fixed "testnet" badge is hidden on the playground (it has its
+  own network toggle now).
 
 ## 1.0.0 — 2026-07-21
 
