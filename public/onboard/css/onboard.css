@@ -3,9 +3,6 @@
 
 .tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 24px; }
 
-/* onboard is testnet-only, so the nav's testnet badge is accurate here (hidden elsewhere) */
-.evo-nav .net-badge { display: inline-block; }
-
 .panel p { color: var(--muted); margin-bottom: 16px; }
 .panel p strong { color: var(--text); }
 

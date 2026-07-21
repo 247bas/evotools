@@ -39,7 +39,6 @@ nav.innerHTML = `
   <div class="links" id="nav-links">
     ${TOOLS.map((t) => `<a href="${t.href}"${isActive(t.href) ? ' style="color:var(--text)"' : ''}>${t.label}</a>`).join('')}
     ${EXTERNAL.map((t) => `<a href="${t.href}" target="_blank" rel="noopener"${t.hideSm ? ' class="hide-sm"' : ''}>${t.label} ↗</a>`).join('')}
-    <span class="net-badge">testnet</span>
   </div>`;
 
 // Mobile: the links collapse behind a hamburger. Toggle open/closed, and close

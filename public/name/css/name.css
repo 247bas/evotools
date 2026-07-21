@@ -8,8 +8,6 @@
   color: var(--text); font-size: 0.82rem; font-family: var(--mono); padding: 7px 10px; cursor: pointer;
 }
 .dn-netsel:focus { outline: none; border-color: var(--blue); }
-/* the tool has its own network control — hide the global testnet badge */
-.evo-nav .net-badge { display: none; }
 
 .dn-name { display: flex; align-items: center; }
 .dn-name input {

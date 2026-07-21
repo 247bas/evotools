@@ -69,14 +69,6 @@ code {
 .evo-nav .links { display: flex; align-items: center; gap: 16px; font-size: 0.88rem; }
 .evo-nav .links a { color: var(--muted); }
 .evo-nav .links a:hover { color: var(--text); text-decoration: none; }
-.evo-nav .net-badge {
-  /* hidden by default; only shown where the whole tool is testnet-only (onboard).
-     the toggle tools (explorer, name, playground) have their own network control. */
-  display: none;
-  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--warn); border: 1px solid var(--warn); border-radius: 999px; padding: 3px 9px;
-}
-
 /* hamburger button — hidden on desktop, shown on narrow screens */
 .evo-nav .nav-toggle {
   display: none; flex-direction: column; justify-content: center; gap: 5px;
@@ -102,7 +94,6 @@ code {
   .evo-nav.open .links { display: flex; }
   .evo-nav .links a { width: 100%; padding: 11px 4px; }
   .evo-nav .links a.hide-sm { display: block; }
-  .evo-nav .net-badge { margin: 8px 0 4px; }
 }
 
 /* ── shared footer (injected by shared/nav.js) ────────────────────────────── */
