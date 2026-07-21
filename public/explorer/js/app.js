@@ -17,7 +17,9 @@ const el = (tag, cls, text) => {
   return e;
 };
 const jsonPretty = (o) => JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? `${v}` : v), 2);
-const EXPLORER = 'https://testnet.platform-explorer.com';
+const dashUnit = () => (getNetwork() === 'mainnet' ? 'DASH' : 'tDASH');
+const explorerBase = () => (getNetwork() === 'mainnet' ? 'https://platform-explorer.com' : 'https://testnet.platform-explorer.com');
+const sdkInit = () => (getNetwork() === 'mainnet' ? 'mainnetTrusted' : 'testnetTrusted');
 const KINDS = ['identity', 'name', 'contract', 'token'];
 const PLACEHOLDER = {
   identity: 'Identity ID (base58, e.g. 3pdTAJ…)',
@@ -83,7 +85,7 @@ function snippet(code) {
 }
 function extLink(path, label) {
   const a = el('a', 'ex-extlink', `${label} ↗`);
-  a.href = `${EXPLORER}${path}`;
+  a.href = `${explorerBase()}${path}`;
   a.target = '_blank';
   a.rel = 'noopener';
   return a;
@@ -113,7 +115,7 @@ function renderIdentity(data) {
   card.append(el('h2', null, data.name || 'Identity'));
   card.append(field('Identity ID', data.id));
   card.append(stats([
-    ['Balance', `${creditsToDash(data.balance)} tDASH`],
+    ['Balance', `${creditsToDash(data.balance)} ${dashUnit()}`],
     ['Revision', String(data.revision)],
     ['Public keys', String(data.keys.length)],
   ]));
@@ -141,7 +143,7 @@ function renderIdentity(data) {
   if (pp) card.append(pp);
   card.append(extLink(`/identity/${data.id}`, 'View on Platform Explorer'));
   card.append(snippet(
-    `const sdk = EvoSDK.testnetTrusted();\nawait sdk.connect();\nconst identity = await sdk.identities.${data.proof ? 'fetchWithProof' : 'fetch'}('${data.id}');\nconst names = await sdk.dpns.usernames({ identityId: '${data.id}' });`,
+    `const sdk = EvoSDK.${sdkInit()}();\nawait sdk.connect();\nconst identity = await sdk.identities.${data.proof ? 'fetchWithProof' : 'fetch'}('${data.id}');\nconst names = await sdk.dpns.usernames({ identityId: '${data.id}' });`,
   ));
   card.append(rawBlock(data.raw));
   return card;
@@ -367,7 +369,7 @@ async function search() {
       node = d ? renderName(d) : notFound('Could not look up that name.');
     } else if (kind === 'token') {
       const d = await lookupToken(q);
-      node = d ? renderToken(d) : notFound('No token with that ID (it may not exist on the current testnet).');
+      node = d ? renderToken(d) : notFound('No token with that ID (it may not exist on this network).');
     } else {
       const d = await lookupContract(q, opts);
       node = d ? renderContract(d) : notFound('No contract with that ID.');
