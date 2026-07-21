@@ -11,11 +11,11 @@ together. Testnet-first, open source, by [247bas](https://github.com/247bas).
 
 | Tool | What it does | Status |
 |------|--------------|--------|
-| [Onboard](onboard/) | Wallet → fund → identity → `.dash` name → ready `.env` | Live |
+| [Onboard](public/onboard/) | Wallet → fund → identity → `.dash` name → ready `.env` | Live |
+| [Playground](public/playground/) | Run the cookbook recipes live in the browser | Live |
+| [Explorer](public/explorer/) | Look up identities, DPNS names, contracts and documents, with proofs | Live |
 | [Cookbook](https://github.com/247bas/evo-cookbook) | Verified, runnable `@dashevo/evo-sdk` v4 recipes | Live (own repo) |
 | create-evo-app | Scaffold a working Dash Platform app in one command | Planned |
-| Playground | Run the cookbook recipes live in the browser | Planned |
-| Explorer | Browse identities, contracts, documents, DPNS names | Planned |
 | dash-name | Claim your `.dash` username with a clean UI | Planned |
 
 ## Structure
