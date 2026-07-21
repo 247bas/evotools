@@ -15,7 +15,7 @@ together. Testnet-first, open source, by [247bas](https://github.com/247bas).
 | [Playground](public/playground/) | Run the cookbook recipes live in the browser | Live |
 | [Explorer](public/explorer/) | Look up identities, DPNS names, contracts and documents, with proofs | Live |
 | [Cookbook](https://github.com/247bas/evo-cookbook) | Verified, runnable `@dashevo/evo-sdk` v4 recipes | Live (own repo) |
-| create-evo-app | Scaffold a working Dash Platform app in one command | Planned |
+| [create-evo-app](https://github.com/247bas/create-evo-app) | Scaffold a Dash Platform app: `npm create evo-app` | Live (own repo) |
 | dash-name | Claim your `.dash` username with a clean UI | Planned |
 
 ## Structure
