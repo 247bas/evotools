@@ -164,9 +164,13 @@ function renderName(data) {
     card.append(el('div', 'note warn', 'Not a valid DPNS name (use a-z, 0-9 and hyphens, 3–63 chars).'));
   } else if (data.available) {
     card.append(el('div', 'note ok', `${data.username}.dash is available${data.contested ? ' (contested — premium name, goes through masternode voting)' : ''}.`));
-    const a = el('a', 'btn primary', 'Claim it in Onboard →');
-    a.href = '/onboard/';
-    card.append(a);
+    if (getNetwork() === 'testnet') {
+      const a = el('a', 'btn primary', 'Claim it in Onboard →');
+      a.href = '/onboard/';
+      card.append(a);
+    } else {
+      card.append(el('p', 'ex-sub', 'Claiming a mainnet name needs a funded mainnet identity — e.g. via Dash Evo Tool or a Platform wallet. (Onboard is testnet-only.)'));
+    }
     card.append(snippet(`const available = await sdk.dpns.isNameAvailable('${data.username}');`));
   } else {
     card.append(el('div', 'note warn', `${data.username}.dash is taken or not available.`));
