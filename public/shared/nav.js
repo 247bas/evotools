@@ -5,7 +5,8 @@
 
 const TOOLS = [
   { href: '/onboard/', label: 'Onboard' },
-  // add tools here as they ship: playground, explorer, name
+  { href: '/playground/', label: 'Playground' },
+  // add tools here as they ship: explorer, name
 ];
 
 const EXTERNAL = [
