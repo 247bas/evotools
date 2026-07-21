@@ -6,11 +6,14 @@
   "description": "evotools — tools to make building on the Dash Evolution chain approachable. Monorepo: a hub homepage plus one folder per tool, served from public/. Pure static site, no build step.",
   "scripts": {
     "vendor": "cp node_modules/@dashevo/evo-sdk/dist/evo-sdk.module.js public/shared/vendor/evo-sdk.module.js && echo vendored",
+    "og": "node tools/og.mjs",
     "serve": "python3 -m http.server 8000 --directory public",
     "dev": "python3 -m http.server 8000 --directory public",
-    "test:onboard": "node public/onboard/test/smoke.mjs"
+    "test:onboard": "node public/onboard/test/smoke.mjs",
+    "test:explorer": "node public/explorer/test/smoke.mjs"
   },
   "devDependencies": {
-    "@dashevo/evo-sdk": "^4.0.0"
+    "@dashevo/evo-sdk": "^4.0.0",
+    "@resvg/resvg-js": "^2.6.2"
   }
 }
