@@ -11,8 +11,9 @@ export const DASH_LOGO =
 const TOOLS = [
   { href: '/onboard/', label: 'Onboard' },
   { href: '/playground/', label: 'Playground' },
+  { href: '/explorer/', label: 'Explorer' },
   { href: '/about/', label: 'About' },
-  // add tools here as they ship: explorer, name
+  // add tools here as they ship: name
 ];
 
 const EXTERNAL = [

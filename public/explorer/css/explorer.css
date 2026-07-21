@@ -1,0 +1,50 @@
+/* evo-explorer */
+.ex-wrap { max-width: 760px; }
+.tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 20px; }
+
+.ex-search { display: flex; gap: 10px; flex-wrap: wrap; }
+.ex-search select, .ex-search input {
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text); font-size: 0.95rem; font-family: inherit; padding: 12px 13px;
+}
+.ex-search select { min-width: 140px; }
+.ex-search input { flex: 1; min-width: 200px; font-family: var(--mono); font-size: 0.85rem; }
+.ex-search select:focus, .ex-search input:focus { outline: none; border-color: var(--blue); }
+
+.ex-examples { color: var(--muted); font-size: 0.85rem; margin: 12px 0 4px; }
+.ex-examples a { color: var(--blue); }
+
+.ex-loading { color: var(--muted); padding: 20px 0; }
+
+/* Result card */
+.ex-card { margin-top: 20px; }
+.ex-card h2 { margin-bottom: 12px; }
+.ex-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 12px; }
+
+.ex-field { margin: 14px 0; }
+.ex-label { color: var(--blue); font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
+.ex-value-row { display: flex; gap: 10px; align-items: center; }
+.ex-value { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; font-size: 0.82rem; word-break: break-all; }
+
+.ex-stats { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+.ex-stat { flex: 1; min-width: 120px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px 12px; }
+.ex-stat-k { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.ex-stat-v { font-family: var(--mono); margin-top: 4px; }
+
+.ex-keys, .ex-types { margin: 16px 0; }
+.ex-key { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.ex-key:last-child { border-bottom: none; }
+.ex-key-id { font-family: var(--mono); color: var(--muted); min-width: 30px; }
+.ex-type { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.ex-type:last-child { border-bottom: none; }
+.ex-type-name { font-size: 0.9rem; }
+
+.ex-docs { margin: 8px 0; }
+.ex-doc { margin: 8px 0; max-height: 240px; overflow: auto; }
+
+.ex-extlink { display: inline-block; margin: 8px 0; font-size: 0.88rem; }
+
+.ex-raw { margin: 12px 0; }
+.ex-raw summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; padding: 6px 0; }
+.ex-raw pre { margin-top: 8px; max-height: 320px; overflow: auto; white-space: pre; font-size: 0.78rem; line-height: 1.5; }
+.ex-raw .btn { margin-top: 8px; }
