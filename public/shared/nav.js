@@ -36,7 +36,7 @@ nav.innerHTML = `
 const footer = document.createElement('footer');
 footer.className = 'evo-footer';
 footer.innerHTML = `
-  <div class="built-on">Built on <a href="https://www.dash.org" target="_blank" rel="noopener" aria-label="Dash">${DASH_LOGO}</a></div>
+  <div class="built-on">Part of the <a href="https://www.dash.org" target="_blank" rel="noopener" aria-label="Dash">${DASH_LOGO}</a> ecosystem</div>
   <div>Tools for building on the Dash Evolution chain · by
   <a href="https://github.com/247bas" target="_blank" rel="noopener">247bas</a> ·
   <a href="/about/">about</a> ·

@@ -88,6 +88,10 @@ code {
 .built-badge .dash-logo svg { height: 17px; }
 a.built-badge:hover { text-decoration: none; }
 
+/* Dash Evolution logo (self-hosted from dash.org brand assets, CC BY 4.0) */
+.evo-logo { display: block; height: 22px; width: auto; }
+.built-badge .evo-logo { height: 24px; }
+
 /* ── buttons ──────────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
