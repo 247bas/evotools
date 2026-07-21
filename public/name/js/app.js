@@ -18,6 +18,61 @@ const explorerLink = (label, id) => {
   return a;
 };
 
+// ── SDK snippet dropdown ─────────────────────────────────────────────────────
+// Mirrors the explorer: a collapsible showing the exact evo-sdk calls behind the
+// UI, so it doubles as a copy-paste starting point. Reflects the current network.
+const factory = () => `${getNetwork()}Trusted`;
+function copyBtn(text) {
+  const b = el('button', 'btn ghost sm dn-copy', 'Copy');
+  b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(text); b.textContent = 'Copied ✓'; }
+    catch { b.textContent = 'Copy failed'; }
+    setTimeout(() => { b.textContent = 'Copy'; }, 1200);
+  });
+  return b;
+}
+function snippet(code) {
+  const d = el('details', 'dn-snippet');
+  d.append(el('summary', null, 'SDK snippet — what runs behind the scenes'));
+  const body = el('div', 'dn-snippet-body');
+  body.append(el('pre', 'mono', code));
+  body.append(copyBtn(code));
+  d.append(body);
+  return d;
+}
+const checkCode = (label) => `import { EvoSDK } from '@dashevo/evo-sdk';
+
+const sdk = EvoSDK.${factory()}();
+await sdk.connect();
+
+// is it a usable name? is it a contested (premium) name?
+const valid     = await sdk.dpns.isValidUsername('${label}');
+const contested = await sdk.dpns.isContestedUsername('${label}');
+
+// who owns it? (undefined when nobody has registered it yet)
+const owner     = await sdk.dpns.resolveName('${label}');
+
+// if it's unregistered, is it free to claim?
+const available = await sdk.dpns.isNameAvailable('${label}');`;
+const registerCode = (label) => `import { EvoSDK, IdentitySigner } from '@dashevo/evo-sdk';
+
+const sdk = EvoSDK.${factory()}();
+await sdk.connect();
+
+// your identity + its CRITICAL authentication key
+const identity = await sdk.identities.fetch(IDENTITY_ID);
+const keys = await sdk.identities.getKeys({ identityId: IDENTITY_ID, request: { type: 'all' } });
+const identityKey = keys.find(
+  (k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL',
+);
+
+// sign locally with your private key (WIF) — it never leaves your browser
+const signer = new IdentitySigner();
+signer.addKeyFromWif(WIF);
+
+// preorder + register the name (this is the on-chain write)
+await sdk.dpns.registerName({ label: '${label}', identity, identityKey, signer });`;
+
 let debounce = null;
 let token = 0;
 let last = null;
@@ -70,6 +125,7 @@ function renderStatus(r) {
     s.append(el('span', null, `${r.label}.dash is not available.`));
   }
   if (r.contest && r.contest.contenders?.length) s.append(contestPanel(r.contest));
+  if (r.valid) s.append(snippet(checkCode(r.label)));
 }
 
 function contestPanel(c) {
@@ -103,6 +159,7 @@ function showClaim(r) {
     hint.append(el('span', 'dn-warn', 'Mainnet: this signs with your real identity key and costs real DASH. Your key is used only in your browser to sign the registration — it never leaves this page.'));
   }
   $('claimOut').replaceChildren();
+  $('claimSnippet').replaceChildren(snippet(registerCode(r.label)));
 }
 
 async function claim() {

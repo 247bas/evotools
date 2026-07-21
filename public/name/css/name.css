@@ -23,6 +23,18 @@
   background: rgba(0, 0, 0, 0.5); color: var(--muted); font-family: var(--mono);
 }
 
+/* SDK snippet dropdown (same idea as the explorer) */
+.dn-snippet { margin-top: 14px; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.dn-snippet > summary { cursor: pointer; padding: 10px 13px; font-size: 0.83rem; color: var(--muted); background: rgba(0, 0, 0, 0.15); }
+.dn-snippet[open] > summary { border-bottom: 1px solid var(--border); color: var(--text); }
+.dn-snippet-body { padding: 13px; }
+.dn-snippet-body pre {
+  background: rgba(0, 0, 0, 0.38); border: 1px solid var(--border); border-radius: 7px;
+  color: #d6e2f0; padding: 12px; font-size: 0.78rem; line-height: 1.55;
+  white-space: pre-wrap; word-break: break-word;
+}
+.dn-snippet-body .dn-copy { margin-top: 10px; }
+
 .dn-status { margin-top: 12px; font-size: 0.95rem; min-height: 1.3em; }
 .dn-status.ok { color: var(--ok); }
 .dn-status.bad { color: var(--danger); }
