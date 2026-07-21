@@ -2,7 +2,7 @@
 // Run: node public/explorer/test/smoke.mjs
 import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
-  countDocuments, networkInfo, lookupToken, creditsToDash,
+  countDocuments, networkInfo, lookupToken, decodeStateTransition, creditsToDash,
 } from '../js/explorer.js';
 import { setNetwork } from '../js/sdk.js';
 
@@ -53,6 +53,17 @@ check(free && free.registered === false, `random name: registered=${free?.regist
 console.log('\n7. Token lookup (graceful not-found — no live token after testnet reset)');
 const tok = await safe('lookupToken', () => lookupToken('AxAYWyXV6mrm8Sq7vc7wEM18wtL8a8rgj64SM3SDmzsB'));
 check(tok === null, 'non-existent token -> null (handled)');
+
+console.log('\n7b. Decode a state transition (offline)');
+const blob = await safe('fetch a ST blob', async () => {
+  const list = await (await fetch('https://platform-explorer.pshenmic.dev/transactions?limit=1')).json();
+  const tx = await (await fetch('https://platform-explorer.pshenmic.dev/transaction/' + list.resultSet[0].hash)).json();
+  return tx.data;
+});
+if (blob) {
+  const dec = await safe('decodeStateTransition', () => decodeStateTransition(blob));
+  check(dec && typeof dec.actionType === 'string' && dec.actionType.length > 0, `decoded: ${dec?.actionType} · owner ${dec?.ownerId?.slice(0, 10)}… · hash ${dec?.hash?.slice(0, 12)}…`);
+}
 
 console.log('\n8. Mainnet (read-only) — switch network');
 setNetwork('mainnet');

@@ -6,6 +6,7 @@
 import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
   countDocuments, networkInfo, lookupToken, creditsToDash,
+  decodeStateTransition, broadcastStateTransition,
 } from './explorer.js';
 import { setNetwork, getNetwork } from './sdk.js';
 
@@ -20,13 +21,16 @@ const jsonPretty = (o) => JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? 
 const dashUnit = () => (getNetwork() === 'mainnet' ? 'DASH' : 'tDASH');
 const explorerBase = () => (getNetwork() === 'mainnet' ? 'https://platform-explorer.com' : 'https://testnet.platform-explorer.com');
 const sdkInit = () => (getNetwork() === 'mainnet' ? 'mainnetTrusted' : 'testnetTrusted');
-const KINDS = ['identity', 'name', 'contract', 'token'];
+const KINDS = ['auto', 'identity', 'name', 'contract', 'token'];
 const PLACEHOLDER = {
+  auto: 'Paste an ID (identity / contract / token) or a .dash name',
   identity: 'Identity ID (base58, e.g. 3pdTAJ…)',
   name: 'DPNS name (e.g. alice or alice.dash)',
   contract: 'Data contract ID (base58)',
   token: 'Token ID (base58)',
 };
+// base58, 32-byte id (identity / contract / token) — indistinguishable by shape.
+const IS_ID = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/;
 const EXAMPLES = {
   testnet: [
     { kind: 'name', q: 'dash', label: 'dash' },
@@ -366,7 +370,9 @@ async function search() {
   try {
     const opts = { proof: $('proof').checked };
     let node;
-    if (kind === 'identity') {
+    if (kind === 'auto') {
+      node = await autoLookup(q, opts);
+    } else if (kind === 'identity') {
       const d = await lookupIdentity(q, opts);
       node = d ? renderIdentity(d) : notFound('No identity with that ID.');
     } else if (kind === 'name') {
@@ -391,6 +397,53 @@ async function search() {
 }
 
 // ── wiring ───────────────────────────────────────────────────────────────────
+async function autoLookup(q, opts) {
+  if (!IS_ID.test(q)) {
+    const d = await lookupName(q);
+    return d ? renderName(d) : notFound('Could not look up that name.');
+  }
+  // base58 id — try identity, then contract, then token.
+  const idn = await lookupIdentity(q, opts);
+  if (idn) return renderIdentity(idn);
+  const c = await lookupContract(q, opts);
+  if (c) return renderContract(c);
+  const t = await lookupToken(q);
+  if (t) return renderToken(t);
+  return notFound('No identity, contract or token with that ID on this network.');
+}
+
+// ── developer tools: decode / broadcast a state transition ───────────────────
+async function decodeST() {
+  const input = $('stInput').value.trim();
+  const out = $('stOut');
+  if (!input) return;
+  out.replaceChildren(el('div', 'ex-sub', 'Decoding…'));
+  try {
+    const d = await decodeStateTransition(input);
+    out.replaceChildren();
+    out.append(stats([['Type', d.actionType], ['Fee increase', String(d.userFeeIncrease ?? 0)], ['Sig key', String(d.signaturePublicKeyId ?? '—')]]));
+    if (d.ownerId) out.append(field('Owner identity', d.ownerId));
+    out.append(field('Hash', d.hash));
+    out.append(rawBlock(d, 'Decoded (JSON)'));
+  } catch (e) {
+    out.replaceChildren(el('div', 'error', `Could not decode: ${e?.message || e}`));
+  }
+}
+async function broadcastST() {
+  const input = $('stInput').value.trim();
+  const out = $('stOut');
+  if (!input) return;
+  if (!confirm(`This broadcasts the state transition to ${getNetwork()}. Continue?`)) return;
+  out.replaceChildren(el('div', 'ex-sub', 'Broadcasting…'));
+  try {
+    const r = await broadcastStateTransition(input);
+    out.replaceChildren(el('div', 'note ok', 'Broadcast accepted by the network.'));
+    out.append(rawBlock(r, 'Result (JSON)'));
+  } catch (e) {
+    out.replaceChildren(el('div', 'error', `Broadcast failed: ${e?.message || e}`));
+  }
+}
+
 function renderExamples() {
   const box = $('examples');
   box.replaceChildren(el('span', null, 'Try: '));
@@ -406,6 +459,8 @@ function renderExamples() {
 $('kind').addEventListener('change', () => { $('q').placeholder = PLACEHOLDER[$('kind').value]; });
 $('searchBtn').addEventListener('click', search);
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+$('decodeBtn').addEventListener('click', decodeST);
+$('broadcastBtn').addEventListener('click', broadcastST);
 $('netsel').addEventListener('change', () => {
   setNetwork($('netsel').value);
   networkShown = false;
@@ -417,6 +472,6 @@ $('netsel').addEventListener('change', () => {
   syncUrl($('kind').value, q);
   if (q) search();
 });
-$('q').placeholder = PLACEHOLDER.identity;
+$('q').placeholder = PLACEHOLDER.auto;
 loadFromUrl();
 renderExamples();

@@ -30,6 +30,7 @@
 
     <div class="ex-search">
       <select id="kind" aria-label="What to look up">
+        <option value="auto">Auto-detect</option>
         <option value="identity">Identity</option>
         <option value="name">DPNS name</option>
         <option value="contract">Data contract</option>
@@ -54,6 +55,19 @@
 
     <div class="error" id="err" hidden></div>
     <div id="results"></div>
+
+    <details class="ex-dev">
+      <summary>Developer tools</summary>
+      <div class="ex-dev-body">
+        <label for="stInput">Decode a state transition (base64 or hex). It runs in your browser; Broadcast submits it to the network.</label>
+        <textarea id="stInput" spellcheck="false" autocomplete="off" placeholder="Paste a state transition blob…"></textarea>
+        <div class="ex-dev-btns">
+          <button class="btn primary sm" id="decodeBtn">Decode</button>
+          <button class="btn ghost sm" id="broadcastBtn">Broadcast ↗</button>
+        </div>
+        <div id="stOut"></div>
+      </div>
+    </details>
   </div>
 
   <script type="module" src="/shared/nav.js"></script>

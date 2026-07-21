@@ -2,7 +2,7 @@
 // documents, plus proofs, aggregations and network info. Each returns a plain
 // object the UI renders + a raw JSON dump.
 
-import { getSdk } from './sdk.js';
+import { getSdk, loadEvo } from './sdk.js';
 
 const CREDITS_PER_DASH = 100_000_000_000n;
 export const creditsToDash = (c) => (Number(c ?? 0n) / Number(CREDITS_PER_DASH)).toFixed(4);
@@ -193,4 +193,34 @@ export async function networkInfo() {
     firstBlockHeight: e.firstBlockHeight,
     firstBlockTime: e.firstBlockTime,
   };
+}
+
+// ── developer tools: decode / broadcast a state transition ───────────────────
+function parseStateTransition(Evo, input) {
+  const s = input.trim();
+  const isHex = /^[0-9a-fA-F]+$/.test(s) && s.length % 2 === 0;
+  return isHex ? Evo.StateTransition.fromHex(s) : Evo.StateTransition.fromBase64(s);
+}
+
+export async function decodeStateTransition(input) {
+  const Evo = await loadEvo();
+  const st = parseStateTransition(Evo, input);
+  return {
+    actionType: st.actionType,
+    actionTypeNumber: st.actionTypeNumber,
+    ownerId: st.ownerId?.toString?.(),
+    identityNonce: st.identityNonce,
+    identityContractNonce: st.identityContractNonce,
+    signaturePublicKeyId: st.signaturePublicKeyId,
+    userFeeIncrease: st.userFeeIncrease,
+    hash: st.hash(false),
+  };
+}
+
+export async function broadcastStateTransition(input) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const st = parseStateTransition(Evo, input);
+  const result = await sdk.stateTransitions.broadcastAndWait(st);
+  return result?.toJSON ? result.toJSON() : { ok: true };
 }
