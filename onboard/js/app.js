@@ -9,7 +9,10 @@ import {
 const CREDITS_PER_DASH = 100_000_000_000n;
 const MIN_FUND = 5_000_000_000n;    // 0.05 tDASH — enough to mint + name
 const RECOMMENDED = 50_000_000_000n; // 0.5 tDASH — also covers a contract publish
-const RESERVE = 100_000_000n;        // fee headroom left on the funding input
+// The identity creation fee is ~236,900,000 credits (~0.0024 tDASH). Keep back
+// well more than that so the funding input always covers the fee; the identity
+// is funded with (balance - RESERVE).
+const RESERVE = 1_000_000_000n;      // 0.01 tDASH kept back for the creation fee
 const BRIDGE = 'https://bridge.thepasta.org/';
 const EXPLORER = 'https://testnet.platform-explorer.com';
 const POLL_MS = 4000;
@@ -163,6 +166,10 @@ async function runCreateIdentity() {
   } catch (e) {
     $('identityProgress').hidden = true;
     showError(e);
+    // Most failures here are "not enough credits" — drop back to funding so the
+    // user can top up via the Bridge and try again with the same wallet.
+    showPanel('fund', 2);
+    startPolling();
   }
 }
 $('copyIdentityId').addEventListener('click', (e) => copyToButton(e.target, state.identityId));
