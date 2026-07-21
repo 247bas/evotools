@@ -10,7 +10,8 @@
     "serve": "python3 -m http.server 8000 --directory public",
     "dev": "python3 -m http.server 8000 --directory public",
     "test:onboard": "node public/onboard/test/smoke.mjs",
-    "test:explorer": "node public/explorer/test/smoke.mjs"
+    "test:explorer": "node public/explorer/test/smoke.mjs",
+    "test:name": "node public/name/test/smoke.mjs"
   },
   "devDependencies": {
     "@dashevo/evo-sdk": "^4.0.0",

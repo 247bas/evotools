@@ -1,0 +1,55 @@
+/* dash-name */
+.dn-wrap { max-width: 620px; }
+.tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 18px; }
+
+.dn-controls { margin-bottom: 14px; }
+.dn-netsel {
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.82rem; font-family: var(--mono); padding: 7px 10px; cursor: pointer;
+}
+.dn-netsel:focus { outline: none; border-color: var(--blue); }
+/* the tool has its own network control — hide the global testnet badge */
+.evo-nav .net-badge { display: none; }
+
+.dn-name { display: flex; align-items: center; }
+.dn-name input {
+  flex: 1; padding: 15px 16px; font-size: 1.3rem;
+  border: 1px solid var(--border); border-right: none; border-radius: 10px 0 0 10px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-family: inherit;
+}
+.dn-name input:focus { outline: none; border-color: var(--blue); }
+.dn-name .suffix {
+  padding: 15px 16px; font-size: 1.3rem; border: 1px solid var(--border); border-radius: 0 10px 10px 0;
+  background: rgba(0, 0, 0, 0.5); color: var(--muted); font-family: var(--mono);
+}
+
+.dn-status { margin-top: 12px; font-size: 0.95rem; min-height: 1.3em; }
+.dn-status.ok { color: var(--ok); }
+.dn-status.bad { color: var(--danger); }
+.dn-status.warn { color: var(--warn); }
+.dn-status.muted { color: var(--muted); }
+.dn-link { margin-left: 6px; font-size: 0.85rem; }
+.dn-sub { color: var(--muted); font-size: 0.85rem; margin: 8px 0; }
+
+/* contested panel */
+.dn-contest { margin-top: 14px; padding: 13px; border: 1px solid rgba(157, 50, 228, 0.4); background: rgba(157, 50, 228, 0.08); border-radius: 10px; }
+.dn-contest-head { color: #c88bf5; font-weight: 600; font-size: 0.88rem; }
+.dn-contender { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+.dn-contender:last-child { border-bottom: none; }
+.dn-cid { flex: 1; word-break: break-all; }
+.dn-votes { color: var(--muted); white-space: nowrap; }
+.dn-badge { background: rgba(40, 167, 69, 0.2); color: #7ee2a0; border: 1px solid rgba(40, 167, 69, 0.5); border-radius: 999px; padding: 2px 9px; font-size: 0.68rem; text-transform: uppercase; }
+
+/* claim */
+.dn-claim { margin-top: 22px; }
+.dn-claim h2 { margin-bottom: 14px; }
+.dn-claim .field { margin: 14px 0; }
+.dn-claim label { display: block; color: var(--blue); font-weight: 600; font-size: 0.85rem; margin-bottom: 7px; }
+.dn-claim input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-family: var(--mono); font-size: 0.85rem;
+}
+.dn-claim input:focus { outline: none; border-color: var(--blue); }
+.dn-warn { color: #ffe08a; }
+#claimOut { margin-top: 14px; }
+#claimOut .dn-link { display: inline-block; margin-top: 8px; margin-left: 0; }

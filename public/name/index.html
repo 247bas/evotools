@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dash-name — claim your .dash username · evotools</title>
+  <meta name="description" content="Claim a .dash username for your Dash Platform identity — check availability and register it, on testnet or mainnet." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="evotools" />
+  <meta property="og:title" content="dash-name — claim your .dash username" />
+  <meta property="og:description" content="Give your Dash Platform identity a human-readable .dash name. Check and claim, on testnet or mainnet." />
+  <meta property="og:url" content="https://evotools.dev/name/" />
+  <meta property="og:image" content="https://evotools.dev/og/home.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="dash-name — claim your .dash username" />
+  <meta name="twitter:description" content="Give your Dash Platform identity a human-readable .dash name. Check and claim, on testnet or mainnet." />
+  <meta name="twitter:image" content="https://evotools.dev/og/home.png" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="css/name.css" />
+</head>
+<body>
+  <div class="wrap dn-wrap">
+    <p class="tagline">
+      Give your Dash Platform identity a human-readable <code>.dash</code> name.
+      Type a name, check it, and register it — on testnet or mainnet.
+    </p>
+
+    <div class="dn-controls">
+      <select id="netsel" class="dn-netsel" aria-label="Network">
+        <option value="testnet">testnet</option>
+        <option value="mainnet">mainnet</option>
+      </select>
+    </div>
+
+    <div class="dn-name">
+      <input id="name" type="text" placeholder="yourname" autocomplete="off" spellcheck="false" autocapitalize="off" />
+      <span class="suffix">.dash</span>
+    </div>
+    <div class="dn-status" id="status"></div>
+
+    <section class="dn-claim panel" id="claim" hidden>
+      <h2 id="claimTitle">Claim</h2>
+      <div class="field">
+        <label for="idInput">Identity ID</label>
+        <input id="idInput" type="text" placeholder="Your identity ID (base58)" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="field">
+        <label for="wifInput">Private key — CRITICAL auth key (WIF)</label>
+        <input id="wifInput" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+      </div>
+      <p class="fineprint" id="claimHint"></p>
+      <button class="btn primary" id="claimBtn">Register</button>
+      <div id="claimOut"></div>
+    </section>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
