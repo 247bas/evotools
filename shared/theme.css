@@ -1,0 +1,137 @@
+/* evotools — shared design system. Loaded by every tool + the hub. */
+:root {
+  --blue: #008de4;
+  --blue-dark: #0070b8;
+  --bg: #0f1524;
+  --bg-2: #16213e;
+  --card: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.10);
+  --text: #e6e9ef;
+  --muted: #9aa4b8;
+  --ok: #28a745;
+  --warn: #ffc107;
+  --danger: #ff5c6c;
+  --mono: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', monospace;
+  --maxw: 680px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  background: linear-gradient(160deg, var(--bg) 0%, var(--bg-2) 100%);
+  min-height: 100vh;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 28px 16px 8px; }
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: var(--mono);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.mono { font-family: var(--mono); }
+
+/* ── shared top nav (injected by shared/nav.js) ───────────────────────────── */
+.evo-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(15, 21, 36, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.evo-nav .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 1.05rem; color: var(--text); }
+.evo-nav .brand:hover { text-decoration: none; }
+.evo-nav .brand .logo { color: var(--blue); font-size: 1.35rem; }
+.evo-nav .brand .tld { color: var(--muted); font-weight: 500; }
+.evo-nav .links { display: flex; align-items: center; gap: 16px; font-size: 0.88rem; }
+.evo-nav .links a { color: var(--muted); }
+.evo-nav .links a:hover { color: var(--text); text-decoration: none; }
+.evo-nav .net-badge {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--warn); border: 1px solid var(--warn); border-radius: 999px; padding: 3px 9px;
+}
+@media (max-width: 560px) { .evo-nav .links a.hide-sm { display: none; } }
+
+/* ── shared footer (injected by shared/nav.js) ────────────────────────────── */
+.evo-footer {
+  text-align: center; color: var(--muted); font-size: 0.8rem;
+  padding: 28px 20px; margin-top: 32px; border-top: 1px solid var(--border);
+}
+.evo-footer a { color: var(--muted); }
+
+/* ── buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid transparent; border-radius: 9px;
+  padding: 12px 22px; font-size: 1rem; font-weight: 600;
+  cursor: pointer; transition: background 0.2s, transform 0.1s, opacity 0.2s;
+  font-family: inherit;
+}
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--blue); color: #fff; }
+.btn.primary:hover { background: var(--blue-dark); }
+.btn.ghost { background: transparent; border-color: var(--border); color: var(--text); }
+.btn.ghost:hover { background: rgba(255, 255, 255, 0.06); }
+.btn.sm { padding: 5px 12px; font-size: 0.8rem; font-weight: 500; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.row.sm-gap { gap: 8px; }
+
+/* ── cards / panels ───────────────────────────────────────────────────────── */
+.panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px; animation: fade 0.25s ease;
+}
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ── fields ───────────────────────────────────────────────────────────────── */
+.field { margin: 18px 0; }
+.field-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.field label { color: var(--blue); font-weight: 600; font-size: 0.9rem; }
+.box {
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; word-break: break-all; font-size: 0.9rem;
+}
+.box.small { font-size: 0.82rem; }
+.box.env { white-space: pre-wrap; font-size: 0.8rem; line-height: 1.7; }
+
+.confirm { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--muted); font-size: 0.92rem; cursor: pointer; }
+.confirm input { width: 17px; height: 17px; accent-color: var(--blue); }
+.fineprint { color: var(--muted); font-size: 0.82rem; margin-top: 12px; }
+
+/* ── notes / errors ───────────────────────────────────────────────────────── */
+.note { border-radius: 8px; padding: 13px 15px; margin: 16px 0; font-size: 0.9rem; border: 1px solid; }
+.note.warn { background: rgba(255, 193, 7, 0.10); border-color: rgba(255, 193, 7, 0.4); color: #ffe08a; }
+.note.ok { background: rgba(40, 167, 69, 0.12); border-color: rgba(40, 167, 69, 0.5); color: #7ee2a0; }
+.note.info { background: rgba(0, 141, 228, 0.10); border-color: rgba(0, 141, 228, 0.4); }
+.note.info strong { color: var(--blue); }
+.error {
+  background: rgba(255, 92, 108, 0.12); border: 1px solid var(--danger); color: #ffb3ba;
+  border-radius: 8px; padding: 13px 15px; margin-bottom: 16px; font-size: 0.9rem; word-break: break-word;
+}
+
+/* ── spinner ──────────────────────────────────────────────────────────────── */
+.spinner-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.spinner {
+  width: 20px; height: 20px; border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--blue); border-radius: 50%; animation: spin 0.9s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+h1 { font-size: 1.5rem; margin-bottom: 12px; line-height: 1.25; }
+h2 { font-size: 1.25rem; margin-bottom: 12px; }

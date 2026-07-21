@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>evotools — build on the Dash Evolution chain</title>
+  <meta name="description" content="A growing set of tools that make building on the Dash Evolution chain approachable: identity onboarding, a recipe cookbook, a playground, an explorer and more. Testnet-first, open source." />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <style>
+    .hub { max-width: 860px; margin: 0 auto; padding: 28px 16px 8px; }
+    .hero { text-align: center; padding: 40px 0 28px; }
+    .hero h1 { font-size: 2.4rem; margin-bottom: 14px; }
+    .hero h1 .logo { color: var(--blue); }
+    .hero p { color: var(--muted); font-size: 1.05rem; max-width: 560px; margin: 0 auto 10px; }
+    .hero .sub { font-size: 0.9rem; }
+    .hero .cta { margin-top: 22px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 8px; }
+    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 1.9rem; } }
+    .tool {
+      display: flex; flex-direction: column; gap: 8px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px; transition: border-color 0.2s, transform 0.1s; color: inherit;
+    }
+    a.tool:hover { border-color: rgba(0, 141, 228, 0.4); text-decoration: none; transform: translateY(-2px); }
+    .tool.soon { opacity: 0.72; }
+    .tool-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .tool-head h3 { font-size: 1.1rem; color: var(--text); }
+    .tool p { color: var(--muted); font-size: 0.9rem; margin: 0; }
+    .badge { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+    .badge.live { color: var(--ok); border-color: rgba(40, 167, 69, 0.5); }
+    .badge.soon { color: var(--muted); border-color: var(--border); }
+    .badge.ext { color: var(--blue); border-color: rgba(0, 141, 228, 0.4); }
+    .section-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 26px 0 6px; }
+  </style>
+</head>
+<body>
+  <div class="hub">
+    <div class="hero">
+      <h1><span class="logo">◈</span> evotools</h1>
+      <p>Tools that make building on the Dash Evolution chain approachable.</p>
+      <p class="sub">Testnet-first · open source · by 247bas</p>
+      <a class="btn primary cta" href="/onboard/">Get a testnet identity →</a>
+    </div>
+
+    <div class="section-label">Live</div>
+    <div class="grid">
+      <a class="tool" href="/onboard/">
+        <div class="tool-head"><h3>Onboard</h3><span class="badge live">Live</span></div>
+        <p>Generate a wallet, fund it, mint an identity and claim a <code>.dash</code> name — then walk away with a ready <code>.env</code>.</p>
+      </a>
+      <a class="tool" href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener">
+        <div class="tool-head"><h3>Cookbook</h3><span class="badge ext">GitHub ↗</span></div>
+        <p>Verified, runnable recipes for <code>@dashevo/evo-sdk</code> v4 — the examples the official docs are missing.</p>
+      </a>
+    </div>
+
+    <div class="section-label">Coming next</div>
+    <div class="grid">
+      <div class="tool soon">
+        <div class="tool-head"><h3>create-evo-app</h3><span class="badge soon">Soon</span></div>
+        <p>Scaffold a working Dash Platform app — SDK wired up, identity handling in place — with one command.</p>
+      </div>
+      <div class="tool soon">
+        <div class="tool-head"><h3>Playground</h3><span class="badge soon">Soon</span></div>
+        <p>Run the cookbook recipes live against testnet, right in your browser. No install.</p>
+      </div>
+      <div class="tool soon">
+        <div class="tool-head"><h3>Explorer</h3><span class="badge soon">Soon</span></div>
+        <p>Browse identities, data contracts, documents and DPNS names — with copy-ready SDK snippets.</p>
+      </div>
+      <div class="tool soon">
+        <div class="tool-head"><h3>dash-name</h3><span class="badge soon">Soon</span></div>
+        <p>Claim your <code>.dash</code> username with a clean, shareable interface.</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+</body>
+</html>

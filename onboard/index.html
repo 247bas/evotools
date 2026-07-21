@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onboard — your first Dash Platform identity · evotools</title>
+  <meta name="description" content="Generate a wallet, fund it, mint a Dash Platform identity and claim a .dash username — all in your browser, on testnet." />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="css/onboard.css" />
+</head>
+<body>
+  <div class="wrap">
+    <p class="tagline">
+      From nothing to a funded Dash Platform identity with a <code>.dash</code> name —
+      in your browser. Keys are generated locally and never leave this page.
+    </p>
+
+    <!-- Stepper -->
+    <ol class="stepper" id="stepper">
+      <li data-step="1"><span class="dot">1</span> Wallet</li>
+      <li data-step="2"><span class="dot">2</span> Fund</li>
+      <li data-step="3"><span class="dot">3</span> Identity</li>
+      <li data-step="4"><span class="dot">4</span> Username</li>
+      <li data-step="5"><span class="dot">5</span> Done</li>
+    </ol>
+
+    <div class="error" id="globalError" hidden></div>
+
+    <!-- ── Step 0: intro ─────────────────────────────────────────────── -->
+    <section class="panel" id="panel-intro">
+      <h1>Create your first identity on the Evolution chain</h1>
+      <p>
+        An identity is your account on Dash Platform. You can't just "sign up" —
+        it has to be funded with credits first. This walks you through every step
+        and hands you a ready <code>.env</code> for the
+        <a href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener">evo-cookbook</a>
+        at the end.
+      </p>
+      <ul class="checklist">
+        <li>Generate a testnet wallet (offline, in your browser)</li>
+        <li>Fund its address via the Dash Bridge</li>
+        <li>Mint an identity from it</li>
+        <li>Claim a <code>.dash</code> username</li>
+        <li>Walk away with keys + a working <code>.env</code></li>
+      </ul>
+      <div class="note warn">
+        Testnet only. The wallet created here is for experimenting — never reuse
+        this mnemonic on mainnet or with real funds.
+      </div>
+      <button class="btn primary" id="startBtn">Start</button>
+      <p class="fineprint">
+        First click loads the SDK (~9.5&nbsp;MB, WASM) — give it a second.
+      </p>
+    </section>
+
+    <!-- ── Step 1: wallet ────────────────────────────────────────────── -->
+    <section class="panel" id="panel-wallet" hidden>
+      <h2>Your testnet wallet</h2>
+      <p>
+        This mnemonic controls everything below. Save it now — it's the only way
+        to recover this wallet, and it's shown only here.
+      </p>
+
+      <div class="field">
+        <div class="field-head">
+          <label>Recovery phrase (mnemonic)</label>
+          <button class="btn ghost sm" id="copyMnemonic">Copy</button>
+        </div>
+        <div class="mono box" id="mnemonicBox">…</div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label>Funding address (platform address)</label>
+          <button class="btn ghost sm" id="copyAddress1">Copy</button>
+        </div>
+        <div class="mono box small" id="addressBox1">…</div>
+      </div>
+
+      <label class="confirm">
+        <input type="checkbox" id="savedMnemonic" />
+        I've saved my recovery phrase somewhere safe.
+      </label>
+      <button class="btn primary" id="toFundBtn" disabled>Continue to funding</button>
+    </section>
+
+    <!-- ── Step 2: fund ──────────────────────────────────────────────── -->
+    <section class="panel" id="panel-fund" hidden>
+      <h2>Fund your address</h2>
+      <p>
+        Credits come from the <strong>Dash Bridge</strong>. Open it (your address
+        is prefilled), request testnet credits, and this page will pick up the
+        balance automatically.
+      </p>
+
+      <div class="field">
+        <div class="field-head">
+          <label>Your address</label>
+          <button class="btn ghost sm" id="copyAddress2">Copy</button>
+        </div>
+        <div class="mono box small" id="addressBox2">…</div>
+      </div>
+
+      <a class="btn primary" id="bridgeBtn" href="#" target="_blank" rel="noopener">
+        Open Dash Bridge ↗
+      </a>
+
+      <div class="balance">
+        <div class="balance-row">
+          <span>Current balance</span>
+          <span class="mono" id="balanceValue">checking…</span>
+        </div>
+        <div class="bar"><div class="bar-fill" id="balanceBar"></div></div>
+        <div class="balance-hint" id="balanceHint">
+          Waiting for credits… keep this tab open.
+        </div>
+      </div>
+
+      <button class="btn primary" id="toIdentityBtn" disabled>Create identity</button>
+    </section>
+
+    <!-- ── Step 3: identity ──────────────────────────────────────────── -->
+    <section class="panel" id="panel-identity" hidden>
+      <h2>Minting your identity</h2>
+      <div id="identityProgress">
+        <div class="spinner-row">
+          <span class="spinner"></span>
+          <span id="identityStatus">Building keys and broadcasting…</span>
+        </div>
+        <p class="fineprint">This can take a few seconds. Don't close the tab.</p>
+      </div>
+
+      <div id="identityResult" hidden>
+        <div class="note ok">Identity created.</div>
+        <div class="field">
+          <div class="field-head">
+            <label>Identity ID</label>
+            <button class="btn ghost sm" id="copyIdentityId">Copy</button>
+          </div>
+          <div class="mono box small" id="identityIdBox">…</div>
+        </div>
+        <p><a id="explorerIdentity" href="#" target="_blank" rel="noopener">View on Platform Explorer ↗</a></p>
+        <button class="btn primary" id="toUsernameBtn">Claim a username</button>
+      </div>
+    </section>
+
+    <!-- ── Step 4: username ──────────────────────────────────────────── -->
+    <section class="panel" id="panel-username" hidden>
+      <h2>Claim a <code>.dash</code> username</h2>
+      <p>
+        A DPNS name maps a human-readable handle to your identity. Short or
+        premium names are "contested" and go through masternode voting instead of
+        first-come-first-served.
+      </p>
+
+      <div class="field">
+        <label>Username</label>
+        <div class="username-input">
+          <input type="text" id="usernameInput" placeholder="yourname" autocomplete="off" spellcheck="false" />
+          <span class="suffix">.dash</span>
+        </div>
+        <div class="username-status" id="usernameStatus"></div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="registerBtn" disabled>Register</button>
+        <button class="btn ghost" id="skipUsernameBtn">Skip for now</button>
+      </div>
+      <div id="usernameRegistering" hidden>
+        <div class="spinner-row"><span class="spinner"></span><span>Registering (preorder + domain)…</span></div>
+      </div>
+    </section>
+
+    <!-- ── Step 5: done / handoff ────────────────────────────────────── -->
+    <section class="panel" id="panel-done" hidden>
+      <h2>You're on Dash Platform 🎉</h2>
+      <div class="summary" id="doneSummary"></div>
+
+      <div class="field">
+        <div class="field-head">
+          <label>.env for the evo-cookbook</label>
+          <div class="row sm-gap">
+            <button class="btn ghost sm" id="copyEnv">Copy</button>
+            <button class="btn ghost sm" id="downloadEnv">Download</button>
+          </div>
+        </div>
+        <pre class="mono box env" id="envBox">…</pre>
+      </div>
+
+      <div class="note info">
+        <strong>Next:</strong> clone the
+        <a href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener">evo-cookbook</a>,
+        drop this <code>.env</code> in the project root, and run
+        <code>node recipes/09-write-path.mjs</code> to publish your first data
+        contract and document.
+      </div>
+
+      <details class="keys">
+        <summary>Show all 5 identity keys (advanced — handle with care)</summary>
+        <div id="allKeys"></div>
+      </details>
+
+      <button class="btn ghost" id="restartBtn">Start over</button>
+    </section>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+/* evo-onboard — tool-specific styles. Shared tokens/components live in
+   /shared/theme.css. */
+
+.tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 24px; }
+
+.panel p { color: var(--muted); margin-bottom: 16px; }
+.panel p strong { color: var(--text); }
+
+.checklist { list-style: none; margin: 0 0 20px; }
+.checklist li { padding: 6px 0 6px 26px; position: relative; color: var(--text); }
+.checklist li::before { content: '◈'; color: var(--blue); position: absolute; left: 0; }
+
+/* Stepper */
+.stepper { list-style: none; display: flex; justify-content: space-between; gap: 4px; margin-bottom: 24px; }
+.stepper li {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-size: 0.72rem; color: var(--muted);
+}
+.stepper li .dot {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--card); font-weight: 600; font-size: 0.85rem;
+}
+.stepper li.active { color: var(--text); }
+.stepper li.active .dot { background: var(--blue); border-color: var(--blue); color: #fff; }
+.stepper li.done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+/* Balance */
+.balance { margin: 20px 0; }
+.balance-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
+.bar { height: 8px; background: rgba(0, 0, 0, 0.35); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0; background: var(--blue); border-radius: 999px; transition: width 0.4s ease; }
+.balance-hint { color: var(--muted); font-size: 0.82rem; margin-top: 8px; }
+
+/* Username */
+.username-input { display: flex; align-items: center; }
+.username-input input {
+  flex: 1; padding: 12px 14px; border: 1px solid var(--border); border-right: none;
+  border-radius: 9px 0 0 9px; background: rgba(0, 0, 0, 0.35); color: var(--text);
+  font-size: 1rem; font-family: inherit;
+}
+.username-input input:focus { outline: none; border-color: var(--blue); }
+.username-input .suffix {
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 0 9px 9px 0;
+  background: rgba(0, 0, 0, 0.5); color: var(--muted); font-family: var(--mono);
+}
+.username-status { font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+.username-status.ok { color: var(--ok); }
+.username-status.bad { color: var(--danger); }
+.username-status.warn { color: var(--warn); }
+.username-status.checking { color: var(--muted); }
+
+/* Summary + keys */
+.summary { margin-bottom: 16px; }
+.summary .item { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+.summary .item:last-child { border-bottom: none; }
+.summary .item .k { color: var(--muted); }
+.summary .item .v { font-family: var(--mono); text-align: right; word-break: break-all; }
+
+.keys { margin: 18px 0; }
+.keys summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; padding: 8px 0; }
+.key-card { background: rgba(0, 0, 0, 0.25); border-radius: 8px; padding: 12px; margin: 8px 0; }
+.key-card .key-name { color: var(--blue); font-size: 0.85rem; margin-bottom: 6px; }
+.key-card .key-wif { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+
+@media (max-width: 560px) {
+  .panel { padding: 20px; }
+  .stepper li { font-size: 0.62rem; }
+  h1 { font-size: 1.3rem; }
+}
