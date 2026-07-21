@@ -3,12 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "evotools — tools to make building on the Dash Evolution chain approachable. Monorepo: a hub homepage plus one folder per tool. Pure static site, no build step.",
+  "description": "evotools — tools to make building on the Dash Evolution chain approachable. Monorepo: a hub homepage plus one folder per tool, served from public/. Pure static site, no build step.",
   "scripts": {
-    "vendor": "cp node_modules/@dashevo/evo-sdk/dist/evo-sdk.module.js shared/vendor/evo-sdk.module.js && echo vendored",
-    "serve": "python3 -m http.server 8000",
-    "dev": "python3 -m http.server 8000",
-    "test:onboard": "node onboard/test/smoke.mjs"
+    "vendor": "cp node_modules/@dashevo/evo-sdk/dist/evo-sdk.module.js public/shared/vendor/evo-sdk.module.js && echo vendored",
+    "serve": "python3 -m http.server 8000 --directory public",
+    "dev": "python3 -m http.server 8000 --directory public",
+    "test:onboard": "node public/onboard/test/smoke.mjs"
   },
   "devDependencies": {
     "@dashevo/evo-sdk": "^4.0.0"

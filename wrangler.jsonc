@@ -3,6 +3,6 @@
   "name": "evotools",
   "compatibility_date": "2025-07-01",
   "assets": {
-    "directory": "."
+    "directory": "public"
   }
 }
