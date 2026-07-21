@@ -53,3 +53,10 @@
 .dn-warn { color: #ffe08a; }
 #claimOut { margin-top: 14px; }
 #claimOut .dn-link { display: inline-block; margin-top: 8px; margin-left: 0; }
+
+/* success */
+.dn-success { margin-top: 16px; padding: 18px; border: 1px solid rgba(40, 167, 69, 0.5); background: rgba(40, 167, 69, 0.1); border-radius: 12px; }
+.dn-success-title { color: #7ee2a0; font-size: 1.3rem; font-weight: 700; }
+.dn-success .dn-sub { margin: 8px 0 14px; }
+.dn-success-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.dn-success-actions .dn-link { margin-left: 0; }

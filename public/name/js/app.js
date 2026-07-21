@@ -116,14 +116,33 @@ async function claim() {
   out.replaceChildren(el('div', 'dn-sub', 'Registering (preorder + domain)…'));
   try {
     const res = await registerName(r.label, id, wif);
-    out.replaceChildren(el('div', 'note ok', `🎉 You claimed ${res.name}!`));
-    out.append(explorerLink(`View it on the explorer ↗`, id));
-    check(); // refresh — now taken by you
+    showSuccess(res.name, id);
   } catch (e) {
     out.replaceChildren(el('div', 'error', `Registration failed: ${e?.message || e}`));
   } finally {
     $('claimBtn').disabled = false;
   }
+}
+
+function showSuccess(name, id) {
+  $('claim').hidden = true;
+  token++; // cancel any in-flight check so it can't overwrite this
+  const s = $('status');
+  s.className = 'dn-status dn-success';
+  s.replaceChildren();
+  s.append(el('div', 'dn-success-title', `🎉 ${name} is yours!`));
+  s.append(el('div', 'dn-sub', `Registered on ${getNetwork()} — it now resolves to your identity.`));
+  const actions = el('div', 'dn-success-actions');
+  actions.append(explorerLink('View it on the explorer ↗', id));
+  const again = el('button', 'btn ghost sm', 'Register another');
+  again.addEventListener('click', () => {
+    s.replaceChildren();
+    s.className = 'dn-status';
+    $('name').value = '';
+    $('name').focus();
+  });
+  actions.append(again);
+  s.append(actions);
 }
 
 // ── wiring ───────────────────────────────────────────────────────────────────
