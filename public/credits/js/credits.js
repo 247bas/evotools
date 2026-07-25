@@ -13,8 +13,17 @@
 import { getSdk, loadEvo, getNetwork } from './sdk.js';
 
 export const MIN_WITHDRAW_CREDITS = 400_000_000n; // 0.004 DASH, protocol minimum
-// The transition fee comes off the address, so a sweep leaves a little behind.
-export const SWEEP_MARGIN = 10_000_000n;
+// A sweep has to leave the fee behind on the address, and that fee is not fixed
+// — 13,355,560 credits for a top-up on mainnet, less elsewhere. This is the
+// opening guess; when it is too small the network says exactly what it needed
+// and the call is retried with that number.
+export const SWEEP_MARGIN = 20_000_000n;
+
+// "Insufficient combined address balances: total available is less than required N"
+const requiredFrom = (err) => {
+  const m = /less than required (\d+)/.exec(String(err?.message || err));
+  return m ? BigInt(m[1]) : null;
+};
 
 const str = (x) => (typeof x === 'string' ? x : x?.toString?.());
 
@@ -82,16 +91,31 @@ export async function topUpIdentity({ identityId, addressWif, amount }) {
   const Evo = await loadEvo();
   const sdk = await getSdk();
   const { address, balance } = await addressFromWif(addressWif);
-  const send = amount ?? (balance > SWEEP_MARGIN ? balance - SWEEP_MARGIN : 0n);
+  let send = amount ?? (balance > SWEEP_MARGIN ? balance - SWEEP_MARGIN : 0n);
   if (send <= 0n) throw new Error(`${address} holds ${balance} credits — nothing to move.`);
   if (send > balance) throw new Error(`${address} holds ${balance} credits, less than you asked to move.`);
 
   const identity = await fetchIdentity(sdk, identityId);
-  const result = await sdk.addresses.topUpIdentity({
+  const move = async (value) => sdk.addresses.topUpIdentity({
     identity,
-    inputs: [{ address, amount: send }],
+    inputs: [{ address, amount: value }],
     signer: await addressSigner(Evo, addressWif),
   });
+
+  let result;
+  try {
+    result = await move(send);
+  } catch (e) {
+    // Only a sweep can be adjusted: an explicit amount is what the user asked
+    // for, and quietly sending less would be worse than failing.
+    const fee = requiredFrom(e);
+    if (amount !== undefined || fee === null) throw e;
+    send = balance - fee;
+    if (send <= 0n) {
+      throw new Error(`${address} holds ${balance} credits, which does not cover the ${fee} fee.`);
+    }
+    result = await move(send);
+  }
   return { from: address, moved: send, newBalance: result?.newBalance };
 }
 
@@ -135,18 +159,30 @@ export async function sendBetweenAddresses({ fromWif, toAddress, amount }) {
   const sdk = await getSdk();
   const { address, balance } = await addressFromWif(fromWif);
   if (toAddress === address) throw new Error('That is the same address the credits are already on.');
-  const send = amount ?? (balance > SWEEP_MARGIN ? balance - SWEEP_MARGIN : 0n);
+  let send = amount ?? (balance > SWEEP_MARGIN ? balance - SWEEP_MARGIN : 0n);
   if (send <= 0n) throw new Error(`${address} holds ${balance} credits — nothing to move.`);
   if (send + SWEEP_MARGIN > balance) {
     throw new Error(`${address} holds ${balance} credits; leave at least ${SWEEP_MARGIN} behind for the fee.`);
   }
 
-  await sdk.addresses.transfer({
-    inputs: [{ address, amount: send }],
-    outputs: [{ address: toAddress, amount: send }],
+  const move = async (value) => sdk.addresses.transfer({
+    inputs: [{ address, amount: value }],
+    outputs: [{ address: toAddress, amount: value }],
     feeStrategy: [{ type: 'reduceOutput', index: 0 }],
     signer: await addressSigner(Evo, fromWif),
   });
+
+  try {
+    await move(send);
+  } catch (e) {
+    const fee = requiredFrom(e);
+    if (amount !== undefined || fee === null) throw e;
+    send = balance - fee;
+    if (send <= 0n) {
+      throw new Error(`${address} holds ${balance} credits, which does not cover the ${fee} fee.`);
+    }
+    await move(send);
+  }
   return { from: address, to: toAddress, moved: send };
 }
 
