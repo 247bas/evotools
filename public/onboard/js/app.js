@@ -16,20 +16,23 @@ import {
 
 // ── constants (credits are bigint; 1 DASH = 100,000,000,000 credits) ────────
 const CREDITS_PER_DASH = 100_000_000_000n;
-// The identity creation fee is ~236,900,000 credits (~0.0024 DASH). Keep back
-// well more than that so the funding input always covers the fee; the identity
-// is funded with (balance - RESERVE).
-const RESERVE = 1_000_000_000n;      // 0.01 DASH kept back for the creation fee
+// The identity creation fee is 236,900,000 credits (~0.0024 DASH), measured.
+// `reserve` stays on the address to cover it; the identity is funded with
+// (balance - reserve). Testnet coins are free, so the thresholds there are
+// comfortable; on mainnet they follow the real cost instead, or a perfectly
+// usable balance gets turned away.
 const NET = {
   testnet: {
     unit: 'tDASH',
-    minFund: 5_000_000_000n,    // 0.05 tDASH — enough to mint + name
+    reserve: 1_000_000_000n,      // 0.01 tDASH
+    minFund: 5_000_000_000n,      // 0.05 tDASH — enough to mint + name
     recommended: 50_000_000_000n, // 0.5 tDASH — also covers a contract publish
     explorer: 'https://testnet.platform-explorer.com',
   },
   mainnet: {
     unit: 'DASH',
-    minFund: 2_000_000_000n,     // 0.02 DASH — mint plus a little headroom
+    reserve: 500_000_000n,        // 0.005 DASH — twice the creation fee
+    minFund: 750_000_000n,        // 0.0075 DASH — mint, with credits left over
     // 0.25 DASH also covers a contested name (0.2) and its fees.
     recommended: 25_000_000_000n,
     explorer: 'https://platform-explorer.com',
@@ -483,7 +486,7 @@ async function runCreateIdentity() {
   $('identityProgress').hidden = false;
   $('identityResult').hidden = true;
   try {
-    const amount = state.balance - RESERVE;
+    const amount = state.balance - cfg().reserve;
     if (amount <= 0n) throw new Error('Balance too low to fund an identity.');
     $('identityStatus').textContent = 'Building keys and broadcasting…';
     const res = await createIdentity({
