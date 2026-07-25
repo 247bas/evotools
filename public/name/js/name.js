@@ -66,7 +66,7 @@ export async function registerName(label, identityId, wif) {
   const { IdentitySigner } = Evo;
   const clean = label.replace(/\.dash$/i, '').trim().toLowerCase();
 
-  // Never spend the contested-name fee on a name masternodes already locked.
+  // Never spend the 0.2 DASH contested-name fee on a name masternodes already locked.
   if (await sdk.dpns.isContestedUsername(clean).catch(() => false)) {
     const contest = await getContest(clean).catch(() => undefined);
     if (contest?.outcome === 'Locked') {

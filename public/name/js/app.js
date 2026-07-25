@@ -150,7 +150,7 @@ function contestPanel(c) {
   d.append(el('div', 'dn-contest-head', locked ? '⚖ Contested — locked by masternode vote' : '⚖ Contested — decided by masternode vote'));
   d.append(el('div', 'dn-sub', locked
     ? 'The lock votes beat every contender, which ends the contest with nobody as the owner. Registering it again is not possible.'
-    : 'Short/premium names go through a vote instead of first-come-first-served, and cost ~1 DASH more. Registering one joins the contest.'));
+    : 'Short/premium names go through a vote instead of first-come-first-served, and cost 0.2 DASH more (it prefunds the vote). Registering one joins the contest.'));
   for (const ct of c.contenders) {
     const row = el('div', 'dn-contender');
     if (!locked && c.winner && ct.identityId === c.winner) row.append(el('span', 'dn-badge', 'winner'));

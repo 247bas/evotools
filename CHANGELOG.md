@@ -10,7 +10,8 @@ rather than installable releases.
   `isNameAvailable()` says true while nobody can ever claim it (on mainnet: pay,
   bank, cash, money, wallet, usd, usa, app, mail). Both tools now read
   `winner.kind` from the vote state, show the lock and its tallies, and
-  `registerName()` refuses a locked name before it can cost you 1 DASH.
+  `registerName()` refuses a locked name before it can cost you the 0.2 DASH
+  contested-name fee.
 - **Playground** — a testnet / mainnet toggle. It re-points the recipe's `EvoSDK`
   factory calls to the chosen network (comments, log strings and example data are
   left as-is), with a real-funds warning when mainnet is selected.
