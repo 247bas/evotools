@@ -469,7 +469,10 @@ function renderBalance() {
   const { balance } = state;
   const { unit, minFund, recommended } = cfg();
   $('balanceValue').textContent = `${creditsToDash(balance)} ${unit}`;
-  const pct = Math.min(100, Number(balance * 100n / recommended));
+  // The bar tracks the thing that gates the button: enough to mint. Measuring
+  // against the recommended amount instead left it looking nearly empty while
+  // the hint said "enough" and Create identity was already lit.
+  const pct = minFund > 0n ? Math.min(100, Number((balance * 100n) / minFund)) : 0;
   $('balanceBar').style.width = `${pct}%`;
   const enough = balance >= minFund;
   $('toIdentityBtn').disabled = !enough;
