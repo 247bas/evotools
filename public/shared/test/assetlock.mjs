@@ -70,11 +70,15 @@ check(INSIGHT.mainnet.startsWith('https://') && INSIGHT.testnet.startsWith('http
 const status = (await sdk.system.status()).toObject();
 const locked = status.chain.coreChainLockedHeight;
 check(Number.isInteger(locked) && locked > 0, `Platform reports core chain locked height ${locked}`);
-const already = await waitForChainlock(sdk, locked - 10, { tries: 1 });
-check(already >= locked - 10, 'waitForChainlock returns at once for a height already locked');
+// A few tries, not one: a node can answer badly, and surviving that is exactly
+// what this function is now supposed to do.
+const already = await waitForChainlock(sdk, locked - 10, { tries: 3, intervalMs: 2000 });
+check(already >= locked - 10, 'waitForChainlock returns a height already locked, retrying past a bad answer');
 
 console.log('\n6. Helpers');
-check(spendable([{ confirmations: 0 }, { confirmations: 1 }]).length === 1, 'unconfirmed outputs are not spendable');
+check(spendable([{ confirmations: 1 }]).length === 1, 'a confirmed output is spendable');
+check(spendable([{ confirmations: 0, txlock: true }]).length === 1, 'an InstantSend-locked output is spendable without a confirmation');
+check(spendable([{ confirmations: 0, txlock: false }]).length === 0, 'a plain unconfirmed output is not');
 check(totalDuffs([{ satoshis: 5 }, { satoshis: 7 }]) === 12, 'totalDuffs adds up');
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);

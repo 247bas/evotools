@@ -48,19 +48,31 @@ export function loadDashcore() {
   return _dashcorePromise;
 }
 
-// Confirmed spendable outputs of a layer-1 address, newest API shape first.
+// Outputs of a layer-1 address. InstantSend settles a payment in seconds, which
+// is the point of Dash, so an unconfirmed output whose transaction is locked is
+// as final as a confirmed one — but the listing does not say whether it is, so
+// each unconfirmed entry costs one extra lookup.
 export async function fetchUtxos(address, network) {
   const utxos = await getJson(`${api(network)}/addr/${address}/utxo`);
-  return utxos.map((u) => ({
+  const mapped = utxos.map((u) => ({
     txid: u.txid,
     vout: u.vout,
     script: u.scriptPubKey,
     satoshis: u.satoshis ?? Math.round((u.amount ?? 0) * 1e8),
     confirmations: u.confirmations ?? 0,
+    txlock: false,
   }));
+  await Promise.all(mapped
+    .filter((u) => u.confirmations < 1)
+    .map(async (u) => {
+      const tx = await getJson(`${api(network)}/tx/${u.txid}`).catch(() => null);
+      u.txlock = tx?.txlock === true;
+    }));
+  return mapped;
 }
 
-export const spendable = (utxos) => utxos.filter((u) => u.confirmations >= 1);
+// Confirmed, or locked by InstantSend — either way the coins cannot move again.
+export const spendable = (utxos) => utxos.filter((u) => u.confirmations >= 1 || u.txlock);
 export const totalDuffs = (utxos) => utxos.reduce((sum, u) => sum + u.satoshis, 0);
 
 // Build and sign the asset lock. Shape is byte-identical to the locks Platform
@@ -133,10 +145,15 @@ export async function waitForBlock(txid, network, { onTick, intervalMs = 15000, 
 // it publishes the height it trusts — no InstantSend bytes to chase.
 export async function waitForChainlock(sdk, height, { onTick, intervalMs = 15000, tries = 120 } = {}) {
   for (let i = 0; i < tries; i++) {
-    const status = await sdk.system.status();
-    const locked = status.toObject().chain.coreChainLockedHeight;
-    if (locked >= height) return locked;
-    onTick?.(locked, height);
+    // A node that answers badly ("invalid content type: application/grpc") is a
+    // hiccup, not a verdict — the lock is already on chain and keeps. Retrying
+    // costs a poll; giving up would strand a conversion that is nearly done.
+    let locked = null;
+    try {
+      locked = (await sdk.system.status()).toObject().chain.coreChainLockedHeight;
+    } catch { /* keep polling */ }
+    if (locked !== null && locked >= height) return locked;
+    onTick?.(locked ?? 0, height);
     await sleep(intervalMs);
   }
   throw new Error('Platform has not chain-locked that block yet. It is safe to come back to it later.');

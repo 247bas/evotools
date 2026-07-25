@@ -5,14 +5,20 @@ rather than installable releases.
 
 ## Unreleased
 
+- **InstantSend counts.** A payment that is locked but not yet mined is already
+  final on Dash, so the funding step converts it straight away instead of waiting
+  out a block first. That is the difference between a few seconds and a few
+  minutes before anything can start.
 - **Getting onto Platform no longer needs Dash Evo Tool.** The funding key's
   ordinary Dash address can now be paid from any wallet, and onboard turns those
   coins into Platform credits itself: it builds and signs the asset lock with a
   vendored dashcore-lib bundle, broadcasts through a public Insight instance,
   waits for the block to be chain-locked and hands Platform a chain proof. Same
   code on both networks, so the walk-through you do on testnet with free coins is
-  the one that runs on mainnet with real ones. Verified end to end on testnet,
-  in the browser.
+  the one that runs on mainnet with real ones. Verified end to end on both:
+  testnet in the browser, mainnet headless (200,000 duffs → 186,374,760 credits).
+  A node that answers badly mid-wait no longer aborts a conversion that is nearly
+  done — the lock is on chain and keeps.
 - **keygen shows the Dash address too.** One key, two encodings: the `X…`/`y…`
   address any wallet can pay (that is the one in the QR now) and the `dash1…`
   platform address where the credits land.

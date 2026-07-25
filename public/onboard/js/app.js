@@ -331,7 +331,7 @@ async function pollCoreBalance() {
       ? `Ready to convert. Leave a little behind: ${FEE_DUFFS} duffs pay the layer-1 fee.`
       : duffs > 0
         ? `Below the ${MIN_LOCK_DUFFS / 1e8} ${unit} minimum for an asset lock.`
-        : 'Waiting for a payment with at least one confirmation.';
+        : 'Waiting for a payment. InstantSend counts, so this usually takes seconds.';
     if (enough && !$('lockAmount').value) {
       $('lockAmount').value = floor4(duffs - FEE_DUFFS);
     }
