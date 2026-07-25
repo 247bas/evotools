@@ -101,6 +101,10 @@ $('netsel').addEventListener('change', () => {
   const main = isMainnet();
   $('testnetNote').hidden = main;
   $('mainnetNote').hidden = !main;
+  // On mainnet the risk is the user's, so make them say so before starting.
+  $('mainnetAckWrap').hidden = !main;
+  $('mainnetAck').checked = false;
+  $('startBtn').disabled = main;
   $('introStep1').textContent = main
     ? 'Bring a funding key you already control (WIF)'
     : 'Generate a testnet wallet (offline, in your browser)';
@@ -109,8 +113,13 @@ $('netsel').addEventListener('change', () => {
     : 'Fund its address via the Dash Bridge';
 });
 
+$('mainnetAck').addEventListener('change', (e) => {
+  $('startBtn').disabled = isMainnet() && !e.target.checked;
+});
+
 // ── Step 1: wallet ───────────────────────────────────────────────────────────
 $('startBtn').addEventListener('click', withBusy($('startBtn'), 'Loading SDK…', async () => {
+  if (isMainnet() && !$('mainnetAck').checked) throw new Error('Confirm that you understand the risk first.');
   clearError();
   const main = isMainnet();
   if (main) {

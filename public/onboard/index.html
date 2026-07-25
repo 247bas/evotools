@@ -69,10 +69,23 @@
         this mnemonic on mainnet or with real funds.
       </div>
       <div class="note bad" id="mainnetNote" hidden>
-        Mainnet costs real DASH. You bring the funding key yourself — this page
-        never generates a wallet that holds your money. It does generate the new
-        identity's keys, and if you lose that phrase the identity is gone.
+        <p>
+          Mainnet costs real DASH. You bring the funding key yourself — this page
+          never generates a wallet that holds your money. It does generate the new
+          identity's keys, and if you lose that phrase the identity is gone.
+        </p>
+        <p>
+          Everything you do here happens under your own responsibility. Nothing on
+          Platform can be undone: credits you move, an identity you mint and a name
+          you register are final, and a lost key cannot be recovered by anyone.
+          evotools is free, open source and offered as is, without warranty — if
+          something goes wrong, the loss is yours.
+        </p>
       </div>
+      <label class="confirm" id="mainnetAckWrap" hidden>
+        <input type="checkbox" id="mainnetAck" />
+        I understand this uses real DASH and that I do this at my own risk.
+      </label>
       <button class="btn primary" id="startBtn">Start</button>
       <p class="fineprint">
         First click loads the SDK (~9.5&nbsp;MB, WASM) — give it a second.

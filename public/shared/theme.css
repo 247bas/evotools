@@ -170,6 +170,8 @@ a.built-badge:hover { text-decoration: none; }
 .note.bad { background: rgba(255, 92, 108, 0.12); border-color: rgba(255, 92, 108, 0.5); color: #ffb3ba; }
 .note.info { background: rgba(0, 141, 228, 0.10); border-color: rgba(0, 141, 228, 0.4); }
 .note.info strong { color: var(--blue); }
+/* the global reset strips paragraph margins, so multi-paragraph notes need this */
+.note p + p { margin-top: 10px; }
 .error {
   background: rgba(255, 92, 108, 0.12); border: 1px solid var(--danger); color: #ffb3ba;
   border-radius: 8px; padding: 13px 15px; margin-bottom: 16px; font-size: 0.9rem; word-break: break-word;
