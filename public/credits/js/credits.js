@@ -202,14 +202,16 @@ export async function withdrawToCore({ fromWif, coreAddress, amount }) {
   }
 
   const { address, balance } = await addressFromWif(fromWif);
-  const send = amount ?? balance;
+  // Same rule as the other sweeps: the fee comes off the address, so emptying it
+  // completely leaves nothing to pay with. Leaving the margin was missing here.
+  let send = amount ?? (balance > SWEEP_MARGIN ? balance - SWEEP_MARGIN : 0n);
   if (send < MIN_WITHDRAW_CREDITS) {
     throw new Error(`A withdrawal has to be at least ${Number(MIN_WITHDRAW_CREDITS) / 1e11} DASH.`);
   }
   if (send > balance) throw new Error(`${address} holds ${balance} credits, less than you asked to withdraw.`);
 
-  await sdk.addresses.withdraw({
-    inputs: [{ address, amount: send }],
+  const leave = async (value) => sdk.addresses.withdraw({
+    inputs: [{ address, amount: value }],
     outputScript,
     coreFeePerByte: 1,
     // Only "never pool" is implemented: anything else is refused with
@@ -218,6 +220,18 @@ export async function withdrawToCore({ fromWif, coreAddress, amount }) {
     pooling: PoolingWasm.Never,
     signer: await addressSigner(Evo, fromWif),
   });
+
+  try {
+    await leave(send);
+  } catch (e) {
+    const needed = requiredFrom(e);
+    if (amount !== undefined || needed === null) throw e;
+    send = balance - needed;
+    if (send < MIN_WITHDRAW_CREDITS) {
+      throw new Error(`${address} holds ${balance} credits — not enough to withdraw ${Number(MIN_WITHDRAW_CREDITS) / 1e11} DASH and cover the ${needed} it asks for.`);
+    }
+    await leave(send);
+  }
   return { from: address, to: coreAddress, moved: send };
 }
 
