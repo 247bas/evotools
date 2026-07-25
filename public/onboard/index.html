@@ -4,18 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Onboard — your first Dash Platform identity · evotools</title>
-  <meta name="description" content="Generate a wallet, fund it, mint a Dash Platform identity and claim a .dash username — all in your browser, on testnet." />
+  <meta name="description" content="Mint a Dash Platform identity and claim a .dash username in your browser — testnet from a generated wallet, mainnet from a key you control." />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="evotools" />
   <meta property="og:title" content="Onboard — your first Dash Platform identity" />
-  <meta property="og:description" content="From nothing to a funded testnet identity with a .dash name, in your browser." />
+  <meta property="og:description" content="From nothing to a funded Platform identity with a .dash name, in your browser — testnet or mainnet." />
   <meta property="og:url" content="https://evotools.dev/onboard/" />
   <meta property="og:image" content="https://evotools.dev/og/onboard.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Onboard — your first Dash Platform identity" />
-  <meta name="twitter:description" content="From nothing to a funded testnet identity with a .dash name, in your browser." />
+  <meta name="twitter:description" content="From nothing to a funded Platform identity with a .dash name, in your browser — testnet or mainnet." />
   <meta name="twitter:image" content="https://evotools.dev/og/onboard.png" />
   <link rel="stylesheet" href="/shared/theme.css" />
   <link rel="stylesheet" href="css/onboard.css" />
@@ -49,15 +49,29 @@
         at the end.
       </p>
       <ul class="checklist">
-        <li>Generate a testnet wallet (offline, in your browser)</li>
-        <li>Fund its address via the Dash Bridge</li>
+        <li id="introStep1">Generate a testnet wallet (offline, in your browser)</li>
+        <li id="introStep2">Fund its address via the Dash Bridge</li>
         <li>Mint an identity from it</li>
         <li>Claim a <code>.dash</code> username</li>
         <li>Walk away with keys + a working <code>.env</code></li>
       </ul>
-      <div class="note warn">
+
+      <div class="field">
+        <label for="netsel">Network</label>
+        <select id="netsel">
+          <option value="testnet">testnet — free, for experimenting</option>
+          <option value="mainnet">mainnet — real DASH</option>
+        </select>
+      </div>
+
+      <div class="note warn" id="testnetNote">
         Testnet only. The wallet created here is for experimenting — never reuse
         this mnemonic on mainnet or with real funds.
+      </div>
+      <div class="note bad" id="mainnetNote" hidden>
+        Mainnet costs real DASH. You bring the funding key yourself — this page
+        never generates a wallet that holds your money. It does generate the new
+        identity's keys, and if you lose that phrase the identity is gone.
       </div>
       <button class="btn primary" id="startBtn">Start</button>
       <p class="fineprint">
@@ -67,15 +81,28 @@
 
     <!-- ── Step 1: wallet ────────────────────────────────────────────── -->
     <section class="panel" id="panel-wallet" hidden>
-      <h2>Your testnet wallet</h2>
-      <p>
+      <h2 id="walletTitle">Your testnet wallet</h2>
+      <p id="walletIntro">
         This mnemonic controls everything below. Save it now — it's the only way
         to recover this wallet, and it's shown only here.
       </p>
 
+      <!-- mainnet: you supply the funding key instead of the page making one -->
+      <div id="byoKeyBlock" hidden>
+        <div class="field">
+          <label for="fundingWif">Funding key (WIF) — a key you already control</label>
+          <input type="password" id="fundingWif" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn ghost" id="deriveAddrBtn">Derive my platform address</button>
+        <p class="fineprint">
+          Used only in this page: to derive the address and to sign the funding
+          input. Any credits left over stay on that address, under your key.
+        </p>
+      </div>
+
       <div class="field">
         <div class="field-head">
-          <label>Recovery phrase (mnemonic)</label>
+          <label id="mnemonicLabel">Recovery phrase (mnemonic)</label>
           <button class="btn ghost sm" id="copyMnemonic">Copy</button>
         </div>
         <div class="mono box" id="mnemonicBox">…</div>
@@ -91,7 +118,7 @@
 
       <label class="confirm">
         <input type="checkbox" id="savedMnemonic" />
-        I've saved my recovery phrase somewhere safe.
+        <span id="savedMnemonicText">I've saved my recovery phrase somewhere safe.</span>
       </label>
       <button class="btn primary" id="toFundBtn" disabled>Continue to funding</button>
     </section>
@@ -99,7 +126,7 @@
     <!-- ── Step 2: fund ──────────────────────────────────────────────── -->
     <section class="panel" id="panel-fund" hidden>
       <h2>Fund your address</h2>
-      <p>
+      <p id="fundIntro">
         Credits come from the <strong>Dash Bridge</strong>. Open it (your address
         is prefilled), request testnet credits, and this page will pick up the
         balance automatically.
@@ -116,6 +143,33 @@
       <a class="btn primary" id="bridgeBtn" href="#" target="_blank" rel="noopener">
         Open Dash Bridge ↗
       </a>
+
+      <!-- mainnet: no faucet exists, so credits come from an identity you own -->
+      <div id="mainnetFundBlock" hidden>
+        <p>
+          There is no faucet on mainnet. Credits reach this address in one of two
+          ways: from an identity you already own (below), or from a Dash Core
+          asset lock made in
+          <a href="https://github.com/dashpay/dash-evo-tool" target="_blank" rel="noopener">Dash Evo Tool</a>.
+        </p>
+        <details class="keys" id="fundFromIdentity">
+          <summary>Send credits from an identity I own</summary>
+          <div class="field">
+            <label for="srcIdentity">Identity ID</label>
+            <input type="text" id="srcIdentity" placeholder="base58 identity ID" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="srcTransferWif">Its TRANSFER key (WIF)</label>
+            <input type="password" id="srcTransferWif" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="srcAmount">Amount (DASH)</label>
+            <input type="text" id="srcAmount" placeholder="0.25" autocomplete="off" spellcheck="false" />
+          </div>
+          <button class="btn primary" id="fundFromIdentityBtn">Send credits</button>
+          <div id="fundOut"></div>
+        </details>
+      </div>
 
       <div class="balance">
         <div class="balance-row">

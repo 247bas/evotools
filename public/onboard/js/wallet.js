@@ -1,7 +1,7 @@
 // Wallet + key derivation, mirroring evo-cookbook recipe 10 (the verified v4
 // Platform Address flow). All of this is offline — no network, no Dash Core.
 
-import { loadEvo, NETWORK } from './sdk.js';
+import { loadEvo, getNetwork } from './sdk.js';
 
 // The 5 standard identity keys (DIP-9/DIP-13 layout, same as Dash Evo Tool):
 //   0 MASTER auth · 1 HIGH auth · 2 CRITICAL auth · 3 TRANSFER · 4 ENCRYPTION
@@ -17,7 +17,8 @@ export async function keySpecs() {
   ];
 }
 
-// Generate a fresh testnet wallet and its funding (platform) address.
+// Generate a fresh wallet and its funding (platform) address, on the current
+// network. Used for the testnet walkthrough; on mainnet you bring your own key.
 export async function generateWallet() {
   const { wallet } = await loadEvo();
   const mnemonic = await wallet.generateMnemonic();
@@ -25,32 +26,49 @@ export async function generateWallet() {
   return { mnemonic, ...funding };
 }
 
-// Funding address: BIP44 m/44'/1'/0'/0/0 → bech32m platform address (tdash1…).
+// Generate the mnemonic that will hold the new identity's keys. On mainnet this
+// is the only key material the browser creates — the funding key stays yours.
+export async function generateIdentityMnemonic() {
+  const { wallet } = await loadEvo();
+  return wallet.generateMnemonic();
+}
+
+// Funding address from a mnemonic: BIP44 m/44'/{coin}'/0'/0/0 → bech32m
+// platform address (tdash1… on testnet, dash1… on mainnet).
 export async function deriveFundingAddress(mnemonic) {
-  const { wallet, PrivateKey, PlatformAddressSigner } = await loadEvo();
-  const pathInfo = await wallet.derivationPathBip44Testnet(0, 0, 0);
-  const keyInfo = await wallet.deriveKeyFromSeedWithPath({
-    mnemonic,
-    path: pathInfo.path,
-    network: NETWORK,
-  });
-  const addressPrivateKeyWif = keyInfo.toObject().privateKeyWif;
-  const address = new PlatformAddressSigner()
-    .addKey(PrivateKey.fromWIF(addressPrivateKeyWif))
-    .toBech32m(NETWORK);
-  return { address, addressPrivateKeyWif };
+  const { wallet } = await loadEvo();
+  const net = getNetwork();
+  const pathInfo = net === 'mainnet'
+    ? await wallet.derivationPathBip44Mainnet(0, 0, 0)
+    : await wallet.derivationPathBip44Testnet(0, 0, 0);
+  const keyInfo = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path: pathInfo.path, network: net });
+  return platformAddressFromWif(keyInfo.toObject().privateKeyWif);
+}
+
+// Funding address from a key the user already controls. The WIF never leaves the
+// page; it is only used to derive the address and later to sign the funding input.
+export async function platformAddressFromWif(wif) {
+  const { PrivateKey, PlatformAddressSigner } = await loadEvo();
+  let privateKey;
+  try { privateKey = PrivateKey.fromWIF(wif); }
+  catch { throw new Error('That is not a valid WIF private key.'); }
+  const address = new PlatformAddressSigner().addKey(privateKey).toBech32m(getNetwork());
+  return { address, addressPrivateKeyWif: wif };
 }
 
 // Derive the 5 identity keys for identity index 0 via DIP-13:
-//   m/9'/1'/5'/0'/0'/0'/{keyId}'
+//   m/9'/{coin}'/5'/0'/0'/0'/{keyId}'
 export async function deriveIdentityKeys(mnemonic) {
   const { wallet } = await loadEvo();
+  const net = getNetwork();
   const specs = await keySpecs();
-  const base = await wallet.derivationPathDip13Testnet(5);
+  const base = net === 'mainnet'
+    ? await wallet.derivationPathDip13Mainnet(5)
+    : await wallet.derivationPathDip13Testnet(5);
   return Promise.all(
     specs.map(async (spec) => {
       const path = `${base.path}/0'/0'/0'/${spec.keyId}'`;
-      const k = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path, network: NETWORK });
+      const k = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path, network: net });
       const obj = k.toObject();
       return { spec, publicKeyHex: obj.publicKey, privateKeyWif: obj.privateKeyWif };
     }),

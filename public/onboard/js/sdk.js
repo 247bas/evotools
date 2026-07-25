@@ -1,13 +1,18 @@
-// Lazy loader for the vendored evo-sdk v4 (WASM inlined). The module is ~9.5MB,
-// so we import it dynamically only when the user actually starts — the landing
-// page stays light. One EvoSDK instance is created and reused across steps.
-// The SDK is shared by all tools in the monorepo (evotools/shared/vendor).
+// Network-aware lazy loader for the vendored evo-sdk v4 (WASM inlined). The
+// module is ~9.5MB, so we import it dynamically only when the user actually
+// starts — the landing page stays light. One connected SDK is cached per
+// network. Same pattern as dash-name and the explorer.
 
-export const NETWORK = 'testnet';
+export const NETWORKS = ['testnet', 'mainnet'];
 
-let _mod = null;       // the evo-sdk module namespace
-let _sdk = null;       // connected EvoSDK singleton
-let _connecting = null;
+let _network = 'testnet';
+let _mod = null;          // the evo-sdk module namespace
+const _sdks = {};         // connected EvoSDK per network
+const _connecting = {};
+
+export function setNetwork(n) { if (NETWORKS.includes(n)) _network = n; }
+export function getNetwork() { return _network; }
+export const isMainnet = () => _network === 'mainnet';
 
 // Load and cache the SDK module (triggers WASM init on first real call).
 export async function loadEvo() {
@@ -17,21 +22,22 @@ export async function loadEvo() {
   return _mod;
 }
 
-// Return a connected testnet SDK, connecting once and sharing the promise so
-// concurrent callers don't open two connections.
+// Return a connected SDK for the current network, sharing the in-flight promise
+// so concurrent callers don't open two connections.
 export async function getSdk() {
+  const net = _network;
   const Evo = await loadEvo();
-  if (_sdk && _sdk.isConnected) return _sdk;
-  if (!_connecting) {
-    _connecting = (async () => {
-      const sdk = Evo.EvoSDK.testnetTrusted();
+  if (_sdks[net] && _sdks[net].isConnected) return _sdks[net];
+  if (!_connecting[net]) {
+    _connecting[net] = (async () => {
+      const sdk = net === 'mainnet' ? Evo.EvoSDK.mainnetTrusted() : Evo.EvoSDK.testnetTrusted();
       await sdk.connect();
-      _sdk = sdk;
-      _connecting = null;
+      _sdks[net] = sdk;
+      _connecting[net] = null;
       return sdk;
     })();
   }
-  return _connecting;
+  return _connecting[net];
 }
 
 // ── small byte helpers ─────────────────────────────────────────────────────

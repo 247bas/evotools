@@ -1,7 +1,8 @@
-// Platform operations: read an address balance, create an identity from the
-// funded address, and register a DPNS username. Pinned to evo-sdk v4 (see PLAN.md).
+// Platform operations: read an address balance, move credits onto that address
+// from an identity you already own, create an identity from the funded address,
+// and register a DPNS username. Pinned to evo-sdk v4 (see PLAN.md).
 
-import { loadEvo, getSdk, hexToBytes, randomBytes32 } from './sdk.js';
+import { loadEvo, getSdk, getNetwork, hexToBytes, randomBytes32 } from './sdk.js';
 import { deriveIdentityKeys } from './wallet.js';
 
 // Balance of a platform address, in credits (bigint). 0n when unfunded.
@@ -9,6 +10,45 @@ export async function getAddressBalance(address) {
   const sdk = await getSdk();
   const info = await sdk.addresses.get(address);
   return info?.balance ?? 0n;
+}
+
+// Balance of an identity, in credits (bigint).
+export async function getIdentityBalance(identityId) {
+  const sdk = await getSdk();
+  const identity = await sdk.identities.fetch(identityId);
+  if (!identity) throw new Error(`Identity not found on this network: ${identityId}`);
+  return identity.balance ?? 0n;
+}
+
+// Move credits from an identity you own onto a platform address. This is how a
+// mainnet address gets funded without Dash Core: the identity pays, signed with
+// its TRANSFER key (purpose TRANSFER, the only key allowed to move credits).
+export async function fundAddressFromIdentity({ identityId, transferWif, address, amount }) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const { IdentitySigner, PlatformAddress, PlatformAddressOutput, PrivateKey } = Evo;
+
+  const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
+  const transferKeys = keys.filter((k) => k.purpose === 'TRANSFER' && !k.disabledAt);
+  if (!transferKeys.length) throw new Error('This identity has no TRANSFER key, so it cannot send credits.');
+
+  let privateKeyBytes;
+  try { privateKeyBytes = PrivateKey.fromWIF(transferWif).toBytes(); }
+  catch { throw new Error('That is not a valid WIF private key.'); }
+  const match = transferKeys.some((k) => {
+    try { return k.validatePrivateKey(privateKeyBytes, getNetwork()); } catch { return false; }
+  });
+  if (!match) throw new Error('That key is not the TRANSFER key of this identity.');
+
+  const signer = new IdentitySigner();
+  signer.addKeyFromWif(transferWif);
+
+  const result = await sdk.addresses.transferFromIdentity({
+    identityId,
+    outputs: [new PlatformAddressOutput(PlatformAddress.fromBech32m(address), amount)],
+    signer,
+  });
+  return { newBalance: result?.newBalance };
 }
 
 // Create an identity funded from the platform address. `amount` is the credits

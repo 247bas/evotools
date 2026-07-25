@@ -31,6 +31,17 @@
 .bar-fill { height: 100%; width: 0; background: var(--blue); border-radius: 999px; transition: width 0.4s ease; }
 .balance-hint { color: var(--muted); font-size: 0.82rem; margin-top: 8px; }
 
+/* Text/select fields (network picker, funding key, transfer form) */
+.field input[type="text"], .field input[type="password"], .field select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-size: 0.9rem;
+  font-family: var(--mono);
+}
+.field select { font-family: inherit; }
+.field input:focus, .field select:focus { outline: none; border-color: var(--blue); }
+/* standalone labels only — inside .field-head the shared theme already places them */
+.field > label { display: block; margin-bottom: 7px; }
+
 /* Username */
 .username-input { display: flex; align-items: center; }
 .username-input input {

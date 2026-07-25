@@ -1,20 +1,35 @@
 // evo-onboard — step orchestration and UI wiring.
 
-import { generateWallet } from './wallet.js';
+import { generateWallet, generateIdentityMnemonic, platformAddressFromWif } from './wallet.js';
 import {
   getAddressBalance, createIdentity, checkUsername, registerUsername,
+  fundAddressFromIdentity,
 } from './platform.js';
+import { setNetwork, getNetwork, isMainnet } from './sdk.js';
 
-// ── constants (credits are bigint; 1 tDASH = 100,000,000,000 credits) ───────
+// ── constants (credits are bigint; 1 DASH = 100,000,000,000 credits) ────────
 const CREDITS_PER_DASH = 100_000_000_000n;
-const MIN_FUND = 5_000_000_000n;    // 0.05 tDASH — enough to mint + name
-const RECOMMENDED = 50_000_000_000n; // 0.5 tDASH — also covers a contract publish
-// The identity creation fee is ~236,900,000 credits (~0.0024 tDASH). Keep back
+// The identity creation fee is ~236,900,000 credits (~0.0024 DASH). Keep back
 // well more than that so the funding input always covers the fee; the identity
 // is funded with (balance - RESERVE).
-const RESERVE = 1_000_000_000n;      // 0.01 tDASH kept back for the creation fee
+const RESERVE = 1_000_000_000n;      // 0.01 DASH kept back for the creation fee
+const NET = {
+  testnet: {
+    unit: 'tDASH',
+    minFund: 5_000_000_000n,    // 0.05 tDASH — enough to mint + name
+    recommended: 50_000_000_000n, // 0.5 tDASH — also covers a contract publish
+    explorer: 'https://testnet.platform-explorer.com',
+  },
+  mainnet: {
+    unit: 'DASH',
+    minFund: 2_000_000_000n,     // 0.02 DASH — mint plus a little headroom
+    // 0.25 DASH also covers a contested name (0.2) and its fees.
+    recommended: 25_000_000_000n,
+    explorer: 'https://platform-explorer.com',
+  },
+};
+const cfg = () => NET[getNetwork()];
 const BRIDGE = 'https://bridge.thepasta.org/';
-const EXPLORER = 'https://testnet.platform-explorer.com';
 const POLL_MS = 4000;
 
 // ── state ───────────────────────────────────────────────────────────────────
@@ -78,29 +93,105 @@ function withBusy(btn, label, fn) {
   };
 }
 
+// ── Step 0: network ──────────────────────────────────────────────────────────
+// Switching only matters before the flow starts; after that the wizard carries
+// per-network state (address, keys, balances), so the selector is intro-only.
+$('netsel').addEventListener('change', () => {
+  setNetwork($('netsel').value);
+  const main = isMainnet();
+  $('testnetNote').hidden = main;
+  $('mainnetNote').hidden = !main;
+  $('introStep1').textContent = main
+    ? 'Bring a funding key you already control (WIF)'
+    : 'Generate a testnet wallet (offline, in your browser)';
+  $('introStep2').textContent = main
+    ? 'Move credits onto its platform address'
+    : 'Fund its address via the Dash Bridge';
+});
+
 // ── Step 1: wallet ───────────────────────────────────────────────────────────
 $('startBtn').addEventListener('click', withBusy($('startBtn'), 'Loading SDK…', async () => {
   clearError();
-  const w = await generateWallet();
-  Object.assign(state, w);
+  const main = isMainnet();
+  if (main) {
+    // Nothing that holds money is generated here — only the keys of the identity
+    // that is about to be created. The funding key comes from the user.
+    state.mnemonic = await generateIdentityMnemonic();
+    state.address = null;
+    state.addressPrivateKeyWif = null;
+    $('addressBox1').textContent = 'paste your funding key above';
+  } else {
+    Object.assign(state, await generateWallet());
+    $('addressBox1').textContent = state.address;
+    $('addressBox2').textContent = state.address;
+  }
   $('mnemonicBox').textContent = state.mnemonic;
-  $('addressBox1').textContent = state.address;
-  $('addressBox2').textContent = state.address;
+  $('byoKeyBlock').hidden = !main;
+  $('walletTitle').textContent = main ? 'Your funding key and identity keys' : 'Your testnet wallet';
+  $('walletIntro').textContent = main
+    ? 'The phrase below holds the keys of the identity you are about to create. Save it now — it is shown only here, and without it the identity is unrecoverable.'
+    : 'This mnemonic controls everything below. Save it now — it\'s the only way to recover this wallet, and it\'s shown only here.';
+  $('mnemonicLabel').textContent = main ? 'Identity recovery phrase (mnemonic)' : 'Recovery phrase (mnemonic)';
+  $('savedMnemonicText').textContent = main
+    ? "I've saved the identity phrase somewhere safe."
+    : "I've saved my recovery phrase somewhere safe.";
+  updateContinue();
   showPanel('wallet', 1);
 }));
 
-$('savedMnemonic').addEventListener('change', (e) => {
-  $('toFundBtn').disabled = !e.target.checked;
-});
+// Continue is allowed once the phrase is confirmed and — on mainnet — a funding
+// address has actually been derived from the pasted key.
+function updateContinue() {
+  $('toFundBtn').disabled = !($('savedMnemonic').checked && state.address);
+}
+$('savedMnemonic').addEventListener('change', updateContinue);
+
+$('deriveAddrBtn').addEventListener('click', withBusy($('deriveAddrBtn'), 'Deriving…', async () => {
+  clearError();
+  const wif = $('fundingWif').value.trim();
+  if (!wif) throw new Error('Paste the WIF of the key you want to fund from.');
+  const derived = await platformAddressFromWif(wif);
+  Object.assign(state, derived);
+  $('addressBox1').textContent = state.address;
+  $('addressBox2').textContent = state.address;
+  updateContinue();
+}));
 $('copyMnemonic').addEventListener('click', (e) => copyToButton(e.target, state.mnemonic));
 $('copyAddress1').addEventListener('click', (e) => copyToButton(e.target, state.address));
 $('copyAddress2').addEventListener('click', (e) => copyToButton(e.target, state.address));
 
 $('toFundBtn').addEventListener('click', () => {
-  $('bridgeBtn').href = `${BRIDGE}?address=${encodeURIComponent(state.address)}`;
+  const main = isMainnet();
+  $('bridgeBtn').hidden = main;
+  $('mainnetFundBlock').hidden = !main;
+  if (main) {
+    $('fundIntro').textContent = 'This address holds credits on Platform. Fund it, and this page picks up the balance automatically.';
+  } else {
+    $('bridgeBtn').href = `${BRIDGE}?address=${encodeURIComponent(state.address)}`;
+  }
   showPanel('fund', 2);
   startPolling();
 });
+
+// Mainnet funding: move credits from an identity you already own onto the
+// address, signed with that identity's TRANSFER key.
+$('fundFromIdentityBtn').addEventListener('click', withBusy($('fundFromIdentityBtn'), 'Sending…', async () => {
+  clearError();
+  const out = $('fundOut');
+  out.replaceChildren();
+  const identityId = $('srcIdentity').value.trim();
+  const transferWif = $('srcTransferWif').value.trim();
+  const dash = Number($('srcAmount').value.trim());
+  if (!identityId || !transferWif) throw new Error('Enter the identity ID and its TRANSFER key.');
+  if (!Number.isFinite(dash) || dash <= 0) throw new Error('Enter an amount in DASH, e.g. 0.25');
+  const amount = BigInt(Math.round(dash * Number(CREDITS_PER_DASH)));
+  await fundAddressFromIdentity({ identityId, transferWif, address: state.address, amount });
+  const ok = document.createElement('div');
+  ok.className = 'note ok';
+  ok.textContent = `Sent ${dash} DASH worth of credits. The balance below updates within a few seconds.`;
+  out.append(ok);
+  poll();
+}));
 
 // ── Step 2: fund ─────────────────────────────────────────────────────────────
 function startPolling() {
@@ -122,17 +213,20 @@ async function poll() {
 }
 function renderBalance() {
   const { balance } = state;
-  $('balanceValue').textContent = `${creditsToDash(balance)} tDASH`;
-  const pct = Math.min(100, Number(balance * 100n / RECOMMENDED));
+  const { unit, minFund, recommended } = cfg();
+  $('balanceValue').textContent = `${creditsToDash(balance)} ${unit}`;
+  const pct = Math.min(100, Number(balance * 100n / recommended));
   $('balanceBar').style.width = `${pct}%`;
-  const enough = balance >= MIN_FUND;
+  const enough = balance >= minFund;
   $('toIdentityBtn').disabled = !enough;
   if (balance === 0n) {
     $('balanceHint').textContent = 'Waiting for credits… keep this tab open.';
   } else if (!enough) {
-    $('balanceHint').textContent = `Received some credits. Need at least ${creditsToDash(MIN_FUND)} tDASH to continue.`;
-  } else if (balance < RECOMMENDED) {
-    $('balanceHint').textContent = `Enough to mint. For an identity that can also publish contracts, ${creditsToDash(RECOMMENDED)} tDASH is recommended.`;
+    $('balanceHint').textContent = `Received some credits. Need at least ${creditsToDash(minFund)} ${unit} to continue.`;
+  } else if (balance < recommended) {
+    $('balanceHint').textContent = isMainnet()
+      ? `Enough to mint. For a contested name (0.2 DASH) plus fees, ${creditsToDash(recommended)} ${unit} is recommended.`
+      : `Enough to mint. For an identity that can also publish contracts, ${creditsToDash(recommended)} ${unit} is recommended.`;
   } else {
     $('balanceHint').textContent = 'Fully funded. You can create your identity.';
   }
@@ -160,7 +254,7 @@ async function runCreateIdentity() {
     });
     Object.assign(state, res);
     $('identityIdBox').textContent = state.identityId;
-    $('explorerIdentity').href = `${EXPLORER}/identity/${state.identityId}`;
+    $('explorerIdentity').href = `${cfg().explorer}/identity/${state.identityId}`;
     $('identityProgress').hidden = true;
     $('identityResult').hidden = false;
   } catch (e) {
@@ -208,7 +302,9 @@ function scheduleUsernameCheck(label) {
         status.textContent = `${label}.dash is already taken.`;
       } else if (contested) {
         status.className = 'username-status warn';
-        status.textContent = `${label}.dash is a premium/contested name — registering starts a masternode vote.`;
+        status.textContent = isMainnet()
+          ? `${label}.dash is a contested name — it costs 0.2 DASH extra and goes to a 2-week masternode vote.`
+          : `${label}.dash is a premium/contested name — registering starts a masternode vote.`;
         $('registerBtn').disabled = false;
       } else {
         status.className = 'username-status ok';
@@ -262,7 +358,8 @@ function finish() {
   const rows = [];
   if (state.username) rows.push(['Username', state.username]);
   rows.push(['Identity', state.identityId]);
-  rows.push(['Explorer', 'testnet.platform-explorer.com']);
+  rows.push(['Network', getNetwork()]);
+  rows.push(['Explorer', cfg().explorer.replace('https://', '')]);
   summary.innerHTML = rows.map(([k, v]) => `<div class="item"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 
   $('envBox').textContent = envText();

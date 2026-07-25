@@ -1,8 +1,11 @@
 // Smoke test: exercises the real app modules against testnet, up to (but not
 // including) broadcasting. Run: node test/smoke.mjs
-import { generateWallet, deriveIdentityKeys, keySpecs } from '../js/wallet.js';
-import { loadEvo, getSdk } from '../js/sdk.js';
-import { getAddressBalance, checkUsername } from '../js/platform.js';
+import {
+  generateWallet, deriveIdentityKeys, keySpecs,
+  generateIdentityMnemonic, platformAddressFromWif,
+} from '../js/wallet.js';
+import { loadEvo, getSdk, setNetwork } from '../js/sdk.js';
+import { getAddressBalance, checkUsername, fundAddressFromIdentity } from '../js/platform.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
 const info = (m) => console.log(`  ·  ${m}`);
@@ -56,6 +59,36 @@ const badChars = await checkUsername('-bad-');
 check(badChars.valid === false, 'invalid name "-bad-" rejected');
 const dashTaken = await checkUsername('dash');
 info(`"dash" -> valid=${dashTaken.valid} available=${dashTaken.available} contested=${dashTaken.contested}`);
+
+console.log('\n6. Mainnet mode: own funding key, no wallet generated (network)');
+setNetwork('mainnet');
+const mainKey = Evo.PrivateKey.fromBytes(crypto.getRandomValues(new Uint8Array(32)), 'mainnet');
+const byo = await platformAddressFromWif(mainKey.toWIF());
+check(byo.address.startsWith('dash1'), `WIF -> mainnet platform address ${byo.address}`);
+check(byo.addressPrivateKeyWif === mainKey.toWIF(), 'funding WIF passed through untouched');
+try { await platformAddressFromWif('not-a-wif'); failed++; console.log('  ❌ garbage WIF accepted'); }
+catch (e) { check(/valid WIF/.test(e.message), `garbage WIF rejected — ${e.message}`); }
+
+const mainMnemonic = await generateIdentityMnemonic();
+const mainKeys = await deriveIdentityKeys(mainMnemonic);
+check(mainKeys.length === 5 && mainKeys.every((d) => /^[0-9a-f]{66}$/.test(d.publicKeyHex)), 'DIP-13 mainnet identity keys derived');
+check(mainKeys[0].privateKeyWif !== derived[0].privateKeyWif, 'mainnet keys differ from the testnet ones');
+await getSdk();
+const mainBal = await getAddressBalance(byo.address);
+check(typeof mainBal === 'bigint' && mainBal === 0n, `fresh mainnet address balance = ${mainBal} credits`);
+
+console.log('\n7. Mainnet funding guard: wrong key is refused before broadcast');
+try {
+  await fundAddressFromIdentity({
+    identityId: 'CkKwW6VVEvo1EEps7NERZADE13ZWUwwz7kkuZentxVuj', // bas.dash
+    transferWif: mainKey.toWIF(),
+    address: byo.address,
+    amount: 100_000n,
+  });
+  failed++; console.log('  ❌ transfer with a foreign key was not refused');
+} catch (e) {
+  check(/not the TRANSFER key/.test(e.message), `foreign key refused — ${e.message}`);
+}
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

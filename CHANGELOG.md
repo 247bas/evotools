@@ -5,6 +5,15 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Onboard runs on mainnet** — with a different shape than testnet, because the
+  risk is different. Testnet still generates a wallet and points at the Dash
+  Bridge. Mainnet asks for the WIF of a key you already control, derives its
+  platform address (`dash1…`), and only generates the keys of the identity being
+  created. There is no faucet on mainnet, so the funding step can move credits
+  onto that address from an identity you already own (`transferFromIdentity`,
+  signed with its TRANSFER key), with Dash Evo Tool's asset lock as the other
+  route. Amounts, units, explorer links and the contested-name warning follow the
+  selected network.
 - **dash-name claims any identity** — registration no longer insists on a
   CRITICAL authentication key. DPNS documents may be signed by an AUTHENTICATION
   key at CRITICAL, HIGH or MEDIUM level (a MASTER key never signs documents), and
