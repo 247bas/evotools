@@ -356,27 +356,38 @@ $('convertBtn').addEventListener('click', withBusy($('convertBtn'), 'Converting�
   const dash = Number($('lockAmount').value.trim());
   if (!Number.isFinite(dash) || dash <= 0) throw new Error('Enter an amount in DASH, e.g. 0.05');
   const lockDuffs = Math.round(dash * 1e8);
-  const [dc, sdk, Evo] = await Promise.all([loadDashcore(), getSdk(), loadEvo()]);
-  const steps = {
-    build: 'Building the asset lock…',
-    broadcast: 'Sending it to the Dash network…',
-    mining: 'Waiting for a block. This takes a couple of minutes.',
-    chainlock: 'Waiting for the block to be chain-locked…',
-    crediting: 'Handing the lock to Platform…',
-    done: 'Converted. The credits are on your platform address.',
-  };
-  let last = null;
-  await convertToCredits({
-    sdk, Evo, dc,
-    wif: state.addressPrivateKeyWif,
-    utxos: coreUtxos,
-    lockDuffs,
-    network: getNetwork(),
-    platformAddress: state.address,
-    onProgress: ({ step }) => { if (step !== last) { last = step; say(steps[step] ?? step); } },
-  });
-  say('Converted.', 'note ok');
-  poll();
+  // Offering "look for unfinished conversions" mid-conversion invites someone to
+  // race the run they are watching, over the very lock it is busy with.
+  $('resumeBlock').hidden = true;
+  $('lockAmount').disabled = true;
+  try {
+    const [dc, sdk, Evo] = await Promise.all([loadDashcore(), getSdk(), loadEvo()]);
+    const steps = {
+      build: 'Building the asset lock…',
+      broadcast: 'Sending it to the Dash network…',
+      mining: 'Waiting for a block. This takes a couple of minutes.',
+      chainlock: 'Waiting for the block to be chain-locked…',
+      crediting: 'Handing the lock to Platform…',
+      done: 'Converted. The credits are on your platform address.',
+    };
+    let last = null;
+    await convertToCredits({
+      sdk, Evo, dc,
+      wif: state.addressPrivateKeyWif,
+      utxos: coreUtxos,
+      lockDuffs,
+      network: getNetwork(),
+      platformAddress: state.address,
+      onProgress: ({ step }) => { if (step !== last) { last = step; say(steps[step] ?? step); } },
+    });
+    say('Converted.', 'note ok');
+    poll();
+  } finally {
+    // Back on offer once nothing is in flight — including after a failure, which
+    // is exactly when someone needs it.
+    $('resumeBlock').hidden = false;
+    $('lockAmount').disabled = false;
+  }
 }));
 
 // Pick up a conversion that was interrupted. Everything needed is on the chain

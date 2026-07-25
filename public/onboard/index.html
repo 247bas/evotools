@@ -206,22 +206,22 @@
         <button class="btn primary" id="convertBtn" disabled>Convert to credits</button>
         <div id="convertOut"></div>
 
-        <p class="fineprint">
-          Closed the tab halfway through a conversion? The coins are still on the
-          chain waiting to be claimed — nothing was stored here, but your key is
-          enough to find them.
-        </p>
-        <button class="btn ghost" id="resumeBtn">Look for unfinished conversions</button>
+        <div id="resumeBlock">
+          <p class="fineprint">
+            Closed the tab halfway through a conversion? The coins are still on the
+            chain waiting to be claimed — nothing was stored here, but your key is
+            enough to find them.
+          </p>
+          <button class="btn ghost" id="resumeBtn">Look for unfinished conversions</button>
+        </div>
         <div id="resumeOut"></div>
       </details>
 
       <!-- mainnet: no faucet exists, so credits come from an identity you own -->
       <div id="mainnetFundBlock" hidden>
         <p>
-          There is no faucet on mainnet. Credits reach this address in one of two
-          ways: from an identity you already own (below), or from a Dash Core
-          asset lock made in
-          <a href="https://github.com/dashpay/dash-evo-tool" target="_blank" rel="noopener">Dash Evo Tool</a>.
+          Already have an identity with credits? It can send them here instead —
+          no layer-1 transaction involved.
         </p>
         <details class="keys" id="fundFromIdentity">
           <summary>Send credits from an identity I own</summary>
