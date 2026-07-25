@@ -17,7 +17,13 @@ const el = (tag, cls, text) => {
 };
 const CREDITS_PER_DASH = 100_000_000_000n;
 const unit = () => (getNetwork() === 'mainnet' ? 'DASH' : 'tDASH');
-const toDash = (credits) => (Number(credits) / Number(CREDITS_PER_DASH)).toFixed(5);
+// Always round DOWN. Showing 0.0041 for 0.00407 invites an amount larger than
+// the balance, and the refusal that follows looks like a bug in the tool.
+const floorTo = (value, decimals) => {
+  const scale = 10 ** decimals;
+  return (Math.floor(value * scale) / scale).toFixed(decimals);
+};
+const toDash = (credits) => floorTo(Number(credits) / Number(CREDITS_PER_DASH), 5);
 const toCredits = (dash) => BigInt(Math.round(Number(dash) * Number(CREDITS_PER_DASH)));
 
 let current = null;
@@ -170,7 +176,7 @@ for (const [wifId, outId] of [['topUpWif', 'topUpOut'], ['moveWif', 'moveOut'], 
 }
 
 // ── turning DASH into credits ────────────────────────────────────────────────
-const duffsToDash = (duffs) => (duffs / 1e8).toFixed(4);
+const duffsToDash = (duffs) => floorTo(duffs / 1e8, 4);
 
 let convertTimer = null;
 $('convertWif').addEventListener('input', () => {
