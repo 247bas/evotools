@@ -5,6 +5,14 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Shielded pool panel in the explorer** — Platform runs an Orchard shielded
+  credit pool, and it is live on both networks. The panel shows testnet and
+  mainnet side by side: total balance, note count, anchors and the latest
+  commitment-tree anchor, plus a nullifier spent-check. "Verify with proof"
+  applies here too, via `poolStateWithProof`. Reads only — building a shielded
+  transition needs the Orchard prover, which the WASM SDK leaves out. Note that
+  `encryptedNotes` only accepts startIndex 0 (ranges must be MMR-aligned), so the
+  note count is one capped request rather than real paging.
 - **Onboard runs on mainnet** — with a different shape than testnet, because the
   risk is different. Testnet still generates a wallet and points at the Dash
   Bridge. Mainnet asks for the WIF of a key you already control, derives its

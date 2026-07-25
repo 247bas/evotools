@@ -3,6 +3,7 @@
 import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
   countDocuments, networkInfo, lookupToken, decodeStateTransition, creditsToDash,
+  shieldedPool, checkNullifier,
 } from '../js/explorer.js';
 import { setNetwork } from '../js/sdk.js';
 
@@ -73,6 +74,21 @@ const mn = await safe('lookupName(dash)@mainnet', () => lookupName('dash'));
 check(mn?.registered && mn.identityId, `mainnet dash -> ${mn?.identityId}`);
 const mi = mn?.identityId ? await safe('lookupIdentity@mainnet', () => lookupIdentity(mn.identityId)) : null;
 check(typeof mi?.balance === 'bigint', `mainnet identity balance ${creditsToDash(mi?.balance)} DASH, ${mi?.keys?.length} keys`);
+
+console.log('\n9. Shielded pool — both networks, with and without proof');
+for (const net of ['testnet', 'mainnet']) {
+  const unit = net === 'mainnet' ? 'DASH' : 'tDASH';
+  const pool = await safe(`shieldedPool(${net})`, () => shieldedPool(net));
+  check(typeof pool?.balance === 'bigint', `${net}: ${creditsToDash(pool?.balance)} ${unit} · ${pool?.notes} notes · ${pool?.anchors} anchors`);
+  check(pool?.latestAnchor?.length === 64, `${net}: anchor ${pool?.latestAnchor?.slice(0, 16)}…`);
+  check(pool?.noteBytes === 216, `${net}: note ciphertext ${pool?.noteBytes} bytes`);
+}
+const proven = await safe('shieldedPool(mainnet, proof)', () => shieldedPool('mainnet', { proof: true, notes: false }));
+check(proven?.proof && typeof proven.proof.height === 'bigint', `proven pool state at height ${proven?.proof?.height}, quorumType ${proven?.proof?.quorumType}`);
+const nul = await safe('checkNullifier', () => checkNullifier('mainnet', '00'.repeat(32)));
+check(nul && typeof nul.isSpent === 'boolean', `all-zero nullifier spent: ${nul?.isSpent}`);
+const bad = await checkNullifier('mainnet', 'nope').then(() => null, (e) => e);
+check(bad instanceof Error, 'malformed nullifier is rejected client-side');
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

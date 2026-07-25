@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Explorer — browse Dash Platform · evotools</title>
-  <meta name="description" content="Look up identities, DPNS names, data contracts and documents on Dash Platform (testnet or mainnet) — with the SDK snippet that fetched each one." />
+  <meta name="description" content="Look up identities, DPNS names, data contracts and documents on Dash Platform (testnet or mainnet), and read the Orchard shielded pool — with the SDK snippet that fetched each one." />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
@@ -55,6 +55,30 @@
 
     <div class="error" id="err" hidden></div>
     <div id="results"></div>
+
+    <details class="ex-dev" id="shielded">
+      <summary>Shielded pool</summary>
+      <div class="ex-dev-body">
+        <p class="ex-sub">
+          Platform runs an Orchard shielded credit pool. How much is in it, how many
+          notes it holds and the commitment-tree anchors are public — who owns a note
+          and what it holds is not. Both networks, side by side.
+        </p>
+        <div class="ex-pools" id="pools"></div>
+        <div class="ex-nul">
+          <label for="nulInput">Check whether a nullifier has been spent (32 bytes, hex)</label>
+          <div class="ex-qrow">
+            <select id="nulNet" aria-label="Network for the nullifier check">
+              <option value="testnet">testnet</option>
+              <option value="mainnet">mainnet</option>
+            </select>
+            <input id="nulInput" type="text" spellcheck="false" autocomplete="off" placeholder="64 hex characters" />
+            <button class="btn ghost sm" id="nulBtn">Check</button>
+          </div>
+          <div id="nulOut"></div>
+        </div>
+      </div>
+    </details>
 
     <details class="ex-dev">
       <summary>Developer tools</summary>

@@ -17,8 +17,9 @@ export async function loadEvo() {
   return _mod;
 }
 
-export async function getSdk() {
-  const net = _network;
+// An SDK for a specific network, regardless of the current selection. The
+// shielded panel uses this to show testnet and mainnet side by side.
+export async function getSdkFor(net) {
   const Evo = await loadEvo();
   if (_sdks[net] && _sdks[net].isConnected) return _sdks[net];
   if (!_connecting[net]) {
@@ -31,4 +32,8 @@ export async function getSdk() {
     })();
   }
   return _connecting[net];
+}
+
+export function getSdk() {
+  return getSdkFor(_network);
 }

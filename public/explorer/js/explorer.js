@@ -2,7 +2,7 @@
 // documents, plus proofs, aggregations and network info. Each returns a plain
 // object the UI renders + a raw JSON dump.
 
-import { getSdk, loadEvo } from './sdk.js';
+import { getSdk, getSdkFor, loadEvo } from './sdk.js';
 
 const CREDITS_PER_DASH = 100_000_000_000n;
 export const creditsToDash = (c) => (Number(c ?? 0n) / Number(CREDITS_PER_DASH)).toFixed(4);
@@ -201,6 +201,57 @@ export async function networkInfo() {
     firstBlockHeight: e.firstBlockHeight,
     firstBlockTime: e.firstBlockTime,
   };
+}
+
+// ── shielded (Orchard) pool ──────────────────────────────────────────────────
+// Platform runs an Orchard shielded credit pool. Its total balance, the note
+// set and the commitment-tree anchors are public; who owns a note and what it
+// holds is not. Reads only — building shielded transitions needs the Orchard
+// prover, which the WASM SDK deliberately leaves out.
+
+// The note query has no count endpoint, so the note total comes from fetching
+// the set. It only accepts startIndex 0 (ranges must be MMR-aligned), so this
+// is one request with a ceiling rather than real paging.
+const NOTE_FETCH_CAP = 8192;
+
+export async function shieldedPool(network, { proof = false, notes = true } = {}) {
+  const sdk = await getSdkFor(network);
+
+  let balance, pm;
+  if (proof) {
+    const resp = await sdk.shielded.poolStateWithProof();
+    balance = resp.data;
+    pm = proofMeta(resp);
+  } else {
+    balance = await sdk.shielded.poolState();
+  }
+
+  const [anchors, latest, noteList] = await Promise.all([
+    sdk.shielded.anchors().catch(() => []),
+    sdk.shielded.mostRecentAnchor().catch(() => undefined),
+    notes ? sdk.shielded.encryptedNotes(0n, NOTE_FETCH_CAP).catch(() => null) : null,
+  ]);
+
+  return {
+    network,
+    balance: balance ?? 0n,
+    anchors: anchors.length,
+    latestAnchor: bytesToHex(latest),
+    notes: noteList ? noteList.length : undefined,
+    notesCapped: noteList ? noteList.length >= NOTE_FETCH_CAP : false,
+    noteBytes: noteList?.[0]?.encryptedNote?.length,
+    proof: pm,
+  };
+}
+
+// Has a nullifier been spent? Takes the 32-byte value as 64 hex characters.
+export async function checkNullifier(network, input) {
+  const clean = input.trim().replace(/^0x/i, '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(clean)) throw new Error('A nullifier is 32 bytes — 64 hex characters.');
+  const sdk = await getSdkFor(network);
+  const bytes = Uint8Array.from(clean.match(/../g).map((b) => parseInt(b, 16)));
+  const status = (await sdk.shielded.nullifiers([bytes]))?.[0];
+  return { nullifier: clean, isSpent: !!status?.isSpent, known: !!status };
 }
 
 // ── developer tools: decode / broadcast a state transition ───────────────────

@@ -7,8 +7,9 @@ import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
   countDocuments, networkInfo, lookupToken, creditsToDash,
   decodeStateTransition, broadcastStateTransition,
+  shieldedPool, checkNullifier,
 } from './explorer.js';
-import { setNetwork, getNetwork } from './sdk.js';
+import { setNetwork, getNetwork, NETWORKS } from './sdk.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -417,6 +418,83 @@ async function autoLookup(q, opts) {
   return notFound('No identity, contract or token with that ID on this network.');
 }
 
+// ── shielded pool ────────────────────────────────────────────────────────────
+// Loads both networks at once, so it ignores the network selector. Reloads when
+// the proof checkbox changes, since that switches to the proven query.
+let poolsShownWithProof = null;
+
+function poolCard(net, data) {
+  const card = el('div', 'ex-pool');
+  card.append(el('div', 'ex-pool-net', net));
+  const unit = net === 'mainnet' ? 'DASH' : 'tDASH';
+  card.append(el('div', 'ex-pool-amount', `${creditsToDash(data.balance)} ${unit}`));
+
+  const notes = data.notes == null
+    ? '—'
+    : `${data.notes}${data.notesCapped ? '+' : ''}`;
+  card.append(stats([
+    ['Notes', notes],
+    ['Anchors', String(data.anchors)],
+  ]));
+
+  if (data.latestAnchor) {
+    const f = el('div', 'ex-field');
+    f.append(el('div', 'ex-label', 'Latest anchor'));
+    const row = el('div', 'ex-value-row');
+    row.append(el('div', 'ex-value mono ex-anchor', data.latestAnchor));
+    row.append(copyBtn(data.latestAnchor));
+    f.append(row);
+    card.append(f);
+  }
+
+  const pp = proofPanel(data.proof);
+  if (pp) card.append(pp);
+  return card;
+}
+
+async function loadPools() {
+  const proof = $('proof').checked;
+  const box = $('pools');
+  poolsShownWithProof = proof;
+  box.replaceChildren(el('div', 'ex-loading', 'Reading both pools…'));
+
+  const results = await Promise.all(NETWORKS.map(async (net) => {
+    try { return { net, data: await shieldedPool(net, { proof }) }; }
+    catch (e) { return { net, error: e?.message || String(e) }; }
+  }));
+  if (poolsShownWithProof !== proof) return; // a newer load won
+
+  box.replaceChildren();
+  for (const r of results) {
+    if (r.data) { box.append(poolCard(r.net, r.data)); continue; }
+    const c = el('div', 'ex-pool');
+    c.append(el('div', 'ex-pool-net', r.net));
+    c.append(el('div', 'error', r.error));
+    box.append(c);
+  }
+  box.append(snippet(
+    `const sdk = EvoSDK.mainnetTrusted();\nawait sdk.connect();\n\nconst credits = await sdk.shielded.${proof ? 'poolStateWithProof' : 'poolState'}();\nconst notes = await sdk.shielded.encryptedNotes(0n, 8192); // startIndex must be 0\nconst anchor = await sdk.shielded.mostRecentAnchor();\nconst [status] = await sdk.shielded.nullifiers([nullifierBytes]);`,
+  ));
+  box.append(el('p', 'ex-sub ex-pool-foot',
+    'Reads only. Creating a shielded transition needs the Orchard prover, which the WASM SDK leaves out on purpose.'));
+  // Nothing came back at all — let reopening the panel try again.
+  if (results.every((r) => r.error)) poolsShownWithProof = null;
+}
+
+async function runNullifier() {
+  const out = $('nulOut');
+  const value = $('nulInput').value;
+  if (!value.trim()) return;
+  out.replaceChildren(el('div', 'ex-sub', 'Checking…'));
+  try {
+    const r = await checkNullifier($('nulNet').value, value);
+    out.replaceChildren(el('div', r.isSpent ? 'note warn' : 'note ok',
+      r.isSpent ? 'Spent — this nullifier is in the spent set.' : 'Not spent — this nullifier is not in the spent set.'));
+  } catch (e) {
+    out.replaceChildren(el('div', 'error', e?.message || String(e)));
+  }
+}
+
 // ── developer tools: decode / broadcast a state transition ───────────────────
 async function decodeST() {
   const input = $('stInput').value.trim();
@@ -466,6 +544,13 @@ $('searchBtn').addEventListener('click', search);
 $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
 $('decodeBtn').addEventListener('click', decodeST);
 $('broadcastBtn').addEventListener('click', broadcastST);
+// Load on first open, and again if the proof setting changed since last time.
+const poolsStale = () => $('shielded').open && poolsShownWithProof !== $('proof').checked;
+$('shielded').addEventListener('toggle', () => { if (poolsStale()) loadPools(); });
+$('proof').addEventListener('change', () => { if (poolsStale()) loadPools(); });
+$('nulBtn').addEventListener('click', runNullifier);
+$('nulInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runNullifier(); });
+$('nulNet').value = getNetwork();
 $('netsel').addEventListener('change', () => {
   setNetwork($('netsel').value);
   networkShown = false;
@@ -473,6 +558,7 @@ $('netsel').addEventListener('change', () => {
   $('results').replaceChildren();
   $('err').hidden = true;
   renderExamples();
+  $('nulNet').value = getNetwork();
   const q = $('q').value.trim();
   syncUrl($('kind').value, q);
   if (q) search();

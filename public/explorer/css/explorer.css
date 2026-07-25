@@ -98,6 +98,26 @@
 .ex-netsel { background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.82rem; font-family: var(--mono); padding: 7px 10px; cursor: pointer; }
 .ex-netsel:focus { outline: none; border-color: var(--blue); }
 
+/* ── shielded pool ────────────────────────────────────────────────────────── */
+.ex-pools { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 6px; }
+.ex-pools > .ex-raw, .ex-pools > .ex-pool-foot { grid-column: 1 / -1; }
+.ex-pool { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: rgba(0, 0, 0, 0.18); }
+.ex-pool-net { color: var(--muted); font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.ex-pool-amount { font-size: 1.5rem; font-weight: 600; margin-top: 4px; }
+.ex-pool .ex-stats { margin: 12px 0 6px; }
+.ex-pool .ex-stat { min-width: 0; }
+.ex-anchor { word-break: break-all; font-size: 0.75rem; }
+.ex-pool-foot { margin: 4px 0 0; }
+.ex-nul { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+.ex-nul input, .ex-nul select {
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 0.8rem; font-family: var(--mono); padding: 7px 9px;
+}
+.ex-nul input:focus, .ex-nul select:focus { outline: none; border-color: var(--blue); }
+.ex-nul input { flex: 1; min-width: 220px; }
+.ex-nul #nulOut { margin-top: 10px; }
+@media (max-width: 620px) { .ex-pools { grid-template-columns: 1fr; } }
+
 /* ── developer tools ──────────────────────────────────────────────────────── */
 .ex-dev { margin-top: 24px; border: 1px solid var(--border); border-radius: 10px; }
 .ex-dev > summary { cursor: pointer; padding: 12px 15px; color: var(--muted); font-size: 0.9rem; }
