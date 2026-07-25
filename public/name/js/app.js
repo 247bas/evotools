@@ -1,6 +1,6 @@
 // dash-name — check a .dash name and claim it for an existing identity.
 // All looked-up data + keys stay client-side; the key is used only to sign.
-import { checkName, registerName, DPNS_CONTRACT } from './name.js';
+import { checkName, registerName, topUpIdentity, DPNS_CONTRACT } from './name.js';
 import { setNetwork, getNetwork } from './sdk.js';
 
 const $ = (id) => document.getElementById(id);
@@ -86,7 +86,20 @@ const identityKey = keys
 const signer = new IdentitySigner();
 signer.addKeyFromWif(WIF);
 
-// preorder + register the name (this is the on-chain write)
+// The SDK's one-liner does preorder + domain but keeps the salt to itself, so a
+// failure in between strands the preorder — and its fee, 0.2 DASH for a
+// contested name. This tool derives the salt instead, which makes a second run
+// finish the job against the preorder already paid for:
+//
+//   secret = HMAC(privateKey, 'evotools/dpns-salt/v1')
+//   salt   = HMAC(secret, network + '/' + normalizedLabel + '/0')
+//   hash   = doubleSHA256(salt ++ 'name.dash')
+//   -> documents.create(preorder { saltedDomainHash: hash })
+//   -> documents.create(domain   { label, normalizedLabel, preorderSalt: salt,
+//                                  records: { identity: id.toBytes() }, … })
+//
+// See public/shared/dpns-register.js. The simple version, if you never expect to
+// be interrupted:
 await sdk.dpns.registerName({ label: '${label}', identity, identityKey, signer });`;
 
 let debounce = null;
@@ -236,4 +249,35 @@ $('netsel').addEventListener('change', () => {
   setNetwork($('netsel').value);
   $('claim').hidden = true;
   check();
+});
+
+// Topping up the identity you are claiming for — an identity out of credits is
+// otherwise a dead end halfway through a list of names.
+$('topUpBtn').addEventListener('click', async () => {
+  const out = $('topUpOut');
+  out.replaceChildren();
+  const identityId = $('idInput').value.trim();
+  const addressWif = $('topUpWif').value.trim();
+  const raw = $('topUpAmount').value.trim();
+  const btn = $('topUpBtn');
+  const say = (text, cls) => { out.replaceChildren(el('div', cls, text)); };
+  if (!identityId) { say('Fill in the identity ID above first.', 'error'); return; }
+  if (!addressWif) { say('Paste the key of the address holding the credits.', 'error'); return; }
+  let amount;
+  if (raw) {
+    const dash = Number(raw);
+    if (!Number.isFinite(dash) || dash <= 0) { say('Enter an amount in DASH, or leave it empty to move everything.', 'error'); return; }
+    amount = BigInt(Math.round(dash * 1e11));
+  }
+  btn.disabled = true;
+  btn.textContent = 'Moving…';
+  try {
+    const res = await topUpIdentity({ identityId, addressWif, amount });
+    say(`Moved ${(Number(res.moved) / 1e11).toFixed(5)} from ${res.address}. The identity now holds ${res.newBalance ?? '—'} credits.`, 'note ok');
+  } catch (e) {
+    say(e?.message || String(e), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Top up this identity';
+  }
 });

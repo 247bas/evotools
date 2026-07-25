@@ -58,6 +58,36 @@ export async function fundAddressFromIdentity({ identityId, transferWif, address
   return { newBalance: result?.newBalance };
 }
 
+// The other direction: move credits from a platform address into an identity.
+// Needed twice over — to empty a funding key you want to throw away, and to
+// refill an identity that ran out mid-registration.
+export async function topUpIdentity({ identityId, addressWif, address, amount }) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const { PlatformAddressSigner, PrivateKey } = Evo;
+
+  let key;
+  try { key = PrivateKey.fromWIF(addressWif); }
+  catch { throw new Error('That is not a valid WIF private key.'); }
+  const derived = new PlatformAddressSigner().addKey(key).toBech32m(getNetwork());
+  if (derived !== address) {
+    throw new Error('That key does not belong to this address.');
+  }
+
+  const identity = await sdk.identities.fetch(identityId);
+  if (!identity) throw new Error(`Identity not found on this network: ${identityId}`);
+
+  // Same shape trap as transferFromIdentity: the fetched Identity, not an id.
+  const signer = new PlatformAddressSigner();
+  signer.addKey(key);
+  const result = await sdk.addresses.topUpIdentity({
+    identity,
+    inputs: [{ address, amount }],
+    signer,
+  });
+  return { newBalance: result?.newBalance };
+}
+
 // Create an identity funded from the platform address. `amount` is the credits
 // (bigint) to move into the new identity. Returns the id, the Identity object
 // (when available), and the derived keys for later use.

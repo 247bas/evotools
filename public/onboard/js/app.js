@@ -6,7 +6,7 @@ import {
 } from './wallet.js';
 import {
   getAddressBalance, createIdentity, checkUsername, registerUsername,
-  fundAddressFromIdentity,
+  fundAddressFromIdentity, topUpIdentity,
 } from './platform.js';
 import { setNetwork, getNetwork, isMainnet, getSdk, loadEvo } from './sdk.js';
 import {
@@ -620,6 +620,7 @@ function finish() {
   summary.innerHTML = rows.map(([k, v]) => `<div class="item"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 
   $('envBox').textContent = envText();
+  showSweep();
 
   $('allKeys').innerHTML = state.derived.map((d) => `
     <div class="key-card">
@@ -640,3 +641,36 @@ $('downloadEnv').addEventListener('click', () => {
   URL.revokeObjectURL(a.href);
 });
 $('restartBtn').addEventListener('click', () => location.reload());
+
+// ── leftovers ────────────────────────────────────────────────────────────────
+// Minting keeps a reserve back on the funding address to cover its fee. What is
+// left afterwards belongs in the identity, not under a key you wanted to discard.
+const SWEEP_MARGIN = 10_000_000n; // 0.0001 DASH, comfortably over the ~3M fee
+
+async function showSweep() {
+  try {
+    const balance = await getAddressBalance(state.address);
+    $('sweepBalance').textContent = `${creditsToDash(balance)} ${cfg().unit}`;
+    $('sweepBlock').hidden = balance <= SWEEP_MARGIN;
+  } catch { $('sweepBlock').hidden = true; }
+}
+
+$('sweepBtn').addEventListener('click', withBusy($('sweepBtn'), 'Moving…', async () => {
+  clearError();
+  const out = $('sweepOut');
+  out.replaceChildren();
+  const balance = await getAddressBalance(state.address);
+  const amount = balance - SWEEP_MARGIN;
+  if (amount <= 0n) throw new Error('Nothing worth moving is left on that address.');
+  await topUpIdentity({
+    identityId: state.identityId,
+    addressWif: state.addressPrivateKeyWif,
+    address: state.address,
+    amount,
+  });
+  const done = document.createElement('div');
+  done.className = 'note ok';
+  done.textContent = `Moved ${creditsToDash(amount)} ${cfg().unit} into your identity.`;
+  out.append(done);
+  showSweep();
+}));

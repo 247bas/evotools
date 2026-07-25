@@ -118,3 +118,38 @@ export async function registerName(label, identityId, wif) {
     network: getNetwork(),
   });
 }
+
+// Move credits from a platform address into this identity. Registering names
+// eats credits faster than people expect, and an identity that runs dry mid-way
+// is a dead end without this.
+export async function topUpIdentity({ identityId, addressWif, amount }) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const { PlatformAddressSigner, PrivateKey } = Evo;
+
+  let key;
+  try { key = PrivateKey.fromWIF(addressWif); }
+  catch { throw new Error('That is not a valid WIF private key.'); }
+  const address = new PlatformAddressSigner().addKey(key).toBech32m(getNetwork());
+
+  const info = await sdk.addresses.get(address);
+  const available = info?.balance ?? 0n;
+  if (available <= 0n) throw new Error(`That key's platform address (${address}) holds no credits.`);
+  // Leave a little behind for the transition fee, which comes off the address.
+  const margin = 10_000_000n;
+  const send = amount ?? (available > margin ? available - margin : 0n);
+  if (send <= 0n) throw new Error(`Only ${available} credits there — not enough to move.`);
+  if (send > available) throw new Error(`That address holds ${available} credits, less than you asked to move.`);
+
+  const identity = await sdk.identities.fetch(identityId);
+  if (!identity) throw new Error(`Identity not found on this network: ${identityId}`);
+
+  const signer = new PlatformAddressSigner();
+  signer.addKey(key);
+  const result = await sdk.addresses.topUpIdentity({
+    identity,
+    inputs: [{ address, amount: send }],
+    signer,
+  });
+  return { address, moved: send, newBalance: result?.newBalance };
+}

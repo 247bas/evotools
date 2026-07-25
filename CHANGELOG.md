@@ -5,6 +5,13 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Credits can go into an identity, not just out of it.** Minting keeps a
+  reserve back on the funding address, and until now it stayed there — under a
+  key you probably wanted to throw away. Onboard offers to move the remainder in
+  when you are done, and dash-name can top up any identity from a platform
+  address, which is what you need when a run of name registrations empties one
+  halfway.
+
 - **A name registration can be picked up where it left off.** DPNS is two steps,
   and the salt tying them together used to be invented inside the SDK and thrown
   away — so a failure in between stranded the preorder along with its fee, which

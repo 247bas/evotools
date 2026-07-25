@@ -332,6 +332,22 @@
         contract and document.
       </div>
 
+      <div id="sweepBlock" hidden>
+        <div class="field">
+          <div class="field-head">
+            <label>Left on the funding address</label>
+          </div>
+          <div class="mono box small" id="sweepBalance">…</div>
+        </div>
+        <p class="fineprint">
+          Credits still sitting under the funding key. Move them into the identity
+          and that key holds nothing — which is what you want if it was only ever
+          meant to get you here.
+        </p>
+        <button class="btn ghost" id="sweepBtn">Move the rest into my identity</button>
+        <div id="sweepOut"></div>
+      </div>
+
       <details class="keys">
         <summary>Show all 5 identity keys (advanced — handle with care)</summary>
         <div id="allKeys"></div>

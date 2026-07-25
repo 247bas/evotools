@@ -54,6 +54,24 @@
       <div id="claimSnippet"></div>
       <button class="btn primary" id="claimBtn">Register</button>
       <div id="claimOut"></div>
+
+      <details class="keys" id="topUpBlock">
+        <summary>This identity is out of credits — top it up</summary>
+        <p class="fineprint">
+          Names cost about 0.0006 DASH each, so an identity runs dry sooner than
+          you expect. Credits sitting on a platform address can be moved in here.
+        </p>
+        <div class="field">
+          <label for="topUpWif">Key of the platform address holding the credits (WIF)</label>
+          <input id="topUpWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="topUpAmount">Amount (DASH) — leave empty to move everything</label>
+          <input id="topUpAmount" type="text" placeholder="0.005" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn ghost" id="topUpBtn">Top up this identity</button>
+        <div id="topUpOut"></div>
+      </details>
     </section>
   </div>
 
