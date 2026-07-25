@@ -10,6 +10,7 @@ export const DASH_LOGO =
 
 const TOOLS = [
   { href: '/onboard/', label: 'Onboard' },
+  { href: '/keygen/', label: 'Keygen' },
   { href: '/playground/', label: 'Playground' },
   { href: '/explorer/', label: 'Explorer' },
   { href: '/name/', label: 'Names' },

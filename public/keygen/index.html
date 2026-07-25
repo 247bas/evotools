@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keygen — cold keys for a Dash Platform identity · evotools</title>
+  <meta name="description" content="Generate a Dash Platform funding address and the five identity keys with no network at all. Download the page and run it on a machine that never goes online." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="evotools" />
+  <meta property="og:title" content="Keygen — cold keys for a Dash Platform identity" />
+  <meta property="og:description" content="Keys made offline, verifiably: no request leaves the page, and you can take the whole tool off the network." />
+  <meta property="og:url" content="https://evotools.dev/keygen/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Keygen — cold keys for a Dash Platform identity" />
+  <meta name="twitter:description" content="Keys made offline, verifiably: no request leaves the page, and you can take the whole tool off the network." />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="css/keygen.css" />
+</head>
+<body>
+  <div class="wrap" id="kgWrap">
+    <p class="tagline">
+      A funding address and the five identity keys, derived from one phrase —
+      with nothing sent anywhere. Take the page offline first if you mean it.
+    </p>
+
+    <div class="error" id="globalError" hidden></div>
+
+    <section class="panel">
+      <h1>Make your keys where nobody is looking</h1>
+      <p class="kg-lede">
+        This page never contacts the network. Key generation runs inside the WASM
+        SDK that is already loaded, so you can pull the plug and it keeps working.
+        The safe way to use it: download the offline copy, open it on a machine
+        that stays offline, write the phrase down on paper, and carry only the
+        address back.
+      </p>
+
+      <div class="note ok" id="offlineNote" hidden>
+        You are running the offline copy. Its own policy blocks every request, so
+        nothing you generate below can leave this machine.
+      </div>
+
+      <div class="kg-download" id="downloadBlock">
+        <div>
+          <button class="btn primary" id="downloadBtn">Download offline copy</button>
+          <p class="fineprint">
+            One file of about 10 MB with the whole tool inside. Open it on a
+            machine that stays offline and generate there — that is the point.
+          </p>
+        </div>
+        <p class="kg-download-note">
+          Or generate here first to see what it produces. Keys made in an online
+          browser are fine for testnet and for a look around; for real funds,
+          take the copy.
+        </p>
+      </div>
+
+      <div class="kg-verify">
+        <h2>How to check that claim yourself</h2>
+        <ol class="kg-checklist">
+          <li>Open devtools, Network tab, then generate. Nothing appears — no request leaves.</li>
+          <li>Or: disconnect wifi and generate again. Same result, because nothing needs a server.</li>
+          <li>The offline copy carries <code>connect-src 'none'</code> in its own content security policy, so the browser refuses any request the page might make.</li>
+          <li>Cross-check the outcome: importing the same phrase in Dash Evo Tool has to give the same address.</li>
+        </ol>
+      </div>
+
+      <div class="kg-controls">
+        <div class="field">
+          <label for="netsel">Network</label>
+          <select id="netsel">
+            <option value="mainnet">mainnet — dash1…</option>
+            <option value="testnet">testnet — tdash1…</option>
+          </select>
+        </div>
+        <div class="kg-actions">
+          <button class="btn primary" id="genBtn">Generate a new phrase</button>
+          <button class="btn ghost" id="restoreBtn">I already have a phrase</button>
+        </div>
+      </div>
+
+      <div id="introSnippet"></div>
+
+      <div class="field" id="restoreBlock" hidden>
+        <label for="mnemonicInput">Recovery phrase</label>
+        <textarea id="mnemonicInput" rows="2" placeholder="twelve or twenty-four words, separated by spaces" autocomplete="off" spellcheck="false"></textarea>
+        <button class="btn primary" id="deriveBtn">Derive from this phrase</button>
+      </div>
+    </section>
+
+    <section class="panel" id="result" hidden>
+      <div class="kg-result-head">
+        <h2 id="resultTitle">Your keys</h2>
+        <div class="row sm-gap kg-noprint">
+          <button class="btn ghost sm" id="printBtn">Print</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label>Recovery phrase — write this on paper</label>
+          <button class="btn ghost sm kg-noprint" id="copyMnemonic">Copy</button>
+        </div>
+        <ol class="kg-words" id="wordList"></ol>
+        <p class="fineprint">
+          This one phrase is the identity and the funding key. There is no reset,
+          no support desk and no second copy.
+        </p>
+      </div>
+
+      <div class="kg-address">
+        <div class="kg-address-text">
+          <div class="field-head">
+            <label>Funding address (platform address)</label>
+            <button class="btn ghost sm kg-noprint" id="copyAddress">Copy</button>
+          </div>
+          <div class="mono box small" id="addressBox">…</div>
+          <p class="fineprint">
+            Public — this is the only line you need to carry back to an online
+            machine. Scan the code with your phone instead of typing it.
+          </p>
+        </div>
+        <div class="kg-qr" id="qrBox" aria-label="QR code of the funding address"></div>
+      </div>
+
+      <details class="keys" id="secretBlock">
+        <summary>Show the private keys (they are secret — anyone who reads them owns the identity)</summary>
+        <h3 class="kg-printonly">Private keys</h3>
+        <div class="table-scroll">
+          <table class="kg-table">
+            <thead>
+              <tr><th>Key</th><th>Role</th><th>Path</th><th>Private key (WIF)</th></tr>
+            </thead>
+            <tbody id="keyRows"></tbody>
+          </table>
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label>Funding key (WIF) — paste this in onboard on mainnet</label>
+            <button class="btn ghost sm kg-noprint" id="copyFunding">Copy</button>
+          </div>
+          <div class="mono box small" id="fundingBox">…</div>
+        </div>
+      </details>
+
+      <div class="note info kg-noprint">
+        <strong>Next:</strong> fund the address (Dash Evo Tool makes the asset lock,
+        or move credits from an identity you already own), then create the identity
+        in <a href="/onboard/">onboard</a> and claim names in <a href="/name/">dash-name</a>.
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

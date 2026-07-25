@@ -1,0 +1,135 @@
+/* keygen — cold key generation. Layout leans on shared/theme.css. */
+
+.kg-lede { color: var(--muted); max-width: 66ch; margin-bottom: 18px; }
+
+.kg-download {
+  display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: start;
+  border: 1px solid rgba(0, 141, 228, 0.35); background: rgba(0, 141, 228, 0.08);
+  border-radius: 11px; padding: 18px; margin: 20px 0;
+}
+.kg-download .fineprint { max-width: 34ch; }
+.kg-download-note { color: var(--muted); font-size: 0.86rem; align-self: center; }
+@media (max-width: 640px) {
+  .kg-download { grid-template-columns: 1fr; gap: 14px; }
+  .kg-download .fineprint { max-width: none; }
+}
+
+.kg-verify {
+  border: 1px solid var(--border); border-radius: 11px;
+  background: rgba(0, 0, 0, 0.18); padding: 16px 18px; margin: 18px 0 22px;
+}
+.kg-verify h2 {
+  font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--blue); margin-bottom: 10px;
+}
+.kg-checklist { margin: 0; padding-left: 0; list-style: none; counter-reset: v; }
+.kg-checklist li {
+  counter-increment: v; position: relative; padding-left: 26px;
+  color: var(--muted); font-size: 0.89rem; margin-bottom: 7px;
+}
+.kg-checklist li:last-child { margin-bottom: 0; }
+.kg-checklist li::before {
+  content: counter(v); position: absolute; left: 0; top: 1px;
+  width: 18px; height: 18px; border-radius: 5px; font-size: 0.7rem;
+  font-family: var(--mono, ui-monospace, monospace);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 141, 228, 0.14); border: 1px solid rgba(0, 141, 228, 0.35);
+  color: var(--blue);
+}
+
+.kg-controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+.kg-controls .field { margin: 0; min-width: 210px; }
+.kg-controls select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-size: 0.9rem;
+}
+.kg-controls select:focus { outline: none; border-color: var(--blue); }
+.kg-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.kg-controls .field label,
+#restoreBlock label { display: block; color: var(--blue); font-weight: 600; font-size: 0.85rem; margin-bottom: 7px; }
+
+#restoreBlock textarea {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text);
+  font-family: var(--mono, ui-monospace, monospace); font-size: 0.86rem; resize: vertical;
+  margin-bottom: 12px;
+}
+#restoreBlock textarea:focus { outline: none; border-color: var(--blue); }
+
+.kg-result-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 6px;
+}
+
+/* Recovery phrase, laid out for transcription */
+.kg-words {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: w;
+}
+.kg-words li {
+  counter-increment: w; display: flex; align-items: baseline; gap: 9px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px;
+  font-family: var(--mono, ui-monospace, monospace); font-size: 0.92rem;
+}
+.kg-words li::before {
+  content: counter(w); color: var(--muted); font-size: 0.72rem; min-width: 15px;
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+
+/* Address + QR */
+.kg-address {
+  display: grid; grid-template-columns: 1fr auto; gap: 20px;
+  align-items: start; margin: 22px 0;
+}
+@media (max-width: 620px) { .kg-address { grid-template-columns: 1fr; } }
+.kg-qr {
+  background: #fff; padding: 10px; border-radius: 10px; line-height: 0;
+  border: 1px solid var(--border);
+}
+.kg-qr svg { width: 172px; height: 172px; display: block; }
+
+/* Key table */
+.table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; margin: 14px 0; }
+.kg-table { border-collapse: collapse; width: 100%; min-width: 640px; }
+.kg-table th, .kg-table td {
+  text-align: left; padding: 10px 13px; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+}
+.kg-table th {
+  font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); background: rgba(0, 0, 0, 0.2); font-weight: 600;
+}
+.kg-table tr:last-child td { border-bottom: none; }
+.kg-table td.mono, .kg-table td .mono {
+  font-family: var(--mono, ui-monospace, monospace); word-break: break-all;
+}
+.kg-role { color: var(--muted); font-size: 0.76rem; display: block; }
+
+/* SDK snippet — same component as dash-name and the explorer */
+.kg-snippet { margin-top: 16px; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.kg-snippet > summary { cursor: pointer; padding: 10px 13px; font-size: 0.83rem; color: var(--muted); background: rgba(0, 0, 0, 0.15); }
+.kg-snippet[open] > summary { border-bottom: 1px solid var(--border); color: var(--text); }
+.kg-snippet-body { padding: 13px; }
+.kg-snippet-body pre {
+  background: rgba(0, 0, 0, 0.38); border: 1px solid var(--border); border-radius: 7px;
+  color: #d6e2f0; padding: 12px; font-size: 0.78rem; line-height: 1.55;
+  overflow-x: auto; margin: 0;
+}
+.kg-snippet-body .btn { margin-top: 10px; }
+
+.kg-printonly { display: none; }
+
+@media print {
+  .kg-noprint, .evo-nav, .evo-footer, .tagline, .kg-verify, .kg-controls,
+  #restoreBlock, .note, .kg-snippet { display: none !important; }
+  body { background: #fff; color: #000; }
+  .panel { border: none; background: none; padding: 0; }
+  .kg-words li, .box, .kg-table th, .kg-table td { background: none; color: #000; border-color: #999; }
+  /* app.js opens this section before printing — CSS alone cannot reveal a
+     collapsed <details>. The summary is replaced by a plain heading. */
+  #secretBlock > summary { display: none; }
+  .kg-printonly { display: block; font-size: 1rem; margin: 14px 0 4px; }
+  .table-scroll { overflow: visible; border: none; }
+  .kg-table { min-width: 0; }
+  a { color: #000; }
+}

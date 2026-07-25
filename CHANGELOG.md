@@ -5,6 +5,21 @@ rather than installable releases.
 
 ## Unreleased
 
+- **keygen — a sixth tool.** Derives the funding address and the five DIP-13
+  identity keys from one phrase, with no network at all: no `EvoSDK` instance, no
+  `connect()`. "Download offline copy" packs the whole tool, SDK included, into
+  one ~10 MB HTML file whose own policy carries `connect-src 'none'`, so it can
+  be opened on a machine that never goes online. The address comes with a QR
+  (self-written encoder — a CDN is not an option under that policy, and it is
+  cross-checked against a reference library and read back with a decoder), the
+  private keys sit behind a fold but always print, and an SDK snippet shows the
+  exact calls. The smoke test derives, compares against onboard key for key, and
+  runs the snippet it shows to prove it is not fiction.
+- **Onboard takes a phrase you made elsewhere.** On mainnet the identity keys no
+  longer have to come from the browser tab: paste the phrase from keygen and the
+  identity carries exactly those five keys. The funding address now derives while
+  you type, and a disabled "Continue" says which of the two things is missing.
+
 - **"Verify with proof" is on by default** in the explorer. Measured across
   identity, contract, document and shielded-pool queries on both networks, the
   proven path costs nothing worth saving: on mainnet 135 vs 185 ms for an
