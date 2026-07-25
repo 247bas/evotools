@@ -4,6 +4,7 @@
 
 import { loadEvo, getSdk, getNetwork, hexToBytes, randomBytes32 } from './sdk.js';
 import { deriveIdentityKeys } from './wallet.js';
+import { registerName as registerNameResumable } from '../../shared/dpns-register.js';
 
 // Balance of a platform address, in credits (bigint). 0n when unfunded.
 export async function getAddressBalance(address) {
@@ -126,11 +127,13 @@ export async function checkUsername(label) {
   return { valid, contested, available };
 }
 
-// Register a DPNS name for the identity, signed with the CRITICAL auth key (#2).
+// Register a DPNS name for the identity. Goes through the resumable path rather
+// than sdk.dpns.registerName, so an interruption between the preorder and the
+// domain document does not throw the preorder (and its fee) away.
 export async function registerUsername({ label, identityId, identityObj, derived }) {
   const Evo = await loadEvo();
   const sdk = await getSdk();
-  const { IdentitySigner } = Evo;
+  const { IdentitySigner, PrivateKey } = Evo;
 
   const identity = identityObj ?? (await sdk.identities.fetch(identityId));
   if (!identity) throw new Error(`could not load identity ${identityId}`);
@@ -148,5 +151,9 @@ export async function registerUsername({ label, identityId, identityObj, derived
   const signer = new IdentitySigner();
   signer.addKeyFromWif(criticalWif);
 
-  return sdk.dpns.registerName({ label, identity, identityKey, signer });
+  return registerNameResumable({
+    sdk, Evo, label, identity, identityKey, signer,
+    privateKeyBytes: PrivateKey.fromWIF(criticalWif).toBytes(),
+    network: getNetwork(),
+  });
 }

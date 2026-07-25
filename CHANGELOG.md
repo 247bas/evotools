@@ -5,6 +5,13 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A name registration can be picked up where it left off.** DPNS is two steps,
+  and the salt tying them together used to be invented inside the SDK and thrown
+  away — so a failure in between stranded the preorder along with its fee, which
+  for a contested name is 0.2 DASH. The salt is now derived from your key, so
+  running the registration again recomputes it and finishes against the preorder
+  you already paid for. Both onboard and dash-name register this way.
+
 - **The second funding route works too.** Moving credits from an identity you
   already own onto a platform address was code-complete but untried; it turned
   out the SDK wants the fetched identity rather than its id, and said so with an

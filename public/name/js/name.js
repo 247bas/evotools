@@ -2,6 +2,7 @@
 // name for an existing identity (reuses onboard's registration + explorer's
 // contest query).
 import { getSdk, loadEvo, getNetwork } from './sdk.js';
+import { registerName as registerNameResumable } from '../../shared/dpns-register.js';
 
 // Document state transitions may be signed by an AUTHENTICATION key at CRITICAL,
 // HIGH or MEDIUM level. A MASTER key cannot sign documents, and a TRANSFER key
@@ -108,6 +109,12 @@ export async function registerName(label, identityId, wif) {
   const signer = new IdentitySigner();
   signer.addKeyFromWif(wif);
 
-  await sdk.dpns.registerName({ label: clean, identity, identityKey, signer });
-  return { name: `${clean}.dash`, identityId };
+  // The resumable path rather than sdk.dpns.registerName: that one invents the
+  // salt internally, so a failure between the preorder and the domain document
+  // strands the preorder and its fee — 0.2 DASH for a contested name.
+  return registerNameResumable({
+    sdk, Evo, label: clean, identity, identityKey, signer,
+    privateKeyBytes,
+    network: getNetwork(),
+  });
 }
