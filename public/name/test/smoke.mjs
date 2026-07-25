@@ -28,5 +28,10 @@ setNetwork('mainnet');
 const m = await safe('checkName(dash)@mainnet', () => checkName('dash'));
 check(m?.registered && m.ownerId, `mainnet dash.dash -> ${m?.ownerId?.slice(0, 12)}…`);
 
+console.log('\n5. mainnet: a locked name (pay) — unowned, yet unclaimable');
+const l = await safe('checkName(pay)@mainnet', () => checkName('pay'));
+check(l?.locked === true && l.contest?.outcome === 'Locked', `pay.dash locked (${l?.contest?.lock} lock votes)`);
+check(l?.registered === false && l?.available === false, 'locked name is not reported as available');
+
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

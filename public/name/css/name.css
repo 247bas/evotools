@@ -49,6 +49,9 @@
 .dn-cid { flex: 1; word-break: break-all; }
 .dn-votes { color: var(--muted); white-space: nowrap; }
 .dn-badge { background: rgba(40, 167, 69, 0.2); color: #7ee2a0; border: 1px solid rgba(40, 167, 69, 0.5); border-radius: 999px; padding: 2px 9px; font-size: 0.68rem; text-transform: uppercase; }
+.dn-badge.lock { background: rgba(220, 53, 69, 0.18); color: #f19aa4; border-color: rgba(220, 53, 69, 0.5); }
+.dn-contest.locked { border-color: rgba(220, 53, 69, 0.4); background: rgba(220, 53, 69, 0.07); }
+.dn-contest.locked .dn-contest-head { color: #f19aa4; }
 
 /* claim */
 .dn-claim { margin-top: 22px; }

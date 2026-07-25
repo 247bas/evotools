@@ -166,6 +166,8 @@ function renderName(data) {
     card.append(snippet(`const owner = await sdk.dpns.resolveName('${data.username}');`));
   } else if (!data.valid) {
     card.append(el('div', 'note warn', 'Not a valid DPNS name (use a-z, 0-9 and hyphens, 3–63 chars).'));
+  } else if (data.locked) {
+    card.append(el('div', 'note bad', `${data.username}.dash is locked — masternodes voted the contest down, so it has no owner and cannot be claimed.`));
   } else if (data.available) {
     card.append(el('div', 'note ok', `${data.username}.dash is available${data.contested ? ' (contested — premium name, goes through masternode voting)' : ''}.`));
     if (getNetwork() === 'testnet') {
@@ -187,13 +189,16 @@ function renderName(data) {
 function contestPanel(data) {
   const c = data.contest;
   if (!c || !c.contenders?.length) return null;
+  const locked = c.outcome === 'Locked';
   const d = el('div', 'ex-contest');
-  d.append(el('div', 'ex-contest-head', '⚖ Contested name — decided by masternode vote'));
-  d.append(el('div', 'ex-sub', 'Short or premium names go through a masternode vote instead of first-come-first-served. Contenders and vote tallies:'));
+  d.append(el('div', 'ex-contest-head', locked ? '⚖ Contested name — locked by masternode vote' : '⚖ Contested name — decided by masternode vote'));
+  d.append(el('div', 'ex-sub', locked
+    ? 'The lock votes beat every contender, so the contest ended with no owner at all. Contenders and vote tallies:'
+    : 'Short or premium names go through a masternode vote instead of first-come-first-served. Contenders and vote tallies:'));
   const list = el('div', 'ex-contenders');
   for (const ct of c.contenders) {
     const row = el('div', 'ex-contender');
-    if (c.winner && ct.identityId === c.winner) row.append(el('span', 'ex-badge win', 'winner'));
+    if (!locked && c.winner && ct.identityId === c.winner) row.append(el('span', 'ex-badge win', 'winner'));
     row.append(el('span', 'ex-contender-id mono', ct.identityId));
     row.append(el('span', 'ex-votes', `${ct.votes} vote${ct.votes === 1 ? '' : 's'}`));
     const b = el('button', 'btn ghost sm', 'View');

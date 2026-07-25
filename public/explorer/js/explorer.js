@@ -77,7 +77,10 @@ export async function lookupName(label) {
     return { username: clean, registered: true, identityId: str(owner), valid: true, contested, contest };
   }
   const available = valid ? await sdk.dpns.isNameAvailable(clean).catch(() => undefined) : false;
-  return { username: clean, registered: false, valid, contested, available, contest };
+  // A contest that ended in a lock leaves the name unowned, so isNameAvailable()
+  // reports true even though nobody can ever claim it. The lock wins.
+  const locked = contest?.outcome === 'Locked';
+  return { username: clean, registered: false, valid, contested, available: locked ? false : available, locked, contest };
 }
 
 async function getContest(label) {
@@ -89,17 +92,22 @@ async function getContest(label) {
     indexName: 'parentNameAndLabel',
     indexValues: ['dash', norm],
     resultType: 'documentsAndVoteTally',
+    allowIncludeLockedAndAbstainingVoteTally: true,
   });
   const contenders = (state.contenders || []).map((c) => ({
     identityId: c.identityId?.toString?.(),
     votes: c.voteTally ?? 0,
   }));
+  // `winner` only exists once the contest ended; its `kind` is the outcome
+  // ('Locked' = nobody gets the name, 'WonByIdentity' = awarded).
+  const winner = state.winner;
   return {
     normalizedLabel: norm,
     contenders,
     abstain: state.abstainVoteTally ?? 0,
     lock: state.lockVoteTally ?? 0,
-    winner: state.winner?.identityId?.toString?.(),
+    outcome: winner ? winner.kind : undefined,
+    winner: winner?.identityId?.toString?.(),
   };
 }
 

@@ -167,6 +167,7 @@ a.built-badge:hover { text-decoration: none; }
 .note { border-radius: 8px; padding: 13px 15px; margin: 16px 0; font-size: 0.9rem; border: 1px solid; }
 .note.warn { background: rgba(255, 193, 7, 0.10); border-color: rgba(255, 193, 7, 0.4); color: #ffe08a; }
 .note.ok { background: rgba(40, 167, 69, 0.12); border-color: rgba(40, 167, 69, 0.5); color: #7ee2a0; }
+.note.bad { background: rgba(255, 92, 108, 0.12); border-color: rgba(255, 92, 108, 0.5); color: #ffb3ba; }
 .note.info { background: rgba(0, 141, 228, 0.10); border-color: rgba(0, 141, 228, 0.4); }
 .note.info strong { color: var(--blue); }
 .error {

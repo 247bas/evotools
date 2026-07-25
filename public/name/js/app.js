@@ -1,6 +1,6 @@
 // dash-name — check a .dash name and claim it for an existing identity.
 // All looked-up data + keys stay client-side; the key is used only to sign.
-import { checkName, registerName } from './name.js';
+import { checkName, registerName, DPNS_CONTRACT } from './name.js';
 import { setNetwork, getNetwork } from './sdk.js';
 
 const $ = (id) => document.getElementById(id);
@@ -40,7 +40,7 @@ function snippet(code) {
   d.append(body);
   return d;
 }
-const checkCode = (label) => `import { EvoSDK } from '@dashevo/evo-sdk';
+const checkCode = (label, contested) => `import { EvoSDK } from '@dashevo/evo-sdk';
 
 const sdk = EvoSDK.${factory()}();
 await sdk.connect();
@@ -53,7 +53,20 @@ const contested = await sdk.dpns.isContestedUsername('${label}');
 const owner     = await sdk.dpns.resolveName('${label}');
 
 // if it's unregistered, is it free to claim?
-const available = await sdk.dpns.isNameAvailable('${label}');`;
+const available = await sdk.dpns.isNameAvailable('${label}');` + (contested ? `
+
+// Careful: a contested name whose vote ended in a lock has no owner, so
+// isNameAvailable() returns true while nobody can ever claim it. Ask the vote.
+const norm  = await sdk.dpns.convertToHomographSafe('${label}');
+const state = await sdk.voting.contestedResourceVoteState({
+  dataContractId: '${DPNS_CONTRACT}',
+  documentTypeName: 'domain',
+  indexName: 'parentNameAndLabel',
+  indexValues: ['dash', norm],
+  resultType: 'documentsAndVoteTally',
+  allowIncludeLockedAndAbstainingVoteTally: true,
+});
+const locked = state.winner?.kind === 'Locked';` : '');
 const registerCode = (label) => `import { EvoSDK, IdentitySigner } from '@dashevo/evo-sdk';
 
 const sdk = EvoSDK.${factory()}();
@@ -116,6 +129,9 @@ function renderStatus(r) {
     s.className = 'dn-status bad';
     s.append(el('span', null, `${r.label}.dash is taken. `));
     s.append(explorerLink('View owner ↗', r.ownerId));
+  } else if (r.locked) {
+    s.className = 'dn-status bad';
+    s.append(el('span', null, `${r.label}.dash is locked — masternodes voted the contest down, so nobody can claim it.`));
   } else if (r.available) {
     s.className = 'dn-status ok';
     s.append(el('span', null, `${r.label}.dash is available${r.contested ? " — but it's a contested (premium) name" : ''}.`));
@@ -124,21 +140,29 @@ function renderStatus(r) {
     s.className = 'dn-status warn';
     s.append(el('span', null, `${r.label}.dash is not available.`));
   }
-  if (r.contest && r.contest.contenders?.length) s.append(contestPanel(r.contest));
-  if (r.valid) s.append(snippet(checkCode(r.label)));
+  if (r.contest && (r.contest.contenders?.length || r.contest.lock || r.contest.abstain)) s.append(contestPanel(r.contest));
+  if (r.valid) s.append(snippet(checkCode(r.label, r.contested)));
 }
 
 function contestPanel(c) {
-  const d = el('div', 'dn-contest');
-  d.append(el('div', 'dn-contest-head', '⚖ Contested — decided by masternode vote'));
-  d.append(el('div', 'dn-sub', 'Short/premium names go through a vote instead of first-come-first-served, and cost ~1 DASH more. Registering one joins the contest.'));
+  const locked = c.outcome === 'Locked';
+  const d = el('div', 'dn-contest' + (locked ? ' locked' : ''));
+  d.append(el('div', 'dn-contest-head', locked ? '⚖ Contested — locked by masternode vote' : '⚖ Contested — decided by masternode vote'));
+  d.append(el('div', 'dn-sub', locked
+    ? 'The lock votes beat every contender, which ends the contest with nobody as the owner. Registering it again is not possible.'
+    : 'Short/premium names go through a vote instead of first-come-first-served, and cost ~1 DASH more. Registering one joins the contest.'));
   for (const ct of c.contenders) {
     const row = el('div', 'dn-contender');
-    if (c.winner && ct.identityId === c.winner) row.append(el('span', 'dn-badge', 'winner'));
+    if (!locked && c.winner && ct.identityId === c.winner) row.append(el('span', 'dn-badge', 'winner'));
     row.append(el('span', 'dn-cid mono', ct.identityId));
     row.append(el('span', 'dn-votes', `${ct.votes} vote${ct.votes === 1 ? '' : 's'}`));
     d.append(row);
   }
+  const tally = el('div', 'dn-contender');
+  if (locked) tally.append(el('span', 'dn-badge lock', 'locked'));
+  tally.append(el('span', 'dn-cid', 'lock / abstain'));
+  tally.append(el('span', 'dn-votes', `${c.lock} / ${c.abstain} votes`));
+  d.append(tally);
   return d;
 }
 
