@@ -15,7 +15,8 @@
     "dev": "python3 -m http.server 8000 --directory public",
     "vendor:dashcore": "node tools/vendor-dashcore.mjs",
     "test:assetlock": "node public/shared/test/assetlock.mjs",
-    "test:dpns": "node public/shared/test/dpns-register.mjs"
+    "test:dpns": "node public/shared/test/dpns-register.mjs",
+    "test:credits": "node public/credits/test/smoke.mjs"
   },
   "devDependencies": {
     "@dashevo/dashcore-lib": "^0.25.0",

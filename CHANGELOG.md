@@ -5,6 +5,13 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A credits tool.** Topping up an identity was buried at the end of the onboard
+  wizard and inside dash-name's claim panel — reachable only if you were already
+  doing something else. It has its own page now: look an identity up by id or
+  name, see what it holds and which keys it has, then top it up from a platform
+  address, pay out to one, move credits between addresses, or withdraw back to
+  layer 1. The in-flow versions stay where they are; this is the front door.
+
 - **Credits can go into an identity, not just out of it.** Minting keeps a
   reserve back on the funding address, and until now it stayed there — under a
   key you probably wanted to throw away. Onboard offers to move the remainder in

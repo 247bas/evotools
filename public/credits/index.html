@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credits — top up and move an identity's balance · evotools</title>
+  <meta name="description" content="See what an identity holds and move credits: top it up from a platform address, pay out to one, or withdraw back to layer 1." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="evotools" />
+  <meta property="og:title" content="Credits — an identity's balance, and how to move it" />
+  <meta property="og:description" content="Top up an identity, pay out to a platform address, or withdraw credits back to layer 1." />
+  <meta property="og:url" content="https://evotools.dev/credits/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Credits — an identity's balance, and how to move it" />
+  <meta name="twitter:description" content="Top up an identity, pay out to a platform address, or withdraw credits back to layer 1." />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="css/credits.css" />
+</head>
+<body>
+  <div class="wrap">
+    <p class="tagline">
+      What an identity holds, and how to move it. Credits pay for names,
+      documents and contracts — an identity that runs out simply stops.
+    </p>
+
+    <div class="error" id="globalError" hidden></div>
+
+    <section class="panel">
+      <div class="cr-head">
+        <h1>Credits</h1>
+        <select id="netsel" aria-label="Network">
+          <option value="testnet">testnet</option>
+          <option value="mainnet">mainnet</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="idInput">Identity — id or <code>.dash</code> name</label>
+        <input id="idInput" type="text" placeholder="bas.dash or a base58 identity id" autocomplete="off" spellcheck="false" />
+      </div>
+      <button class="btn primary" id="lookupBtn">Look up</button>
+      <div id="identityOut"></div>
+    </section>
+
+    <section class="panel" id="actions" hidden>
+      <h2>Move credits</h2>
+
+      <details class="keys" open>
+        <summary>Top up this identity from a platform address</summary>
+        <p class="fineprint">
+          The address keeps a little back for the transition fee. Leave the amount
+          empty to move everything it holds.
+        </p>
+        <div class="field">
+          <label for="topUpWif">Key of that address (WIF)</label>
+          <input id="topUpWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="topUpAmount">Amount (DASH), optional</label>
+          <input id="topUpAmount" type="text" placeholder="everything" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn primary" id="topUpBtn">Top up</button>
+        <div id="topUpOut"></div>
+      </details>
+
+      <details class="keys">
+        <summary>Pay out to a platform address</summary>
+        <p class="fineprint">
+          Signed with the identity's TRANSFER key — the only one allowed to move
+          credits out. There is no identity-to-identity transfer: the other side
+          tops itself up from the address you send to.
+        </p>
+        <div class="field">
+          <label for="payWif">TRANSFER key of this identity (WIF)</label>
+          <input id="payWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="payTo">Destination platform address</label>
+          <input id="payTo" type="text" placeholder="dash1… or tdash1…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="payAmount">Amount (DASH)</label>
+          <input id="payAmount" type="text" placeholder="0.005" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn primary" id="payBtn">Send credits</button>
+        <div id="payOut"></div>
+      </details>
+
+      <details class="keys">
+        <summary>Move credits between two platform addresses</summary>
+        <div class="field">
+          <label for="moveWif">Key of the sending address (WIF)</label>
+          <input id="moveWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="moveTo">Destination platform address</label>
+          <input id="moveTo" type="text" placeholder="dash1… or tdash1…" autocomplete="off" spellcheck="false" />
+        </div>
+        <p class="fineprint">
+          Moves the whole balance except a small margin, which stays behind to
+          pay the fee. The destination has to be a different address.
+        </p>
+        <button class="btn primary" id="moveBtn">Move the balance</button>
+        <div id="moveOut"></div>
+      </details>
+
+      <details class="keys">
+        <summary>Withdraw back to layer 1</summary>
+        <div class="note warn">
+          This leaves Platform. Credits become DASH again at the address you name,
+          minimum 0.004 DASH. Withdrawals are not instant — masternodes sign them
+          in batches.
+        </div>
+        <div class="field">
+          <label for="wdWif">Key of the platform address holding the credits (WIF)</label>
+          <input id="wdWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="wdTo">Dash address to receive it</label>
+          <input id="wdTo" type="text" placeholder="X… or y…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="wdAmount">Amount (DASH), optional</label>
+          <input id="wdAmount" type="text" placeholder="everything" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn primary" id="wdBtn">Withdraw</button>
+        <div id="wdOut"></div>
+      </details>
+    </section>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
