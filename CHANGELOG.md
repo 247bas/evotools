@@ -10,6 +10,9 @@ rather than installable releases.
   identity, which you already have. The conversion lives in the credits tool now,
   including the recovery for one that was interrupted. Onboard keeps its own copy
   for people arriving with nothing.
+- **The round trip is closed.** DASH goes in through an asset lock and comes
+  back out through an asset unlock, both verified on mainnet — so credits are no
+  longer a one-way door.
 - **A credits tool.** Topping up an identity was buried at the end of the onboard
   wizard and inside dash-name's claim panel — reachable only if you were already
   doing something else. It has its own page now: look an identity up by id or
