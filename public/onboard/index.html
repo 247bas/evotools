@@ -121,6 +121,24 @@
         <div class="mono box" id="mnemonicBox">…</div>
       </div>
 
+      <!-- mainnet: keys made offline beat keys made in a browser tab -->
+      <div id="ownPhraseBlock" hidden>
+        <details class="keys">
+          <summary>I made my keys offline — use my phrase instead</summary>
+          <p class="fineprint">
+            Generated in <a href="/keygen/">keygen</a> on a machine that stays
+            offline? Paste that phrase and the identity gets exactly those five
+            keys. The phrase above is then thrown away.
+          </p>
+          <div class="field">
+            <label for="ownPhrase">Your recovery phrase</label>
+            <textarea id="ownPhrase" rows="2" placeholder="twelve or twenty-four words, separated by spaces" autocomplete="off" spellcheck="false"></textarea>
+          </div>
+          <button class="btn ghost" id="useOwnPhraseBtn">Use this phrase</button>
+          <div id="ownPhraseOut"></div>
+        </details>
+      </div>
+
       <div class="field">
         <div class="field-head">
           <label>Funding address (platform address)</label>
@@ -134,6 +152,7 @@
         <span id="savedMnemonicText">I've saved my recovery phrase somewhere safe.</span>
       </label>
       <button class="btn primary" id="toFundBtn" disabled>Continue to funding</button>
+      <p class="fineprint" id="continueHint" hidden></p>
     </section>
 
     <!-- ── Step 2: fund ──────────────────────────────────────────────── -->

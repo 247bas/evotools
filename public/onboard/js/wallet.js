@@ -27,10 +27,16 @@ export async function generateWallet() {
 }
 
 // Generate the mnemonic that will hold the new identity's keys. On mainnet this
-// is the only key material the browser creates — the funding key stays yours.
+// is the only key material the browser creates — the funding key stays yours,
+// and a phrase made offline in keygen can replace this one entirely.
 export async function generateIdentityMnemonic() {
   const { wallet } = await loadEvo();
   return wallet.generateMnemonic();
+}
+
+export async function isValidMnemonic(mnemonic) {
+  const { wallet } = await loadEvo();
+  try { return await wallet.validateMnemonic(mnemonic); } catch { return false; }
 }
 
 // Funding address from a mnemonic: BIP44 m/44'/{coin}'/0'/0/0 → bech32m

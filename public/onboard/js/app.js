@@ -1,6 +1,8 @@
 // evo-onboard — step orchestration and UI wiring.
 
-import { generateWallet, generateIdentityMnemonic, platformAddressFromWif } from './wallet.js';
+import {
+  generateWallet, generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic,
+} from './wallet.js';
 import {
   getAddressBalance, createIdentity, checkUsername, registerUsername,
   fundAddressFromIdentity,
@@ -35,6 +37,7 @@ const POLL_MS = 4000;
 // ── state ───────────────────────────────────────────────────────────────────
 const state = {
   mnemonic: null,
+  ownPhrase: false, // true once the user supplied a phrase made elsewhere
   address: null,
   addressPrivateKeyWif: null,
   balance: 0n,
@@ -136,6 +139,8 @@ $('startBtn').addEventListener('click', withBusy($('startBtn'), 'Loading SDK…'
   }
   $('mnemonicBox').textContent = state.mnemonic;
   $('byoKeyBlock').hidden = !main;
+  $('ownPhraseBlock').hidden = !main;
+  $('ownPhraseOut').replaceChildren();
   $('walletTitle').textContent = main ? 'Your funding key and identity keys' : 'Your testnet wallet';
   $('walletIntro').textContent = main
     ? 'The phrase below holds the keys of the identity you are about to create. Save it now — it is shown only here, and without it the identity is unrecoverable.'
@@ -149,11 +154,62 @@ $('startBtn').addEventListener('click', withBusy($('startBtn'), 'Loading SDK…'
 }));
 
 // Continue is allowed once the phrase is confirmed and — on mainnet — a funding
-// address has actually been derived from the pasted key.
+// address has actually been derived from the pasted key. A disabled button with
+// no explanation is a dead end, so say which of the two is missing.
 function updateContinue() {
-  $('toFundBtn').disabled = !($('savedMnemonic').checked && state.address);
+  const noAddress = !state.address;
+  const noTick = !$('savedMnemonic').checked;
+  $('toFundBtn').disabled = noAddress || noTick;
+  const hint = $('continueHint');
+  hint.textContent = noAddress
+    ? 'Paste the funding key above — its platform address has to be derived first.'
+    : noTick ? 'Confirm that you saved the recovery phrase.' : '';
+  hint.hidden = !hint.textContent;
 }
 $('savedMnemonic').addEventListener('change', updateContinue);
+
+// Derive while typing so the address appears on its own; the button below stays
+// as the explicit way to do it.
+let wifDebounce = null;
+$('fundingWif').addEventListener('input', () => {
+  clearTimeout(wifDebounce);
+  const wif = $('fundingWif').value.trim();
+  state.address = null;
+  state.addressPrivateKeyWif = null;
+  $('addressBox1').textContent = wif ? 'checking…' : 'paste your funding key above';
+  updateContinue();
+  if (!wif) return;
+  wifDebounce = setTimeout(async () => {
+    try {
+      Object.assign(state, await platformAddressFromWif(wif));
+      $('addressBox1').textContent = state.address;
+      $('addressBox2').textContent = state.address;
+      clearError();
+    } catch {
+      $('addressBox1').textContent = 'not a usable key yet — check the WIF';
+    }
+    updateContinue();
+  }, 400);
+});
+
+// Keys made offline should win over the ones this tab just made, so let the
+// user swap in their own phrase before anything is broadcast.
+$('useOwnPhraseBtn').addEventListener('click', withBusy($('useOwnPhraseBtn'), 'Checking…', async () => {
+  clearError();
+  const phrase = $('ownPhrase').value.trim().replace(/\s+/g, ' ');
+  if (!phrase) throw new Error('Paste your recovery phrase first.');
+  if (!(await isValidMnemonic(phrase))) {
+    throw new Error('That phrase is not a valid mnemonic — check for typos or a missing word.');
+  }
+  state.mnemonic = phrase;
+  state.ownPhrase = true;
+  $('mnemonicBox').textContent = phrase;
+  $('ownPhrase').value = '';
+  const ok = document.createElement('div');
+  ok.className = 'note ok';
+  ok.textContent = 'Using your phrase. The identity will carry the five keys derived from it.';
+  $('ownPhraseOut').replaceChildren(ok);
+}));
 
 $('deriveAddrBtn').addEventListener('click', withBusy($('deriveAddrBtn'), 'Deriving…', async () => {
   clearError();

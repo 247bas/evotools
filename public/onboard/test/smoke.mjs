@@ -2,10 +2,11 @@
 // including) broadcasting. Run: node test/smoke.mjs
 import {
   generateWallet, deriveIdentityKeys, keySpecs,
-  generateIdentityMnemonic, platformAddressFromWif,
+  generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic,
 } from '../js/wallet.js';
 import { loadEvo, getSdk, setNetwork } from '../js/sdk.js';
 import { getAddressBalance, checkUsername, fundAddressFromIdentity } from '../js/platform.js';
+import { deriveAll } from '../../keygen/js/keys.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
 const info = (m) => console.log(`  ·  ${m}`);
@@ -76,6 +77,20 @@ check(mainKeys[0].privateKeyWif !== derived[0].privateKeyWif, 'mainnet keys diff
 await getSdk();
 const mainBal = await getAddressBalance(byo.address);
 check(typeof mainBal === 'bigint' && mainBal === 0n, `fresh mainnet address balance = ${mainBal} credits`);
+
+console.log('\n6b. A phrase made in keygen produces the same identity keys here');
+check((await isValidMnemonic(mainMnemonic)) === true, 'a real phrase is accepted');
+check((await isValidMnemonic('this is not a mnemonic at all')) === false, 'a broken phrase is refused');
+const fromKeygen = await deriveAll(mainMnemonic, 'mainnet');
+const viaOnboard = await deriveIdentityKeys(mainMnemonic); // still on mainnet from step 6
+check(
+  viaOnboard.length === 5 && viaOnboard.every((d, i) => d.privateKeyWif === fromKeygen.keys[i].wif),
+  'onboard derives exactly the keys keygen showed offline',
+);
+check(
+  viaOnboard.every((d, i) => d.publicKeyHex === fromKeygen.keys[i].publicKeyHex),
+  'and the same public keys, so the minted identity carries them',
+);
 
 console.log('\n7. Mainnet funding guard: wrong key is refused before broadcast');
 try {
