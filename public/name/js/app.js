@@ -67,17 +67,20 @@ const state = await sdk.voting.contestedResourceVoteState({
   allowIncludeLockedAndAbstainingVoteTally: true,
 });
 const locked = state.winner?.kind === 'Locked';` : '');
-const registerCode = (label) => `import { EvoSDK, IdentitySigner } from '@dashevo/evo-sdk';
+const registerCode = (label) => `import { EvoSDK, IdentitySigner, PrivateKey } from '@dashevo/evo-sdk';
 
 const sdk = EvoSDK.${factory()}();
 await sdk.connect();
 
-// your identity + its CRITICAL authentication key
+// Documents may be signed by an AUTHENTICATION key at CRITICAL, HIGH or MEDIUM
+// level — a MASTER key cannot sign documents. Pick the one your WIF belongs to.
 const identity = await sdk.identities.fetch(IDENTITY_ID);
 const keys = await sdk.identities.getKeys({ identityId: IDENTITY_ID, request: { type: 'all' } });
-const identityKey = keys.find(
-  (k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL',
-);
+const privateKeyBytes = PrivateKey.fromWIF(WIF).toBytes();
+const identityKey = keys
+  .filter((k) => k.purpose === 'AUTHENTICATION'
+    && ['CRITICAL', 'HIGH', 'MEDIUM'].includes(k.securityLevel))
+  .find((k) => k.validatePrivateKey(privateKeyBytes, '${getNetwork()}'));
 
 // sign locally with your private key (WIF) — it never leaves your browser
 const signer = new IdentitySigner();

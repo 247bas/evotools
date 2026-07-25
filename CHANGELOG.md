@@ -5,6 +5,13 @@ rather than installable releases.
 
 ## Unreleased
 
+- **dash-name claims any identity** — registration no longer insists on a
+  CRITICAL authentication key. DPNS documents may be signed by an AUTHENTICATION
+  key at CRITICAL, HIGH or MEDIUM level (a MASTER key never signs documents), and
+  the tool now picks the key your WIF actually belongs to via
+  `validatePrivateKey`, instead of guessing one. Identities made outside Onboard
+  (Dash Evo Tool, mobile wallets) typically carry a HIGH key and were rejected
+  before this.
 - **Locked names** — dash-name and the explorer no longer call a name available
   when its contest ended in a lock. A lock leaves the name without an owner, so
   `isNameAvailable()` says true while nobody can ever claim it (on mainnet: pay,

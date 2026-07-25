@@ -1,7 +1,12 @@
 // DPNS operations for dash-name: check availability + contest state, and claim a
 // name for an existing identity (reuses onboard's registration + explorer's
 // contest query).
-import { getSdk, loadEvo } from './sdk.js';
+import { getSdk, loadEvo, getNetwork } from './sdk.js';
+
+// Document state transitions may be signed by an AUTHENTICATION key at CRITICAL,
+// HIGH or MEDIUM level. A MASTER key cannot sign documents, and a TRANSFER key
+// has the wrong purpose — same rule Dash Evo Tool applies for DPNS.
+const DOC_SIGNING_LEVELS = ['CRITICAL', 'HIGH', 'MEDIUM'];
 
 const str = (x) => (typeof x === 'string' ? x : x?.toString?.());
 // DPNS system contract — identical on testnet and mainnet.
@@ -59,11 +64,12 @@ async function getContest(label) {
   };
 }
 
-// Claim a name for an existing identity, signed with its CRITICAL auth key.
+// Claim a name for an existing identity, signed with whichever authentication key
+// the supplied WIF belongs to.
 export async function registerName(label, identityId, wif) {
   const Evo = await loadEvo();
   const sdk = await getSdk();
-  const { IdentitySigner } = Evo;
+  const { IdentitySigner, PrivateKey } = Evo;
   const clean = label.replace(/\.dash$/i, '').trim().toLowerCase();
 
   // Never spend the 0.2 DASH contested-name fee on a name masternodes already locked.
@@ -78,8 +84,26 @@ export async function registerName(label, identityId, wif) {
   if (!identity) throw new Error(`Identity not found on this network: ${identityId}`);
 
   const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
-  const identityKey = keys.find((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL');
-  if (!identityKey) throw new Error('This identity has no CRITICAL authentication key.');
+  const usable = keys.filter(
+    (k) => k.purpose === 'AUTHENTICATION' && DOC_SIGNING_LEVELS.includes(k.securityLevel) && !k.disabledAt,
+  );
+  if (!usable.length) {
+    throw new Error('This identity has no authentication key that can sign documents (needs CRITICAL, HIGH or MEDIUM — a MASTER key cannot).');
+  }
+
+  // Match the pasted key against the identity's keys instead of assuming one, so
+  // it works whichever of the usable keys you happen to hold.
+  let privateKeyBytes;
+  try { privateKeyBytes = PrivateKey.fromWIF(wif).toBytes(); }
+  catch { throw new Error('That private key is not a valid WIF.'); }
+  const net = getNetwork();
+  const identityKey = usable.find((k) => {
+    try { return k.validatePrivateKey(privateKeyBytes, net); } catch { return false; }
+  });
+  if (!identityKey) {
+    const list = usable.map((k) => `#${k.keyId} ${k.securityLevel}`).join(', ');
+    throw new Error(`That key does not match any signing key on this identity (${list}).`);
+  }
 
   const signer = new IdentitySigner();
   signer.addKeyFromWif(wif);
