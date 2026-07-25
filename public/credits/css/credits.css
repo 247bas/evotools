@@ -19,6 +19,9 @@
 .cr-cell .k { display: block; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
 .cr-cell .v { font-family: var(--mono); font-size: 0.9rem; word-break: break-all; }
 .cr-cell .v.big { font-size: 1.25rem; }
+/* One key per line: the text carries newlines, which HTML would otherwise eat. */
+.cr-cell.keys-cell { grid-column: 1 / -1; }
+.cr-cell.keys-cell .v { white-space: pre-line; line-height: 1.7; font-size: 0.82rem; }
 
 .keys + .keys { margin-top: 10px; }
 #actions .keys > summary { font-weight: 600; }

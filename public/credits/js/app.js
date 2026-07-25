@@ -62,8 +62,8 @@ const needIdentity = () => {
 function renderIdentity(info) {
   const out = $('identityOut');
   const grid = el('div', 'cr-summary');
-  const cell = (k, v, big) => {
-    const c = el('div', 'cr-cell');
+  const cell = (k, v, big, cls) => {
+    const c = el('div', `cr-cell${cls ? ` ${cls}` : ''}`);
     c.append(el('span', 'k', k));
     c.append(el('span', `v${big ? ' big' : ''}`, v));
     return c;
@@ -71,7 +71,7 @@ function renderIdentity(info) {
   grid.append(cell('Balance', `${toDash(info.balance)} ${unit()}`, true));
   grid.append(cell('Identity', info.identityId));
   if (info.name) grid.append(cell('Name', info.name));
-  grid.append(cell('Keys', info.keys.map((k) => `#${k.keyId} ${k.purpose}/${k.securityLevel}`).join('\n')));
+  grid.append(cell('Keys', info.keys.map((k) => `#${k.keyId}  ${k.purpose} · ${k.securityLevel}`).join('\n'), false, 'keys-cell'));
   out.replaceChildren(grid);
   if (!info.hasTransferKey) {
     out.append(el('div', 'note warn', 'No TRANSFER key on this identity, so credits can go in but never out.'));
