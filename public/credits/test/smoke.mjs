@@ -78,6 +78,10 @@ check(funding.platform.startsWith('tdash1'), `platform address ${funding.platfor
 check(/^y[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(funding.core), `and its Dash address ${funding.core}`);
 check(funding.credits === 0n && funding.duffs === 0, 'a fresh key holds nothing on either side');
 await refuses(() => convertDash({ wif: stranger }), 'Nothing confirmed', 'converting from an address nobody paid');
+// Duffs are numbers, credits are bigints. Passing a bigint amount used to throw
+// "Cannot mix BigInt and other types" halfway through, after the UI had already
+// promised to convert.
+await refuses(() => convertDash({ wif: stranger, lockDuffs: 250_000 }), 'Nothing confirmed', 'an explicit amount is taken as a plain number');
 check((await unfinishedConversions(stranger)).length === 0, 'and it has no unfinished conversions waiting');
 check(MIN_LOCK_DUFFS === 200_000, 'an asset lock needs 0.002 DASH');
 

@@ -217,6 +217,8 @@ $('convertBtn').addEventListener('click', withBusy($('convertBtn'), 'Convertingâ
   const wif = $('convertWif').value.trim();
   if (!wif) throw new Error('Paste the funding key first.');
   const raw = $('convertAmount').value.trim();
+  // Duffs are plain numbers here â€” credits are the bigint side of the house, and
+  // mixing the two throws before anything reaches the chain.
   const lockDuffs = raw ? Math.round(Number(raw) * 1e8) : undefined;
   if (raw && (!Number.isFinite(lockDuffs) || lockDuffs <= 0)) throw new Error('Enter an amount in DASH, or leave it empty.');
   // Offering the recovery button mid-conversion invites racing the run in front
@@ -226,7 +228,7 @@ $('convertBtn').addEventListener('click', withBusy($('convertBtn'), 'Convertingâ
     let last = null;
     await convertDash({
       wif,
-      lockDuffs: lockDuffs === undefined ? undefined : BigInt(lockDuffs),
+      lockDuffs,
       onProgress: ({ step }) => {
         if (step === last) return;
         last = step;
