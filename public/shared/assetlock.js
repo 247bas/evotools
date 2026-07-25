@@ -13,7 +13,9 @@ export const INSIGHT = {
   testnet: 'https://insight.testnet.networks.dash.org/insight-api',
 };
 
-// Protocol minimum for an asset lock that can create an identity.
+// Protocol minimum for an asset lock that can create an identity, 0.002 DASH.
+// Not queryable — copied from the reference implementation (LESSONS §A1). The
+// chain is the real authority; this only keeps the page from offering less.
 export const MIN_LOCK_DUFFS = 200_000;
 
 // Deliberately small. The public Insight nodes run a low `-maxtxfee`: 5,000

@@ -18,7 +18,12 @@ import {
 
 export { MIN_LOCK_DUFFS, FEE_DUFFS };
 
-export const MIN_WITHDRAW_CREDITS = 400_000_000n; // 0.004 DASH, protocol minimum
+// Protocol minimum for a withdrawal, 0.004 DASH. The SDK does not publish its
+// limits — the protocol facade only carries version state — so this is copied
+// from the reference implementation (dash-evo-tool, see LESSONS §A1) and cannot
+// be derived at runtime. If the protocol ever moves it, the chain refuses and
+// says so; nothing is lost, but this number would need updating.
+export const MIN_WITHDRAW_CREDITS = 400_000_000n;
 // A sweep has to leave the fee behind on the address, and that fee is not fixed
 // — 13,355,560 credits for a top-up on mainnet, less elsewhere. This is the
 // opening guess; when it is too small the network says exactly what it needed
