@@ -12,10 +12,22 @@
     "test:keygen": "node public/keygen/test/smoke.mjs",
     "vendor": "cp node_modules/@dashevo/evo-sdk/dist/evo-sdk.module.js public/shared/vendor/evo-sdk.module.js && echo vendored",
     "og": "node tools/og.mjs",
-    "dev": "python3 -m http.server 8000 --directory public"
+    "dev": "python3 -m http.server 8000 --directory public",
+    "vendor:dashcore": "node tools/vendor-dashcore.mjs",
+    "test:assetlock": "node public/shared/test/assetlock.mjs"
   },
   "devDependencies": {
+    "@dashevo/dashcore-lib": "^0.25.0",
     "@dashevo/evo-sdk": "^4.0.0",
-    "@resvg/resvg-js": "^2.6.2"
+    "@resvg/resvg-js": "^2.6.2",
+    "assert": "^2.1.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
+    "esbuild": "^0.28.1",
+    "events": "^3.3.0",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "string_decoder": "^1.3.0",
+    "url": "^0.11.4"
   }
 }

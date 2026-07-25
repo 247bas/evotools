@@ -5,6 +5,21 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Getting onto Platform no longer needs Dash Evo Tool.** The funding key's
+  ordinary Dash address can now be paid from any wallet, and onboard turns those
+  coins into Platform credits itself: it builds and signs the asset lock with a
+  vendored dashcore-lib bundle, broadcasts through a public Insight instance,
+  waits for the block to be chain-locked and hands Platform a chain proof. Same
+  code on both networks, so the walk-through you do on testnet with free coins is
+  the one that runs on mainnet with real ones. Verified end to end on testnet,
+  in the browser.
+- **keygen shows the Dash address too.** One key, two encodings: the `X…`/`y…`
+  address any wallet can pay (that is the one in the QR now) and the `dash1…`
+  platform address where the credits land.
+- **onboard says how many things you have to keep.** Supply your own funding key
+  and the phrase on screen only covers the identity — so the page now derives
+  what the phrase would produce, compares it with the key in use, and every line
+  in that step follows the answer instead of the network.
 - **keygen — a sixth tool.** Derives the funding address and the five DIP-13
   identity keys from one phrase, with no network at all: no `EvoSDK` instance, no
   `connect()`. "Download offline copy" packs the whole tool, SDK included, into

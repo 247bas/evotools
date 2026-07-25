@@ -113,16 +113,27 @@
       <div class="kg-address">
         <div class="kg-address-text">
           <div class="field-head">
-            <label>Funding address (platform address)</label>
+            <label>Dash address — pay this one</label>
+            <button class="btn ghost sm kg-noprint" id="copyCoreAddress">Copy</button>
+          </div>
+          <div class="mono box small" id="coreAddressBox">…</div>
+          <p class="fineprint">
+            An ordinary Dash address. Send DASH here from any wallet, then convert
+            it to Platform credits in <a href="/onboard/">onboard</a>. Scan the
+            code instead of typing it.
+          </p>
+
+          <div class="field-head">
+            <label>Platform address — where the credits land</label>
             <button class="btn ghost sm kg-noprint" id="copyAddress">Copy</button>
           </div>
           <div class="mono box small" id="addressBox">…</div>
           <p class="fineprint">
-            Public — this is the only line you need to carry back to an online
-            machine. Scan the code with your phone instead of typing it.
+            Same key, other encoding. Both are public, so these two lines are the
+            only thing that needs to travel back to an online machine.
           </p>
         </div>
-        <div class="kg-qr" id="qrBox" aria-label="QR code of the funding address"></div>
+        <div class="kg-qr" id="qrBox" aria-label="QR code of the Dash address"></div>
       </div>
 
       <details class="keys" id="secretBlock">

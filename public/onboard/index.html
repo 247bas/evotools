@@ -101,13 +101,13 @@
       </p>
 
       <!-- mainnet: you supply the funding key instead of the page making one -->
-      <div id="byoKeyBlock" hidden>
+      <div id="byoKeyBlock">
         <div class="field">
-          <label for="fundingWif">Funding key (WIF) — a key you already control</label>
+          <label for="fundingWif" id="fundingWifLabel">Funding key (WIF) — a key you already control</label>
           <input type="password" id="fundingWif" placeholder="WIF…" autocomplete="off" spellcheck="false" />
         </div>
         <button class="btn ghost" id="deriveAddrBtn">Derive my platform address</button>
-        <p class="fineprint">
+        <p class="fineprint" id="byoKeyHint">
           Used only in this page: to derive the address and to sign the funding
           input. Any credits left over stay on that address, under your key.
         </p>
@@ -119,6 +119,7 @@
           <button class="btn ghost sm" id="copyMnemonic">Copy</button>
         </div>
         <div class="mono box" id="mnemonicBox">…</div>
+        <p class="fineprint" id="phraseScope" hidden></p>
       </div>
 
       <!-- mainnet: keys made offline beat keys made in a browser tab -->
@@ -175,6 +176,36 @@
       <a class="btn primary" id="bridgeBtn" href="#" target="_blank" rel="noopener">
         Open Dash Bridge ↗
       </a>
+
+      <!-- Any network: convert plain DASH sitting on this key's Dash address -->
+      <details class="keys" id="convertBlock">
+        <summary>Convert DASH from this key's own Dash address</summary>
+        <p class="fineprint">
+          The funding key also has an ordinary Dash address. Send DASH there from
+          any wallet — your phone, Dash Core, an exchange withdrawal — and this
+          converts it into Platform credits with an asset lock. No other software.
+        </p>
+        <div class="field">
+          <div class="field-head">
+            <label>Dash address for this key</label>
+            <button class="btn ghost sm" id="copyCoreAddress">Copy</button>
+          </div>
+          <div class="mono box small" id="coreAddressBox">…</div>
+        </div>
+        <div class="balance">
+          <div class="balance-row">
+            <span>Confirmed on that address</span>
+            <span class="mono" id="coreBalance">checking…</span>
+          </div>
+          <div class="balance-hint" id="coreHint">A payment needs one confirmation before it can be converted.</div>
+        </div>
+        <div class="field">
+          <label for="lockAmount">Convert (DASH)</label>
+          <input type="text" id="lockAmount" placeholder="0.05" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn primary" id="convertBtn" disabled>Convert to credits</button>
+        <div id="convertOut"></div>
+      </details>
 
       <!-- mainnet: no faucet exists, so credits come from an identity you own -->
       <div id="mainnetFundBlock" hidden>

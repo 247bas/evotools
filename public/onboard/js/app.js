@@ -2,12 +2,17 @@
 
 import {
   generateWallet, generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic,
+  deriveFundingAddress,
 } from './wallet.js';
 import {
   getAddressBalance, createIdentity, checkUsername, registerUsername,
   fundAddressFromIdentity,
 } from './platform.js';
-import { setNetwork, getNetwork, isMainnet } from './sdk.js';
+import { setNetwork, getNetwork, isMainnet, getSdk, loadEvo } from './sdk.js';
+import {
+  loadDashcore, fetchUtxos, spendable, totalDuffs, convertToCredits,
+  MIN_LOCK_DUFFS, FEE_DUFFS,
+} from '../../shared/assetlock.js';
 
 // ── constants (credits are bigint; 1 DASH = 100,000,000,000 credits) ────────
 const CREDITS_PER_DASH = 100_000_000_000n;
@@ -39,7 +44,10 @@ const state = {
   mnemonic: null,
   ownPhrase: false, // true once the user supplied a phrase made elsewhere
   address: null,
+  coreAddress: null,
   addressPrivateKeyWif: null,
+  generated: null, // the wallet onboard made itself, on testnet
+  sameKey: null,   // does the phrase on screen also control the funding key?
   balance: 0n,
   identityId: null,
   identityObj: null,
@@ -134,24 +142,68 @@ $('startBtn').addEventListener('click', withBusy($('startBtn'), 'Loading SDK…'
     $('addressBox1').textContent = 'paste your funding key above';
   } else {
     Object.assign(state, await generateWallet());
+    Object.assign(state, await platformAddressFromWif(state.addressPrivateKeyWif));
+    // Keep it aside: emptying the WIF field below falls back to this one.
+    state.generated = {
+      address: state.address, coreAddress: state.coreAddress, addressPrivateKeyWif: state.addressPrivateKeyWif,
+    };
     $('addressBox1').textContent = state.address;
     $('addressBox2').textContent = state.address;
   }
   $('mnemonicBox').textContent = state.mnemonic;
-  $('byoKeyBlock').hidden = !main;
   $('ownPhraseBlock').hidden = !main;
+  // Keys made elsewhere are worth using on either network — keygen makes both.
+  $('fundingWifLabel').textContent = main
+    ? 'Funding key (WIF) — a key you already control'
+    : 'Funding key (WIF) — optional, to use your own instead of the generated one';
+  $('byoKeyHint').textContent = main
+    ? 'Used only in this page: to derive the address and to sign the funding input. Any credits left over stay on that address, under your key.'
+    : 'Onboard already made one for you. Paste a key from keygen to use that instead; empty the field to go back.';
   $('ownPhraseOut').replaceChildren();
-  $('walletTitle').textContent = main ? 'Your funding key and identity keys' : 'Your testnet wallet';
-  $('walletIntro').textContent = main
-    ? 'The phrase below holds the keys of the identity you are about to create. Save it now — it is shown only here, and without it the identity is unrecoverable.'
-    : 'This mnemonic controls everything below. Save it now — it\'s the only way to recover this wallet, and it\'s shown only here.';
-  $('mnemonicLabel').textContent = main ? 'Identity recovery phrase (mnemonic)' : 'Recovery phrase (mnemonic)';
-  $('savedMnemonicText').textContent = main
-    ? "I've saved the identity phrase somewhere safe."
-    : "I've saved my recovery phrase somewhere safe.";
   updateContinue();
+  updatePhraseScope();
   showPanel('wallet', 1);
 }));
+
+// Does the phrase on screen also control the money? Derive the funding address
+// the phrase would produce and compare it with the one actually in use. This
+// never shows the phrase or the key — it only says how many things to keep.
+async function updatePhraseScope() {
+  const line = $('phraseScope');
+  if (!state.mnemonic || !state.address) {
+    line.hidden = true;
+    // Nothing to compare against yet — say what the user still has to supply.
+    $('walletIntro').textContent = 'The phrase below holds the keys of the identity you are about to create. Save it now — it is shown only here, and without it the identity is unrecoverable.';
+    $('walletTitle').textContent = 'Your funding key and identity keys';
+    $('mnemonicLabel').textContent = 'Identity recovery phrase (mnemonic)';
+    $('savedMnemonicText').textContent = "I've saved the identity phrase somewhere safe.";
+    return;
+  }
+  let sameKey = false;
+  try {
+    const fromPhrase = await deriveFundingAddress(state.mnemonic);
+    sameKey = fromPhrase.address === state.address;
+  } catch { sameKey = false; }
+  state.sameKey = sameKey;
+
+  // Every line about the phrase follows the same answer, so the page cannot
+  // claim "this controls everything" while the funding key sits elsewhere.
+  line.textContent = sameKey
+    ? 'One phrase covers everything here: the identity keys and the funding key are both derived from it.'
+    : 'Two things to keep: this phrase holds the identity keys only, and the funding key you supplied is separate. Losing either one loses that half.';
+  line.hidden = false;
+  $('walletIntro').textContent = sameKey
+    ? 'This phrase controls everything below — the identity keys and the funding key alike. Save it now, it is shown only here.'
+    : 'The phrase below holds the identity keys. The funding key you supplied is not part of it and stays yours.';
+  $('walletTitle').textContent = sameKey
+    ? (isMainnet() ? 'Your wallet' : 'Your testnet wallet')
+    : 'Your funding key and identity keys';
+  $('mnemonicLabel').textContent = sameKey ? 'Recovery phrase (mnemonic)' : 'Identity recovery phrase (mnemonic)';
+  $('savedMnemonicText').textContent = sameKey
+    ? "I've saved my recovery phrase somewhere safe."
+    : "I've saved the identity phrase, and I still have the funding key.";
+  updateContinue();
+}
 
 // Continue is allowed once the phrase is confirmed and — on mainnet — a funding
 // address has actually been derived from the pasted key. A disabled button with
@@ -163,7 +215,11 @@ function updateContinue() {
   const hint = $('continueHint');
   hint.textContent = noAddress
     ? 'Paste the funding key above — its platform address has to be derived first.'
-    : noTick ? 'Confirm that you saved the recovery phrase.' : '';
+    : noTick
+      ? (state.sameKey === false
+        ? 'Confirm that you saved the identity phrase.'
+        : 'Confirm that you saved the recovery phrase.')
+      : '';
   hint.hidden = !hint.textContent;
 }
 $('savedMnemonic').addEventListener('change', updateContinue);
@@ -174,11 +230,18 @@ let wifDebounce = null;
 $('fundingWif').addEventListener('input', () => {
   clearTimeout(wifDebounce);
   const wif = $('fundingWif').value.trim();
+  if (!wif) {
+    Object.assign(state, state.generated ?? { address: null, coreAddress: null, addressPrivateKeyWif: null });
+    $('addressBox1').textContent = state.address ?? 'paste your funding key above';
+    $('addressBox2').textContent = state.address ?? '…';
+    updateContinue();
+    updatePhraseScope();
+    return;
+  }
   state.address = null;
   state.addressPrivateKeyWif = null;
-  $('addressBox1').textContent = wif ? 'checking…' : 'paste your funding key above';
+  $('addressBox1').textContent = 'checking…';
   updateContinue();
-  if (!wif) return;
   wifDebounce = setTimeout(async () => {
     try {
       Object.assign(state, await platformAddressFromWif(wif));
@@ -189,6 +252,7 @@ $('fundingWif').addEventListener('input', () => {
       $('addressBox1').textContent = 'not a usable key yet — check the WIF';
     }
     updateContinue();
+    updatePhraseScope();
   }, 400);
 });
 
@@ -205,6 +269,7 @@ $('useOwnPhraseBtn').addEventListener('click', withBusy($('useOwnPhraseBtn'), 'C
   state.ownPhrase = true;
   $('mnemonicBox').textContent = phrase;
   $('ownPhrase').value = '';
+  updatePhraseScope();
   const ok = document.createElement('div');
   ok.className = 'note ok';
   ok.textContent = 'Using your phrase. The identity will carry the five keys derived from it.';
@@ -220,6 +285,7 @@ $('deriveAddrBtn').addEventListener('click', withBusy($('deriveAddrBtn'), 'Deriv
   $('addressBox1').textContent = state.address;
   $('addressBox2').textContent = state.address;
   updateContinue();
+  updatePhraseScope();
 }));
 $('copyMnemonic').addEventListener('click', (e) => copyToButton(e.target, state.mnemonic));
 $('copyAddress1').addEventListener('click', (e) => copyToButton(e.target, state.address));
@@ -229,14 +295,86 @@ $('toFundBtn').addEventListener('click', () => {
   const main = isMainnet();
   $('bridgeBtn').hidden = main;
   $('mainnetFundBlock').hidden = !main;
+  $('coreAddressBox').textContent = state.coreAddress ?? '—';
+
+  // Mainnet has no faucet, so converting your own DASH is the whole story there
+  // and leads. On testnet the Bridge is one click, but the same conversion sits
+  // right below it: rehearsing it while the coins are free is what testnet is for.
+  const convert = $('convertBlock');
   if (main) {
-    $('fundIntro').textContent = 'This address holds credits on Platform. Fund it, and this page picks up the balance automatically.';
+    $('fundIntro').textContent = "No faucet exists on mainnet. Send DASH to this key's own Dash address and convert it here, or move credits from an identity you already own.";
+    convert.parentNode.insertBefore(convert, $('bridgeBtn'));
   } else {
+    $('fundIntro').textContent = 'The Dash Bridge hands out testnet credits in one click. Below it is the same conversion mainnet uses — worth walking through once while the coins are free.';
     $('bridgeBtn').href = `${BRIDGE}?address=${encodeURIComponent(state.address)}`;
   }
+  convert.open = true;
   showPanel('fund', 2);
   startPolling();
 });
+
+// ── funding route: convert plain DASH from the key's own layer-1 address ─────
+let coreUtxos = [];
+async function pollCoreBalance() {
+  if (!state.coreAddress) return;
+  try {
+    coreUtxos = spendable(await fetchUtxos(state.coreAddress, getNetwork()));
+    const duffs = totalDuffs(coreUtxos);
+    const { unit } = cfg();
+    // Round DOWN everywhere: showing 0.9900 for 0.98998 duffs would prefill an
+    // amount larger than the address holds, and the build would refuse it.
+    const floor4 = (d) => (Math.floor(d / 1e4) / 1e4).toFixed(4);
+    $('coreBalance').textContent = `${floor4(duffs)} ${unit}`;
+    const enough = duffs >= MIN_LOCK_DUFFS + FEE_DUFFS;
+    $('convertBtn').disabled = !enough;
+    $('coreHint').textContent = enough
+      ? `Ready to convert. Leave a little behind: ${FEE_DUFFS} duffs pay the layer-1 fee.`
+      : duffs > 0
+        ? `Below the ${MIN_LOCK_DUFFS / 1e8} ${unit} minimum for an asset lock.`
+        : 'Waiting for a payment with at least one confirmation.';
+    if (enough && !$('lockAmount').value) {
+      $('lockAmount').value = floor4(duffs - FEE_DUFFS);
+    }
+  } catch {
+    $('coreBalance').textContent = 'connection error';
+  }
+}
+
+$('convertBtn').addEventListener('click', withBusy($('convertBtn'), 'Converting…', async () => {
+  clearError();
+  const out = $('convertOut');
+  const say = (text, cls = 'dn-sub') => {
+    const d = document.createElement('div');
+    d.className = cls;
+    d.textContent = text;
+    out.append(d);
+  };
+  out.replaceChildren();
+  const dash = Number($('lockAmount').value.trim());
+  if (!Number.isFinite(dash) || dash <= 0) throw new Error('Enter an amount in DASH, e.g. 0.05');
+  const lockDuffs = Math.round(dash * 1e8);
+  const [dc, sdk, Evo] = await Promise.all([loadDashcore(), getSdk(), loadEvo()]);
+  const steps = {
+    build: 'Building the asset lock…',
+    broadcast: 'Sending it to the Dash network…',
+    mining: 'Waiting for a block. This takes a couple of minutes.',
+    chainlock: 'Waiting for the block to be chain-locked…',
+    crediting: 'Handing the lock to Platform…',
+    done: 'Converted. The credits are on your platform address.',
+  };
+  let last = null;
+  await convertToCredits({
+    sdk, Evo, dc,
+    wif: state.addressPrivateKeyWif,
+    utxos: coreUtxos,
+    lockDuffs,
+    network: getNetwork(),
+    platformAddress: state.address,
+    onProgress: ({ step }) => { if (step !== last) { last = step; say(steps[step] ?? step); } },
+  });
+  say('Converted.', 'note ok');
+  poll();
+}));
 
 // Mainnet funding: move credits from an identity you already own onto the
 // address, signed with that identity's TRANSFER key.
@@ -267,6 +405,7 @@ function startPolling() {
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
 async function poll() {
+  pollCoreBalance();
   try {
     const balance = await getAddressBalance(state.address);
     state.balance = balance;

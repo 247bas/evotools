@@ -2,7 +2,7 @@
 // including) broadcasting. Run: node test/smoke.mjs
 import {
   generateWallet, deriveIdentityKeys, keySpecs,
-  generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic,
+  generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic, deriveFundingAddress,
 } from '../js/wallet.js';
 import { loadEvo, getSdk, setNetwork } from '../js/sdk.js';
 import { getAddressBalance, checkUsername, fundAddressFromIdentity } from '../js/platform.js';
@@ -91,6 +91,20 @@ check(
   viaOnboard.every((d, i) => d.publicKeyHex === fromKeygen.keys[i].publicKeyHex),
   'and the same public keys, so the minted identity carries them',
 );
+
+console.log('\n6c. Telling a one-phrase setup from a two-key one');
+// What the wallet step claims on screen: derive the funding address the phrase
+// would produce and compare it with the address actually in use.
+setNetwork('testnet');
+const own = await generateWallet();
+const fromOwnPhrase = await deriveFundingAddress(own.mnemonic);
+check(fromOwnPhrase.address === own.address, 'a generated wallet: phrase and funding key match');
+setNetwork('mainnet');
+const strangerKey = Evo.PrivateKey.fromBytes(crypto.getRandomValues(new Uint8Array(32)), 'mainnet');
+const strangerAddr = (await platformAddressFromWif(strangerKey.toWIF())).address;
+const fromMainPhrase = await deriveFundingAddress(mainMnemonic);
+check(fromMainPhrase.address !== strangerAddr, 'a supplied key: phrase and funding key are separate');
+check(typeof (await platformAddressFromWif(strangerKey.toWIF())).coreAddress === 'string', 'a supplied key also yields its layer-1 address');
 
 console.log('\n7. Mainnet funding guard: wrong key is refused before broadcast');
 try {

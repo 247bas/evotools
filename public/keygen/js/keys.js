@@ -63,10 +63,13 @@ const funding = await wallet.derivationPathBip44${suffix}(0, 0, 0);
 const fundingKey = await wallet.deriveKeyFromSeedWithPath({
   mnemonic, path: funding.path, network: '${network}',
 });
-const fundingWif = fundingKey.toObject().privateKeyWif;
+const { privateKeyWif: fundingWif, publicKey } = fundingKey.toObject();
 const address = new PlatformAddressSigner()
   .addKey(PrivateKey.fromWIF(fundingWif))
   .toBech32m('${network}');   // ${network === 'mainnet' ? 'dash1…' : 'tdash1…'}
+
+// Same key, ordinary Dash address — this is the one any wallet can pay.
+const coreAddress = await wallet.pubkeyToAddress(publicKey, '${network}');
 
 // The five identity keys — DIP-13 m/9'/${coin}'/5'/0'/0'/0'/{keyId}
 // 0 MASTER · 1 HIGH · 2 CRITICAL (authentication) · 3 TRANSFER · 4 ENCRYPTION
@@ -90,8 +93,11 @@ export async function deriveAll(mnemonic, network) {
 
   const fp = await fundingPath(network);
   const fundingKey = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path: fp.path, network });
-  const fundingWif = fundingKey.toObject().privateKeyWif;
+  const { privateKeyWif: fundingWif, publicKey: fundingPublicKey } = fundingKey.toObject();
   const address = new PlatformAddressSigner().addKey(PrivateKey.fromWIF(fundingWif)).toBech32m(network);
+  // The same key also has an ordinary Dash address — same public key hash, other
+  // encoding. That is the one any wallet can pay, which is how coins get in.
+  const coreAddress = await wallet.pubkeyToAddress(fundingPublicKey, network);
 
   const base = await identityBase(network);
   const keys = await Promise.all(KEY_ROLES.map(async (role) => {
@@ -101,5 +107,5 @@ export async function deriveAll(mnemonic, network) {
     return { ...role, path, wif: obj.privateKeyWif, publicKeyHex: obj.publicKey };
   }));
 
-  return { mnemonic, network, address, fundingPath: fp.path, fundingWif, keys };
+  return { mnemonic, network, address, coreAddress, fundingPath: fp.path, fundingWif, keys };
 }

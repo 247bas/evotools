@@ -54,12 +54,17 @@ export async function deriveFundingAddress(mnemonic) {
 // Funding address from a key the user already controls. The WIF never leaves the
 // page; it is only used to derive the address and later to sign the funding input.
 export async function platformAddressFromWif(wif) {
-  const { PrivateKey, PlatformAddressSigner } = await loadEvo();
+  const { PrivateKey, PlatformAddressSigner, wallet } = await loadEvo();
   let privateKey;
   try { privateKey = PrivateKey.fromWIF(wif); }
   catch { throw new Error('That is not a valid WIF private key.'); }
-  const address = new PlatformAddressSigner().addKey(privateKey).toBech32m(getNetwork());
-  return { address, addressPrivateKeyWif: wif };
+  const net = getNetwork();
+  const address = new PlatformAddressSigner().addKey(privateKey).toBech32m(net);
+  // The same key also has an ordinary Dash address on layer 1 — same public key
+  // hash, different encoding. That is the one a wallet can pay.
+  const publicKeyHex = Array.from(privateKey.getPublicKey().toBytes(), (b) => b.toString(16).padStart(2, '0')).join('');
+  const coreAddress = await wallet.pubkeyToAddress(publicKeyHex, net);
+  return { address, coreAddress, addressPrivateKeyWif: wif };
 }
 
 // Derive the 5 identity keys for identity index 0 via DIP-13:

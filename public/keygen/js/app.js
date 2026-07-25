@@ -75,7 +75,9 @@ function render(result) {
   $('wordList').replaceChildren(...words.map((w) => el('li', null, w)));
 
   $('addressBox').textContent = result.address;
-  $('qrBox').innerHTML = qrSvg(result.address, { scale: 4, quiet: 3 });
+  $('coreAddressBox').textContent = result.coreAddress;
+  // The QR carries the Dash address: that is the one a wallet can scan and pay.
+  $('qrBox').innerHTML = qrSvg(result.coreAddress, { scale: 4, quiet: 3 });
 
   $('keyRows').replaceChildren(...result.keys.map((k) => {
     const tr = el('tr');
@@ -126,6 +128,7 @@ $('netsel').addEventListener('change', async () => {
 
 $('copyMnemonic').addEventListener('click', (e) => copyToButton(e.target, current?.mnemonic ?? ''));
 $('copyAddress').addEventListener('click', (e) => copyToButton(e.target, current?.address ?? ''));
+$('copyCoreAddress').addEventListener('click', (e) => copyToButton(e.target, current?.coreAddress ?? ''));
 $('copyFunding').addEventListener('click', (e) => copyToButton(e.target, current?.fundingWif ?? ''));
 
 // A collapsed <details> keeps its content out of the printed page no matter what
