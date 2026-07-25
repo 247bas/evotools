@@ -2,7 +2,7 @@
 // stored or sent anywhere.
 import {
   lookupIdentity, addressFromWif, topUpIdentity, sendFromIdentity,
-  sendBetweenAddresses, withdrawToCore, MIN_WITHDRAW_CREDITS,
+  sendBetweenAddresses, withdrawToCore, MIN_WITHDRAW_CREDITS, maxWithdrawable,
   fundingAddresses, convertDash, unfinishedConversions, finishConversion,
   MIN_LOCK_DUFFS, FEE_DUFFS,
 } from './credits.js';
@@ -168,8 +168,19 @@ for (const [wifId, outId] of [['topUpWif', 'topUpOut'], ['moveWif', 'moveOut'], 
     timer = setTimeout(async () => {
       try {
         const { address, balance } = await addressFromWif(wif);
-        const enough = wifId !== 'wdWif' || balance >= MIN_WITHDRAW_CREDITS;
-        say(outId, `${address} holds ${toDash(balance)} ${unit()}.${enough ? '' : ' Below the 0.004 withdrawal minimum.'}`, enough ? 'dn-sub' : 'note warn');
+        if (wifId === 'wdWif') {
+          // Say the most that can leave, not just what is there: the difference
+          // between the two is a protocol rule nobody guesses.
+          const most = maxWithdrawable(balance);
+          const enough = most >= MIN_WITHDRAW_CREDITS;
+          say(outId,
+            enough
+              ? `${address} holds ${toDash(balance)} ${unit()}, of which at most ${toDash(most)} can be withdrawn — the rest has to stay available.`
+              : `${address} holds ${toDash(balance)} ${unit()}, which is not enough: withdrawing 0.004 needs 0.008005 on the address.`,
+            enough ? 'dn-sub' : 'note warn');
+          return;
+        }
+        say(outId, `${address} holds ${toDash(balance)} ${unit()}.`, 'dn-sub');
       } catch { $(outId).replaceChildren(); }
     }, 400);
   });

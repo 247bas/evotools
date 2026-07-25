@@ -139,8 +139,9 @@
         <summary>Withdraw back to layer 1</summary>
         <div class="note warn">
           This leaves Platform. Credits become DASH again at the address you name,
-          minimum 0.004 DASH. Withdrawals are not instant — masternodes sign them
-          in batches.
+          minimum 0.004 DASH — and the address has to keep 0.004005 available on
+          top of whatever you withdraw, so it can never be emptied this way.
+          Withdrawals are not instant: masternodes sign them in batches.
         </div>
         <div class="field">
           <label for="wdWif">Key of the platform address holding the credits (WIF)</label>

@@ -24,6 +24,14 @@ export { MIN_LOCK_DUFFS, FEE_DUFFS };
 // be derived at runtime. If the protocol ever moves it, the chain refuses and
 // says so; nothing is lost, but this number would need updating.
 export const MIN_WITHDRAW_CREDITS = 400_000_000n;
+
+// Withdrawing X needs the address to hold X plus this much, which has to stay
+// available and does not go anywhere — confirmed on mainnet, where a balance of
+// ~0.0090 could only send 0.0051 out. So the last ~0.008 on an address can never
+// leave over layer 1; it can still be spent on names or moved into an identity.
+export const WITHDRAW_RESERVE = 400_500_000n;
+export const maxWithdrawable = (balance) =>
+  (balance > WITHDRAW_RESERVE ? balance - WITHDRAW_RESERVE : 0n);
 // A sweep has to leave the fee behind on the address, and that fee is not fixed
 // — 13,355,560 credits for a top-up on mainnet, less elsewhere. This is the
 // opening guess; when it is too small the network says exactly what it needed
