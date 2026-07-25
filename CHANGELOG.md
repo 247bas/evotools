@@ -5,6 +5,10 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The second funding route works too.** Moving credits from an identity you
+  already own onto a platform address was code-complete but untried; it turned
+  out the SDK wants the fetched identity rather than its id, and said so with an
+  error that names neither. Fixed and verified on testnet, guard included.
 - **A closed tab no longer loses a conversion.** Coins that reached the chain as
   an asset lock stay claimable until Platform is handed a proof, so the funding
   step can now look for unfinished conversions and complete them. Nothing is

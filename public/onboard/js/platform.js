@@ -26,7 +26,7 @@ export async function getIdentityBalance(identityId) {
 export async function fundAddressFromIdentity({ identityId, transferWif, address, amount }) {
   const Evo = await loadEvo();
   const sdk = await getSdk();
-  const { IdentitySigner, PlatformAddress, PlatformAddressOutput, PrivateKey } = Evo;
+  const { IdentitySigner, PrivateKey } = Evo;
 
   const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
   const transferKeys = keys.filter((k) => k.purpose === 'TRANSFER' && !k.disabledAt);
@@ -43,9 +43,15 @@ export async function fundAddressFromIdentity({ identityId, transferWif, address
   const signer = new IdentitySigner();
   signer.addKeyFromWif(transferWif);
 
+  // It wants the fetched Identity, not an id — same trap as topUpIdentity, and
+  // the error ("'identity' is required") does not say which of the two it means.
+  // Outputs are plain objects here; unlike fundFromAssetLock they all carry an
+  // amount, because the identity keeps whatever is left.
+  const identity = await sdk.identities.fetch(identityId);
+  if (!identity) throw new Error(`Identity not found on this network: ${identityId}`);
   const result = await sdk.addresses.transferFromIdentity({
-    identityId,
-    outputs: [new PlatformAddressOutput(PlatformAddress.fromBech32m(address), amount)],
+    identity,
+    outputs: [{ address, amount }],
     signer,
   });
   return { newBalance: result?.newBalance };

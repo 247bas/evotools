@@ -1,5 +1,6 @@
 // Smoke test: exercises the real app modules against testnet, up to (but not
 // including) broadcasting. Run: node test/smoke.mjs
+import { readFileSync } from 'node:fs';
 import {
   generateWallet, deriveIdentityKeys, keySpecs,
   generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic, deriveFundingAddress,
@@ -105,6 +106,16 @@ const strangerAddr = (await platformAddressFromWif(strangerKey.toWIF())).address
 const fromMainPhrase = await deriveFundingAddress(mainMnemonic);
 check(fromMainPhrase.address !== strangerAddr, 'a supplied key: phrase and funding key are separate');
 check(typeof (await platformAddressFromWif(strangerKey.toWIF())).coreAddress === 'string', 'a supplied key also yields its layer-1 address');
+
+console.log('\n6d. transferFromIdentity is called the way the SDK wants it');
+// Verified live on testnet: it needs the fetched Identity, not an id, and the
+// error ("'identity' is required") does not say which. A regex here because the
+// call itself moves credits, which a smoke test should not do on every run.
+const platformSrc = readFileSync(new URL('../js/platform.js', import.meta.url), 'utf8');
+const transferCall = platformSrc.slice(platformSrc.indexOf('transferFromIdentity({'));
+check(/transferFromIdentity\(\{\s*\n\s*identity,/.test(transferCall), 'the fetched Identity object is passed');
+check(!/transferFromIdentity\(\{[^}]*identityId,/.test(transferCall), 'not the bare id, which the SDK rejects');
+check(/outputs: \[\{ address, amount \}\]/.test(transferCall), 'outputs are plain objects carrying an amount');
 
 console.log('\n7. Mainnet funding guard: wrong key is refused before broadcast');
 try {
