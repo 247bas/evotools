@@ -212,7 +212,10 @@ export async function withdrawToCore({ fromWif, coreAddress, amount }) {
     inputs: [{ address, amount: send }],
     outputScript,
     coreFeePerByte: 1,
-    pooling: PoolingWasm.Standard,
+    // Only "never pool" is implemented: anything else is refused with
+    // "pooling 2 should be equal to 0. Other pooling mechanism are not
+    // implemented yet". Pooling would have batched withdrawals for privacy.
+    pooling: PoolingWasm.Never,
     signer: await addressSigner(Evo, fromWif),
   });
   return { from: address, to: coreAddress, moved: send };
