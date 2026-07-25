@@ -5,6 +5,11 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A closed tab no longer loses a conversion.** Coins that reached the chain as
+  an asset lock stay claimable until Platform is handed a proof, so the funding
+  step can now look for unfinished conversions and complete them. Nothing is
+  stored for this — the chain is asked, and the key is enough to recognise which
+  locks pay you. Locks that were already credited say so instead of erroring.
 - **InstantSend counts.** A payment that is locked but not yet mined is already
   final on Dash, so the funding step converts it straight away instead of waiting
   out a block first. That is the difference between a few seconds and a few

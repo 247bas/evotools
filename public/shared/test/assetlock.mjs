@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import {
   buildAssetLock, fetchUtxos, spendable, totalDuffs, waitForChainlock,
-  INSIGHT, MIN_LOCK_DUFFS, FEE_DUFFS,
+  findAssetLocks, isAlreadyUsed, INSIGHT, MIN_LOCK_DUFFS, FEE_DUFFS,
 } from '../assetlock.js';
 import { setNetwork, getSdk, loadEvo } from '../../name/js/sdk.js';
 
@@ -80,6 +80,22 @@ check(spendable([{ confirmations: 1 }]).length === 1, 'a confirmed output is spe
 check(spendable([{ confirmations: 0, txlock: true }]).length === 1, 'an InstantSend-locked output is spendable without a confirmation');
 check(spendable([{ confirmations: 0, txlock: false }]).length === 0, 'a plain unconfirmed output is not');
 check(totalDuffs([{ satoshis: 5 }, { satoshis: 7 }]) === 12, 'totalDuffs adds up');
+
+console.log('\n7. Finding an interrupted conversion back from the key alone');
+// A real address carrying two asset locks made by this suite. Testnet resets
+// wipe it, so an empty result is reported rather than failed.
+const KNOWN = 'yT5sYD3Pz7vC34kdJaSUdVqLf6DufcefXf';
+const found = await findAssetLocks({ dc, address: KNOWN, network: 'testnet' });
+if (!found.length) {
+  console.log('  ·  no history on the sample address (testnet reset?) — skipped');
+} else {
+  check(found.every((l) => l.duffs > 0 && /^[0-9a-f]{64}$/.test(l.txid)), `found ${found.length} asset lock(s) paying this key`);
+  check(found.every((l) => l.height > 0), 'each one carries the block it landed in');
+}
+const empty = await findAssetLocks({ dc, address: new dc.PrivateKey(undefined, 'testnet').toAddress('testnet').toString(), network: 'testnet' });
+check(empty.length === 0, 'an unused address has nothing waiting');
+check(isAlreadyUsed(new Error('Protocol error: Asset lock transaction abc output 0 already completely used')), "Platform's \"already used\" answer is recognised as done, not as failure");
+check(!isAlreadyUsed(new Error('some other problem')), 'other errors are not mistaken for that');
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

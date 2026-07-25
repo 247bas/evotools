@@ -11,7 +11,7 @@ import {
 import { setNetwork, getNetwork, isMainnet, getSdk, loadEvo } from './sdk.js';
 import {
   loadDashcore, fetchUtxos, spendable, totalDuffs, convertToCredits,
-  MIN_LOCK_DUFFS, FEE_DUFFS,
+  findAssetLocks, resumeAssetLock, MIN_LOCK_DUFFS, FEE_DUFFS,
 } from '../../shared/assetlock.js';
 
 // ── constants (credits are bigint; 1 DASH = 100,000,000,000 credits) ────────
@@ -374,6 +374,42 @@ $('convertBtn').addEventListener('click', withBusy($('convertBtn'), 'Converting�
   });
   say('Converted.', 'note ok');
   poll();
+}));
+
+// Pick up a conversion that was interrupted. Everything needed is on the chain
+// already, so this asks the chain rather than remembering anything.
+$('resumeBtn').addEventListener('click', withBusy($('resumeBtn'), 'Looking…', async () => {
+  clearError();
+  const out = $('resumeOut');
+  out.replaceChildren();
+  const say = (text, cls = 'dn-sub') => {
+    const d = document.createElement('div');
+    d.className = cls;
+    d.textContent = text;
+    out.append(d);
+  };
+  const [dc, sdk, Evo] = await Promise.all([loadDashcore(), getSdk(), loadEvo()]);
+  const locks = await findAssetLocks({ dc, address: state.coreAddress, network: getNetwork() });
+  if (!locks.length) { say('No conversions found for this key — nothing is waiting.'); return; }
+  say(`Found ${locks.length} conversion${locks.length === 1 ? '' : 's'} on the chain. Checking which still need finishing…`);
+  let credited = 0;
+  for (const lock of locks) {
+    const dash = (lock.duffs / 1e8).toFixed(4);
+    try {
+      const res = await resumeAssetLock({
+        sdk, Evo, wif: state.addressPrivateKeyWif, lock, platformAddress: state.address,
+        onProgress: ({ step, at }) => {
+          if (step === 'chainlock' && at) say(`${dash} ${cfg().unit}: waiting for the block to be chain-locked…`);
+        },
+      });
+      if (res.state === 'credited') { credited++; say(`${dash} ${cfg().unit} recovered.`, 'note ok'); }
+      else if (res.state === 'already-done') say(`${dash} ${cfg().unit}: already credited earlier.`);
+      else say(`${dash} ${cfg().unit}: not mined yet, try again in a few minutes.`);
+    } catch (e) {
+      say(`${dash} ${cfg().unit}: ${e?.message || e}`, 'error');
+    }
+  }
+  if (credited) poll();
 }));
 
 // Mainnet funding: move credits from an identity you already own onto the

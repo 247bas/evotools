@@ -205,3 +205,60 @@ export async function convertToCredits({
   onProgress({ step: 'done', txid });
   return { txid, height };
 }
+
+// ── picking up an interrupted conversion ────────────────────────────────────
+// A lock that reached the chain stays claimable until someone hands Platform a
+// proof, so a closed tab never loses the coins — it only loses the note of
+// where they went. Nothing has to be stored for this: the chain remembers, and
+// the key is enough to find them back.
+
+// Platform's answer when a lock has already been turned into credits.
+const CONSUMED = 'already completely used';
+export const isAlreadyUsed = (err) => String(err?.message || err).includes(CONSUMED);
+
+// Asset locks on this address whose credits belong to this key.
+export async function findAssetLocks({ dc, address, network, limit = 25 }) {
+  const info = await getJson(`${api(network)}/addr/${address}`);
+  const net = coreNetwork(network);
+  const mine = dc.Address.fromString(address, net).hashBuffer.toString('hex');
+  const locks = [];
+  for (const txid of (info.transactions || []).slice(0, limit)) {
+    let tx;
+    try {
+      const { rawtx } = await getJson(`${api(network)}/rawtx/${txid}`);
+      tx = new dc.Transaction(rawtx);
+    } catch { continue; }
+    if (tx.type !== 8) continue; // not an asset lock
+    const credit = tx.extraPayload?.creditOutputs?.[0];
+    if (!credit) continue;
+    let creditHash;
+    try { creditHash = credit.script.toAddress(net).hashBuffer.toString('hex'); } catch { continue; }
+    if (creditHash !== mine) continue;
+    const meta = await getJson(`${api(network)}/tx/${txid}`).catch(() => null);
+    locks.push({
+      txid,
+      duffs: credit.satoshis,
+      height: meta?.blockheight ?? -1,
+      confirmations: meta?.confirmations ?? 0,
+    });
+  }
+  return locks;
+}
+
+// Finish one. Returns why it could not be finished rather than throwing, since
+// "this one was already done" is a perfectly good outcome when sweeping.
+export async function resumeAssetLock({ sdk, Evo, wif, lock, platformAddress, onProgress = () => {} }) {
+  if (lock.height <= 0) return { txid: lock.txid, state: 'not-mined' };
+  onProgress({ step: 'chainlock', ...lock });
+  const locked = await waitForChainlock(sdk, lock.height, {
+    onTick: (at) => onProgress({ step: 'chainlock', at, ...lock }),
+  });
+  onProgress({ step: 'crediting', ...lock });
+  try {
+    await fundFromAssetLock({ sdk, Evo, wif, txid: lock.txid, chainlockedHeight: locked, platformAddress });
+    return { txid: lock.txid, state: 'credited', duffs: lock.duffs };
+  } catch (e) {
+    if (isAlreadyUsed(e)) return { txid: lock.txid, state: 'already-done', duffs: lock.duffs };
+    throw e;
+  }
+}
