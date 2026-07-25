@@ -5,6 +5,13 @@ rather than installable releases.
 
 ## Unreleased
 
+- **"Verify with proof" is on by default** in the explorer. Measured across
+  identity, contract, document and shielded-pool queries on both networks, the
+  proven path costs nothing worth saving: on mainnet 135 vs 185 ms for an
+  identity, 146 vs 151 ms for ten documents, and on testnet the difference is
+  inside the noise. So every lookup now comes back verified against a
+  quorum-signed state root unless you turn it off. Permalinks carry `proof=0` as
+  well as `proof=1`, so a link made with proofs off stays off.
 - **Shielded pool panel in the explorer** — Platform runs an Orchard shielded
   credit pool, and it is live on both networks. The panel shows testnet and
   mainnet side by side: total balance, note count, anchors and the latest

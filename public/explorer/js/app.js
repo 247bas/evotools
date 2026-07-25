@@ -343,8 +343,10 @@ async function showNetwork() {
 }
 
 // ── permalinks ───────────────────────────────────────────────────────────────
+// Proofs are on by default, so the parameter is always written out — otherwise a
+// link made with proofs off would come back on for whoever opens it.
 function syncUrl(kind, q) {
-  const proof = $('proof').checked ? '&proof=1' : '';
+  const proof = $('proof').checked ? '&proof=1' : '&proof=0';
   const net = getNetwork() === 'mainnet' ? '&net=mainnet' : '';
   history.replaceState(null, '', `?kind=${kind}&q=${encodeURIComponent(q)}${proof}${net}`);
 }
@@ -353,7 +355,8 @@ function loadFromUrl() {
   if (p.get('net') === 'mainnet') { setNetwork('mainnet'); $('netsel').value = 'mainnet'; }
   const kind = p.get('kind');
   const q = p.get('q');
-  if (p.get('proof') === '1') $('proof').checked = true;
+  const pr = p.get('proof');
+  if (pr !== null) $('proof').checked = pr === '1';
   if (KINDS.includes(kind) && q) {
     $('kind').value = kind;
     $('q').value = q;
