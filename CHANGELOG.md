@@ -5,6 +5,11 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Credits can be topped up from DASH without leaving the page.** Needing more
+  credits meant walking through the onboard wizard — a flow about creating an
+  identity, which you already have. The conversion lives in the credits tool now,
+  including the recovery for one that was interrupted. Onboard keeps its own copy
+  for people arriving with nothing.
 - **A credits tool.** Topping up an identity was buried at the end of the onboard
   wizard and inside dash-name's claim panel — reachable only if you were already
   doing something else. It has its own page now: look an identity up by id or

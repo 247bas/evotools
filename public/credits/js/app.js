@@ -3,6 +3,8 @@
 import {
   lookupIdentity, addressFromWif, topUpIdentity, sendFromIdentity,
   sendBetweenAddresses, withdrawToCore, MIN_WITHDRAW_CREDITS,
+  fundingAddresses, convertDash, unfinishedConversions, finishConversion,
+  MIN_LOCK_DUFFS, FEE_DUFFS,
 } from './credits.js';
 import { setNetwork, getNetwork } from './sdk.js';
 
@@ -166,3 +168,96 @@ for (const [wifId, outId] of [['topUpWif', 'topUpOut'], ['moveWif', 'moveOut'], 
     }, 400);
   });
 }
+
+// ── turning DASH into credits ────────────────────────────────────────────────
+const duffsToDash = (duffs) => (duffs / 1e8).toFixed(4);
+
+let convertTimer = null;
+$('convertWif').addEventListener('input', () => {
+  clearTimeout(convertTimer);
+  const wif = $('convertWif').value.trim();
+  const host = $('convertAddresses');
+  if (!wif) { host.replaceChildren(); return; }
+  convertTimer = setTimeout(async () => {
+    try {
+      const info = await fundingAddresses(wif);
+      const box = el('div', 'cr-summary');
+      const cell = (k, v) => {
+        const c = el('div', 'cr-cell');
+        c.append(el('span', 'k', k));
+        c.append(el('span', 'v', v));
+        return c;
+      };
+      box.append(cell('Pay this address', `${info.core}\n${duffsToDash(info.duffs)} ${unit()} confirmed`));
+      box.append(cell('Credits land here', `${info.platform}\n${toDash(info.credits)} ${unit()}`));
+      host.replaceChildren(box);
+      if (info.duffs > 0 && info.duffs < MIN_LOCK_DUFFS) {
+        host.append(el('div', 'note warn', `An asset lock needs at least ${MIN_LOCK_DUFFS / 1e8} ${unit()}; send a little more to that address.`));
+      }
+      if (!$('convertAmount').value && info.duffs > MIN_LOCK_DUFFS + FEE_DUFFS) {
+        $('convertAmount').value = duffsToDash(info.duffs - FEE_DUFFS);
+      }
+    } catch { host.replaceChildren(); }
+  }, 400);
+});
+
+const CONVERT_STEPS = {
+  build: 'Building the asset lock…',
+  broadcast: 'Sending it to the Dash network…',
+  mining: 'Waiting for a block. A couple of minutes.',
+  chainlock: 'Waiting for the block to be chain-locked…',
+  crediting: 'Handing the lock to Platform…',
+  done: 'Converted.',
+};
+
+$('convertBtn').addEventListener('click', withBusy($('convertBtn'), 'Converting…', async () => {
+  clearError();
+  const out = $('convertOut');
+  out.replaceChildren();
+  const wif = $('convertWif').value.trim();
+  if (!wif) throw new Error('Paste the funding key first.');
+  const raw = $('convertAmount').value.trim();
+  const lockDuffs = raw ? Math.round(Number(raw) * 1e8) : undefined;
+  if (raw && (!Number.isFinite(lockDuffs) || lockDuffs <= 0)) throw new Error('Enter an amount in DASH, or leave it empty.');
+  // Offering the recovery button mid-conversion invites racing the run in front
+  // of you, over the very lock it is busy with.
+  $('resumeWrap').hidden = true;
+  try {
+    let last = null;
+    await convertDash({
+      wif,
+      lockDuffs: lockDuffs === undefined ? undefined : BigInt(lockDuffs),
+      onProgress: ({ step }) => {
+        if (step === last) return;
+        last = step;
+        out.append(el('div', 'dn-sub', CONVERT_STEPS[step] ?? step));
+      },
+    });
+    out.append(el('div', 'note ok', 'Converted. The credits are on the platform address above.'));
+    await refresh();
+  } finally {
+    $('resumeWrap').hidden = false;
+  }
+}));
+
+$('resumeBtn').addEventListener('click', withBusy($('resumeBtn'), 'Looking…', async () => {
+  clearError();
+  const out = $('resumeOut');
+  out.replaceChildren();
+  const wif = $('convertWif').value.trim();
+  if (!wif) throw new Error('Paste the funding key first.');
+  const locks = await unfinishedConversions(wif);
+  if (!locks.length) { out.append(el('div', 'dn-sub', 'Nothing waiting for this key.')); return; }
+  out.append(el('div', 'dn-sub', `Found ${locks.length} conversion${locks.length === 1 ? '' : 's'} on the chain.`));
+  for (const lock of locks) {
+    const label = `${duffsToDash(lock.duffs)} ${unit()}`;
+    try {
+      const res = await finishConversion({ wif, lock });
+      if (res.state === 'credited') out.append(el('div', 'note ok', `${label} recovered.`));
+      else if (res.state === 'already-done') out.append(el('div', 'dn-sub', `${label}: already credited earlier.`));
+      else out.append(el('div', 'dn-sub', `${label}: not mined yet, try again shortly.`));
+    } catch (e) {
+      out.append(el('div', 'error', `${label}: ${e?.message || e}`));
+    }
+  }
+}));

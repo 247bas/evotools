@@ -47,7 +47,36 @@
     <section class="panel" id="actions" hidden>
       <h2>Move credits</h2>
 
-      <details class="keys" open>
+      <details class="keys" open id="convertSection">
+        <summary>Turn DASH into credits</summary>
+        <p class="fineprint">
+          Credits have to come from somewhere. The funding key's ordinary Dash
+          address can be paid from any wallet — send DASH there, then convert it
+          here with an asset lock. Minimum 0.002 DASH, and it takes a few minutes:
+          a block has to pass and be chain-locked.
+        </p>
+        <div class="field">
+          <label for="convertWif">Funding key (WIF)</label>
+          <input id="convertWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div id="convertAddresses"></div>
+        <div class="field">
+          <label for="convertAmount">Convert (DASH), optional</label>
+          <input id="convertAmount" type="text" placeholder="everything on the address" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn primary" id="convertBtn">Convert to credits</button>
+        <div id="convertOut"></div>
+        <div id="resumeWrap">
+          <p class="fineprint">
+            A conversion that was interrupted leaves the coins on the chain,
+            waiting. Your key is enough to find them back.
+          </p>
+          <button class="btn ghost" id="resumeBtn">Look for unfinished conversions</button>
+          <div id="resumeOut"></div>
+        </div>
+      </details>
+
+      <details class="keys">
         <summary>Top up this identity from a platform address</summary>
         <p class="fineprint">
           The address keeps a little back for the transition fee. Leave the amount

@@ -21,6 +21,7 @@
 .cr-cell .v.big { font-size: 1.25rem; }
 /* One key per line: the text carries newlines, which HTML would otherwise eat. */
 .cr-cell.keys-cell { grid-column: 1 / -1; }
+#convertAddresses .cr-cell .v { white-space: pre-line; line-height: 1.6; }
 .cr-cell.keys-cell .v { white-space: pre-line; line-height: 1.7; font-size: 0.82rem; }
 
 .keys + .keys { margin-top: 10px; }

@@ -11,6 +11,12 @@
 // well, never from an identity directly.
 
 import { getSdk, loadEvo, getNetwork } from './sdk.js';
+import {
+  loadDashcore, fetchUtxos, spendable, totalDuffs, convertToCredits as runConversion,
+  findAssetLocks, resumeAssetLock, MIN_LOCK_DUFFS, FEE_DUFFS,
+} from '../../shared/assetlock.js';
+
+export { MIN_LOCK_DUFFS, FEE_DUFFS };
 
 export const MIN_WITHDRAW_CREDITS = 400_000_000n; // 0.004 DASH, protocol minimum
 // A sweep has to leave the fee behind on the address, and that fee is not fixed
@@ -251,4 +257,69 @@ function publicKeyHashOf(coreAddress) {
   for (const c of coreAddress) { if (c === '1') bytes.unshift(0); else break; }
   if (bytes.length !== 25) throw new Error(`${coreAddress} is not a Dash address.`);
   return Uint8Array.from(bytes.slice(1, 21));
+}
+
+// ── getting credits in the first place ──────────────────────────────────────
+// Credits have to come from somewhere, and for most people that somewhere is
+// plain DASH. The funding key's ordinary Dash address can be paid from any
+// wallet; this turns what lands there into credits with an asset lock. Same
+// module onboard uses — this is just the door for people who already have an
+// identity and only need more credits.
+
+// Both faces of one key, with what sits on each.
+export async function fundingAddresses(wif) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const { PrivateKey, PlatformAddressSigner, wallet } = Evo;
+  let key;
+  try { key = PrivateKey.fromWIF(wif); }
+  catch { throw new Error('That is not a valid WIF private key.'); }
+  const network = getNetwork();
+  const platform = new PlatformAddressSigner().addKey(key).toBech32m(network);
+  const publicKeyHex = Array.from(key.getPublicKey().toBytes(), (b) => b.toString(16).padStart(2, '0')).join('');
+  const core = await wallet.pubkeyToAddress(publicKeyHex, network);
+
+  const info = await sdk.addresses.get(platform);
+  const utxos = spendable(await fetchUtxos(core, network).catch(() => []));
+  return {
+    platform,
+    core,
+    credits: info?.balance ?? 0n,
+    duffs: totalDuffs(utxos),
+    utxos,
+  };
+}
+
+// Layer-1 DASH → credits on this key's platform address.
+export async function convertDash({ wif, lockDuffs, onProgress }) {
+  // Check there is something to convert before pulling in the transaction
+  // builder — it is 1.7MB, and refusing early costs nothing.
+  const { platform, utxos, duffs } = await fundingAddresses(wif);
+  if (!utxos.length) throw new Error('Nothing confirmed on that key\'s Dash address yet.');
+  const lock = lockDuffs ?? duffs - FEE_DUFFS;
+  if (lock < MIN_LOCK_DUFFS) {
+    throw new Error(`An asset lock needs at least ${MIN_LOCK_DUFFS / 1e8} DASH; that address holds ${duffs / 1e8}.`);
+  }
+
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const dc = await loadDashcore();
+  return runConversion({
+    sdk, Evo, dc, wif, utxos, lockDuffs: lock,
+    network: getNetwork(), platformAddress: platform, onProgress,
+  });
+}
+
+// Conversions that reached the chain but never became credits.
+export async function unfinishedConversions(wif) {
+  const { core } = await fundingAddresses(wif);
+  const dc = await loadDashcore();
+  return findAssetLocks({ dc, address: core, network: getNetwork() });
+}
+
+export async function finishConversion({ wif, lock, onProgress }) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const { platform } = await fundingAddresses(wif);
+  return resumeAssetLock({ sdk, Evo, wif, lock, platformAddress: platform, onProgress });
 }

@@ -6,8 +6,15 @@ import { randomBytes } from 'node:crypto';
 import {
   lookupIdentity, addressFromWif, topUpIdentity, sendFromIdentity,
   sendBetweenAddresses, withdrawToCore, MIN_WITHDRAW_CREDITS, SWEEP_MARGIN,
+  fundingAddresses, convertDash, unfinishedConversions, MIN_LOCK_DUFFS,
 } from '../js/credits.js';
+import { readFileSync } from 'node:fs';
 import { setNetwork, loadEvo, getSdk } from '../js/sdk.js';
+
+// The page loads the transaction builder with a script tag; in Node we evaluate
+// the same bundle so the conversion paths can be exercised.
+globalThis.window = globalThis;
+(0, eval)(readFileSync(new URL('../../shared/vendor/dashcore.bundle.js', import.meta.url), 'utf8'));
 
 const ok = (m) => console.log(`  ✅ ${m}`);
 let failed = 0;
@@ -65,7 +72,16 @@ await refuses(
   'not a Dash address', 'withdrawing to something that is not an address',
 );
 
-console.log('\n4. Constants match the protocol');
+console.log('\n4. Getting credits in, from layer 1');
+const funding = await fundingAddresses(stranger);
+check(funding.platform.startsWith('tdash1'), `platform address ${funding.platform}`);
+check(/^y[1-9A-HJ-NP-Za-km-z]{25,34}$/.test(funding.core), `and its Dash address ${funding.core}`);
+check(funding.credits === 0n && funding.duffs === 0, 'a fresh key holds nothing on either side');
+await refuses(() => convertDash({ wif: stranger }), 'Nothing confirmed', 'converting from an address nobody paid');
+check((await unfinishedConversions(stranger)).length === 0, 'and it has no unfinished conversions waiting');
+check(MIN_LOCK_DUFFS === 200_000, 'an asset lock needs 0.002 DASH');
+
+console.log('\n5. Constants match the protocol');
 check(MIN_WITHDRAW_CREDITS === 400_000_000n, 'withdrawal minimum is 0.004 DASH');
 check(SWEEP_MARGIN > 0n && SWEEP_MARGIN < MIN_WITHDRAW_CREDITS, `sweeps leave ${SWEEP_MARGIN} credits for the fee`);
 
