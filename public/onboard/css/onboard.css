@@ -45,7 +45,9 @@
 /* Username */
 .username-input { display: flex; align-items: center; }
 .username-input input {
-  flex: 1; padding: 12px 14px; border: 1px solid var(--border); border-right: none;
+  /* min-width: 0 — an input keeps its intrinsic width in a flex row otherwise,
+     and the row would stick out past a narrow screen */
+  flex: 1; min-width: 0; padding: 12px 14px; border: 1px solid var(--border); border-right: none;
   border-radius: 9px 0 0 9px; background: rgba(0, 0, 0, 0.35); color: var(--text);
   font-size: 1rem; font-family: inherit;
 }
@@ -65,16 +67,16 @@
 .summary .item { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); gap: 12px; }
 .summary .item:last-child { border-bottom: none; }
 .summary .item .k { color: var(--muted); }
-.summary .item .v { font-family: var(--mono); text-align: right; word-break: break-all; }
+.summary .item .v { font-family: var(--mono); text-align: right; overflow-wrap: anywhere; }
 
 .keys { margin: 18px 0; }
 .keys summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; padding: 8px 0; }
 .key-card { background: rgba(0, 0, 0, 0.25); border-radius: 8px; padding: 12px; margin: 8px 0; }
 .key-card .key-name { color: var(--blue); font-size: 0.85rem; margin-bottom: 6px; }
-.key-card .key-wif { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+.key-card .key-wif { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); overflow-wrap: anywhere; }
 
+/* panel padding + h1 now come from the shared theme's phone block */
 @media (max-width: 560px) {
-  .panel { padding: 20px; }
   .stepper li { font-size: 0.62rem; }
-  h1 { font-size: 1.3rem; }
+  .stepper { gap: 2px; }
 }

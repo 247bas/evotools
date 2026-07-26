@@ -38,6 +38,13 @@
     .hero-built a:hover { opacity: 0.85; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0 8px; }
     @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 1.9rem; } }
+    @media (max-width: 480px) {
+      .hub { padding: 20px 16px 8px; }
+      .hero { padding: 26px 0 20px; }
+      .hero h1 { font-size: 1.7rem; }
+      .hero p { font-size: 1rem; }
+      .tool { padding: 18px 16px; }
+    }
     .tool {
       display: flex; flex-direction: column; gap: 10px;
       background: var(--card); border: 1px solid var(--border); border-radius: 14px;

@@ -7,8 +7,8 @@
   background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 9px;
   color: var(--text); font-size: 0.95rem; font-family: inherit; padding: 12px 13px;
 }
-.ex-search select { min-width: 140px; }
-.ex-search input { flex: 1; min-width: 200px; font-family: var(--mono); font-size: 0.85rem; }
+.ex-search select { min-width: min(140px, 100%); }
+.ex-search input { flex: 1; min-width: min(200px, 100%); font-family: var(--mono); font-size: 0.85rem; }
 .ex-search select:focus, .ex-search input:focus { outline: none; border-color: var(--blue); }
 
 .ex-examples { color: var(--muted); font-size: 0.85rem; margin: 12px 0 4px; }
@@ -24,10 +24,10 @@
 .ex-field { margin: 14px 0; }
 .ex-label { color: var(--blue); font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
 .ex-value-row { display: flex; gap: 10px; align-items: center; }
-.ex-value { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; font-size: 0.82rem; word-break: break-all; }
+.ex-value { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; font-size: 0.82rem; min-width: 0; overflow-wrap: anywhere; }
 
 .ex-stats { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
-.ex-stat { flex: 1; min-width: 120px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px 12px; }
+.ex-stat { flex: 1; min-width: min(120px, 100%); background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px 12px; }
 .ex-stat-k { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .ex-stat-v { font-family: var(--mono); margin-top: 4px; }
 
@@ -63,7 +63,7 @@
 /* ── proof panel ──────────────────────────────────────────────────────────── */
 .ex-proof-panel { margin: 16px 0; padding: 14px; border: 1px solid rgba(40, 167, 69, 0.4); background: rgba(40, 167, 69, 0.08); border-radius: 10px; }
 .ex-proof-head { color: #7ee2a0; font-weight: 600; font-size: 0.9rem; margin-bottom: 10px; }
-.ex-proof-sub { color: var(--muted); font-size: 0.78rem; margin-top: 10px; font-family: var(--mono); word-break: break-all; }
+.ex-proof-sub { color: var(--muted); font-size: 0.78rem; margin-top: 10px; font-family: var(--mono); overflow-wrap: anywhere; }
 
 /* ── document type query form ─────────────────────────────────────────────── */
 .ex-type { border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; overflow: hidden; }
@@ -77,7 +77,7 @@
   background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 6px;
   color: var(--text); font-size: 0.8rem; font-family: var(--mono); padding: 7px 9px;
 }
-.ex-qform input { flex: 1; min-width: 80px; }
+.ex-qform input { flex: 1; min-width: min(80px, 100%); }
 .ex-qform .ex-limit { max-width: 90px; }
 .ex-qform input:focus, .ex-qform select:focus { outline: none; border-color: var(--blue); }
 .ex-qbtns { display: flex; gap: 8px; margin-top: 4px; }
@@ -89,7 +89,7 @@
 .ex-contenders { margin: 12px 0; }
 .ex-contender { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
 .ex-contender:last-child { border-bottom: none; }
-.ex-contender-id { flex: 1; word-break: break-all; }
+.ex-contender-id { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .ex-votes { color: var(--muted); white-space: nowrap; }
 .ex-badge.win { background: rgba(40, 167, 69, 0.2); color: #7ee2a0; border: 1px solid rgba(40, 167, 69, 0.5); border-radius: 999px; padding: 2px 9px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
 
@@ -106,7 +106,7 @@
 .ex-pool-amount { font-size: 1.5rem; font-weight: 600; margin-top: 4px; }
 .ex-pool .ex-stats { margin: 12px 0 6px; }
 .ex-pool .ex-stat { min-width: 0; }
-.ex-anchor { word-break: break-all; font-size: 0.75rem; }
+.ex-anchor { overflow-wrap: anywhere; font-size: 0.75rem; }
 .ex-pool-foot { margin: 4px 0 0; }
 .ex-nul { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
 .ex-nul input, .ex-nul select {
@@ -114,7 +114,7 @@
   color: var(--text); font-size: 0.8rem; font-family: var(--mono); padding: 7px 9px;
 }
 .ex-nul input:focus, .ex-nul select:focus { outline: none; border-color: var(--blue); }
-.ex-nul input { flex: 1; min-width: 220px; }
+.ex-nul input { flex: 1; min-width: min(220px, 100%); }
 .ex-nul #nulOut { margin-top: 10px; }
 @media (max-width: 620px) { .ex-pools { grid-template-columns: 1fr; } }
 
@@ -127,7 +127,7 @@
 .ex-dev-body textarea {
   width: 100%; height: 110px; resize: vertical;
   background: rgba(0, 0, 0, 0.38); border: 1px solid var(--border); border-radius: 8px;
-  color: #d6e2f0; font-family: var(--mono); font-size: 0.78rem; padding: 12px; word-break: break-all;
+  color: #d6e2f0; font-family: var(--mono); font-size: 0.78rem; padding: 12px; overflow-wrap: anywhere;
 }
 .ex-dev-body textarea:focus { outline: none; border-color: var(--blue); }
 .ex-dev-btns { display: flex; gap: 10px; margin: 10px 0; }

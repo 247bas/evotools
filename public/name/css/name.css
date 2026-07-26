@@ -11,7 +11,9 @@
 
 .dn-name { display: flex; align-items: center; }
 .dn-name input {
-  flex: 1; padding: 15px 16px; font-size: 1.3rem;
+  /* an input will not shrink past its intrinsic size on its own; without this
+     the name field + suffix push the page wider than a phone screen */
+  flex: 1; min-width: 0; padding: 15px 16px; font-size: 1.3rem;
   border: 1px solid var(--border); border-right: none; border-radius: 10px 0 0 10px;
   background: rgba(0, 0, 0, 0.35); color: var(--text); font-family: inherit;
 }
@@ -46,7 +48,7 @@
 .dn-contest-head { color: #c88bf5; font-weight: 600; font-size: 0.88rem; }
 .dn-contender { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
 .dn-contender:last-child { border-bottom: none; }
-.dn-cid { flex: 1; word-break: break-all; }
+.dn-cid { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .dn-votes { color: var(--muted); white-space: nowrap; }
 .dn-badge { background: rgba(40, 167, 69, 0.2); color: #7ee2a0; border: 1px solid rgba(40, 167, 69, 0.5); border-radius: 999px; padding: 2px 9px; font-size: 0.68rem; text-transform: uppercase; }
 .dn-badge.lock { background: rgba(220, 53, 69, 0.18); color: #f19aa4; border-color: rgba(220, 53, 69, 0.5); }
@@ -66,6 +68,15 @@
 .dn-warn { color: #ffe08a; }
 #claimOut { margin-top: 14px; }
 #claimOut .dn-link { display: inline-block; margin-top: 8px; margin-left: 0; }
+
+/* The shared theme forces controls to 16px below 760px so iOS doesn't zoom in on
+   focus; the suffix has to follow or the two halves of the field don't line up. */
+@media (max-width: 760px) {
+  .dn-name input, .dn-name .suffix { font-size: 1rem; }
+}
+@media (max-width: 560px) {
+  .dn-name input, .dn-name .suffix { padding: 13px 12px; }
+}
 
 /* success */
 .dn-success { margin-top: 16px; padding: 18px; border: 1px solid rgba(40, 167, 69, 0.5); background: rgba(40, 167, 69, 0.1); border-radius: 12px; }

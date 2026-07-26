@@ -38,7 +38,7 @@
 }
 
 .kg-controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
-.kg-controls .field { margin: 0; min-width: 210px; }
+.kg-controls .field { margin: 0; min-width: min(210px, 100%); }
 .kg-controls select {
   width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
   background: rgba(0, 0, 0, 0.35); color: var(--text); font-size: 0.9rem;
@@ -63,7 +63,7 @@
 
 /* Recovery phrase, laid out for transcription */
 .kg-words {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(158px, 100%), 1fr));
   gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: w;
 }
 .kg-words li {
@@ -101,7 +101,7 @@
 }
 .kg-table tr:last-child td { border-bottom: none; }
 .kg-table td.mono, .kg-table td .mono {
-  font-family: var(--mono, ui-monospace, monospace); word-break: break-all;
+  font-family: var(--mono, ui-monospace, monospace); overflow-wrap: anywhere;
 }
 .kg-role { color: var(--muted); font-size: 0.76rem; display: block; }
 

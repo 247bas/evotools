@@ -5,6 +5,12 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The site fits a phone screen.** Tapping a field in mobile Safari zoomed the
+  page in and left it zoomed, which is what put text against the edge of the
+  screen; controls are 16px below 760px now, the size iOS needs to leave the zoom
+  alone. The name field could also push the layout wider than the screen, cards
+  hand some of their padding back to the text on narrow screens, and a recovery
+  phrase wraps between words instead of halfway through one.
 - **Credits can be topped up from DASH without leaving the page.** Needing more
   credits meant walking through the onboard wizard — a flow about creating an
   identity, which you already have. The conversion lives in the credits tool now,
