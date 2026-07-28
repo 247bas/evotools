@@ -66,6 +66,30 @@ export async function contestDetail(indexValues) {
 // that fails to match simply keeps its stored form on screen.
 const homographSafe = (s) => s.toLowerCase().replace(/[il]/g, '1').replace(/o/g, '0');
 
+// The chain's own tally for one contest, fetched when a row is opened.
+//
+// Measured on 2026-07-28 across twelve contests: for every open one the index and
+// the chain agree exactly, so the list is safe to render from the index. Finished
+// ones can drift — thedesert1ynx reads 61 votes in the index against 51 on the
+// chain, sega 13 against 6 — always with the index counting higher, and the lock
+// tallies always matching. The chain is the one that decided the outcome, so that
+// is the number shown once somebody looks closely.
+export async function chainTally(normalizedLabel) {
+  const { setNetwork: setSdkNetwork, getSdk } = await import('./sdk.js');
+  const { contestState } = await import('../../shared/dpns-register.js');
+  setSdkNetwork(network);
+  const sdk = await getSdk();
+  const state = await contestState({ sdk, normalizedLabel });
+  return {
+    votesFor: state.votes.reduce((a, b) => a + b, 0),
+    votesLock: state.lock,
+    votesAbstain: state.abstain,
+    perContender: Object.fromEntries(state.contenders.map((id, i) => [id, state.votes[i] ?? 0])),
+    outcome: state.outcome,
+    winner: state.winner,
+  };
+}
+
 function toContest(r) {
   const label = r.resourceValue?.[1];
   const lock = r.totalCountLock ?? 0;

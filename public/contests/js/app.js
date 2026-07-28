@@ -1,6 +1,6 @@
 // contests — the open and decided .dash name votes, from the public indexer.
 import {
-  stats, contests, contestDetail, setNetwork, getNetwork, apiHost,
+  stats, contests, contestDetail, chainTally, setNetwork, getNetwork, apiHost,
 } from './api.js';
 
 const $ = (id) => document.getElementById(id);
@@ -148,6 +148,31 @@ function detail(full, brief) {
   const links = el('div', 'ct-detail-links');
   links.append(explorerLink('name', brief.label));
   d.append(links);
+
+  // The list above is the index's word. Once a row is open, ask the chain — it
+  // is the tally that decided the outcome, and on finished contests the two do
+  // not always agree.
+  const verify = el('div', 'ct-sub', 'Checking the tally against the chain…');
+  d.append(verify);
+  chainTally(brief.label).then((chain) => {
+    const same = chain.votesFor === brief.votesFor
+      && chain.votesLock === brief.votesLock
+      && chain.votesAbstain === brief.votesAbstain;
+    verify.replaceChildren();
+    verify.append(el('span', null, `Chain tally: ${num(chain.votesFor)} for · ${num(chain.votesLock)} lock · ${num(chain.votesAbstain)} abstain`));
+    if (!same) {
+      verify.append(el('span', 'ct-drift', ` — the index above lists ${num(brief.votesFor)} / ${num(brief.votesLock)} / ${num(brief.votesAbstain)} for this one. The chain is what counted.`));
+    }
+    // Per-contender numbers come from the index too; correct them where the
+    // chain knows better.
+    for (const [id, votes] of Object.entries(chain.perContender)) {
+      const row = [...d.querySelectorAll('.ct-contender')].find((r) => r.textContent.includes(id));
+      const tally = row?.querySelector('.ct-tally.for b');
+      if (tally && tally.textContent !== num(votes)) tally.textContent = num(votes);
+    }
+  }).catch((e) => {
+    verify.textContent = `Could not reach the chain for a second opinion: ${e?.message || e}`;
+  });
   return d;
 }
 

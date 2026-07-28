@@ -68,6 +68,7 @@
 
 .ct-pager { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 .ct-page { font-size: 0.8rem; color: var(--muted); }
+.ct-drift { color: var(--warn); }
 .ct-source { margin-top: 30px; font-size: 0.75rem; color: var(--muted); opacity: 0.8; }
 
 /* Phone: the four-column header stacks, and the dates stop hugging the right */
