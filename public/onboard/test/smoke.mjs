@@ -101,6 +101,14 @@ check(
   viaOnboard.every((d, i) => d.publicKeyHex === fromKeygen.keys[i].publicKeyHex),
   'and the same public keys, so the minted identity carries them',
 );
+// EVO_PRIVATE_WIF is the CRITICAL identity key, not the funding key — one signs,
+// the other pays, and they sit on different paths. Mistaking one for the other
+// makes a correct handover look broken.
+const envWif = viaOnboard.find((d) => d.spec.keyId === 2).privateKeyWif;
+check(envWif === fromKeygen.keys[2].wif, "the .env key is keygen's identity key #2");
+check(envWif !== fromKeygen.fundingWif, 'and is not the funding key keygen shows above it');
+check(viaOnboard.every((d) => d.path?.startsWith("m/9'")), `identity keys carry their path (${viaOnboard[2].path})`);
+check(fromKeygen.fundingPath.startsWith("m/44'"), `while funding lives on ${fromKeygen.fundingPath}`);
 
 console.log('\n6c. Telling a one-phrase setup from a two-key one');
 // What the wallet step claims on screen: derive the funding address the phrase

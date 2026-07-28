@@ -654,11 +654,17 @@ $('registerBtn').addEventListener('click', async () => {
 $('skipUsernameBtn').addEventListener('click', () => { state.username = null; finish(); });
 
 // ── Step 5: done / handoff ───────────────────────────────────────────────────
+// EVO_PRIVATE_WIF is the identity's CRITICAL key, which is what signs. The name
+// invites the assumption that it is the funding key — a different key on a
+// different path — so the file says which one it is.
 function envText() {
   const criticalWif = state.derived.find((d) => d.spec.keyId === 2)?.privateKeyWif ?? '';
+  const path = state.derived.find((d) => d.spec.keyId === 2)?.path;
   return [
     `EVO_MNEMONIC="${state.mnemonic}"`,
     `EVO_IDENTITY_ID=${state.identityId}`,
+    `# identity key #2, Critical (authentication)${path ? ` — ${path}` : ''}`,
+    '# not the funding key: that one is separate and pays, it does not sign.',
     `EVO_PRIVATE_WIF=${criticalWif}`,
   ].join('\n');
 }
@@ -691,10 +697,13 @@ function finish() {
   verifyKeys();
   showSweep();
 
+  // The path is what tells these apart from the funding key, which lives on
+  // m/44'/…  and is a different key with a different job.
   $('allKeys').innerHTML = state.derived.map((d) => `
     <div class="key-card">
-      <div class="key-name">Key #${d.spec.keyId} — ${d.spec.label}</div>
+      <div class="key-name">Key #${d.spec.keyId} — ${d.spec.label}${d.spec.keyId === 2 ? ' · the one in .env' : ''}</div>
       <div class="key-wif">${d.privateKeyWif}</div>
+      ${d.path ? `<div class="key-path">${d.path}</div>` : ''}
     </div>`).join('');
 
   showPanel('done', 5);

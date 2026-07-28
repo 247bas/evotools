@@ -5,6 +5,12 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The `.env` says which key it hands you.** `EVO_PRIVATE_WIF` is the identity's
+  CRITICAL key — the one that signs — but the name reads like the funding key,
+  which is a different key on a different path that only pays. Comparing the two
+  and finding them different made a correct handover look wrong. The file now
+  names the key and its path, and the key list marks the one that ends up in the
+  `.env`.
 - **The funding address can be scanned.** Money for a new identity comes off a
   phone or an exchange withdrawal page, and both of those scan rather than type.
   Onboard's funding step shows the key's Dash address as a QR next to it — the

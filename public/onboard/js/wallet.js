@@ -81,7 +81,9 @@ export async function deriveIdentityKeys(mnemonic) {
       const path = `${base.path}/0'/0'/0'/${spec.keyId}'`;
       const k = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path, network: net });
       const obj = k.toObject();
-      return { spec, publicKeyHex: obj.publicKey, privateKeyWif: obj.privateKeyWif };
+      // The path travels with the key: it is the only thing that distinguishes
+      // these from the funding key at a glance, and people do compare them.
+      return { spec, path, publicKeyHex: obj.publicKey, privateKeyWif: obj.privateKeyWif };
     }),
   );
 }
