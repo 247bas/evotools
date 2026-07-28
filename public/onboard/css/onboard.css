@@ -75,6 +75,15 @@
 .key-card .key-name { color: var(--blue); font-size: 0.85rem; margin-bottom: 6px; }
 .key-card .key-wif { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); overflow-wrap: anywhere; }
 
+/* Funding QR — a white quiet zone, or a scanner has nothing to lock onto */
+.fund-qr { margin-top: 12px; }
+.fund-qr > div {
+  background: #fff; padding: 10px; border-radius: 10px; line-height: 0;
+  border: 1px solid var(--border); width: max-content;
+}
+.fund-qr svg { width: 168px; height: 168px; display: block; }
+.fund-qr .fineprint { margin-top: 8px; }
+
 /* panel padding + h1 now come from the shared theme's phone block */
 @media (max-width: 560px) {
   .stepper li { font-size: 0.62rem; }

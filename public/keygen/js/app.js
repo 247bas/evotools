@@ -1,7 +1,7 @@
 // keygen — UI wiring. Nothing here touches the network except the explicit
 // "download offline copy" action, which reads this page's own assets.
 import { generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet } from './keys.js';
-import { qrSvg } from './qr.js';
+import { qrSvg } from '../../shared/qr.js';
 // offline.js is imported on demand: the offline copy hides the download button
 // and has no files to resolve a relative import against.
 

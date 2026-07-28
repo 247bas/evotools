@@ -3,7 +3,7 @@
 // Run: node public/keygen/test/smoke.mjs
 import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet } from '../js/keys.js';
-import { qrMatrix } from '../js/qr.js';
+import { qrMatrix } from '../../shared/qr.js';
 import {
   buildOfflineHtml, extractMarkup, SDK_SPECIFIER, KEYS_SPECIFIER, QR_SPECIFIER,
 } from '../js/offline.js';
@@ -62,7 +62,7 @@ const sources = {
   css: read('../css/keygen.css'),
   appJs: read('../js/app.js'),
   keysJs: read('../js/keys.js'),
-  qrJs: read('../js/qr.js'),
+  qrJs: read('../../shared/qr.js'),
   sdk: read('../../shared/vendor/evo-sdk.module.js'),
 };
 // The bootstrap rewires imports by string replacement — if a specifier ever

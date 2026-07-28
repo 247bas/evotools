@@ -19,7 +19,7 @@ export const CSP = [
 // They must appear verbatim in the sources — the smoke test asserts that.
 export const SDK_SPECIFIER = "'../../shared/vendor/evo-sdk.module.js'";
 export const KEYS_SPECIFIER = "'./keys.js'";
-export const QR_SPECIFIER = "'./qr.js'";
+export const QR_SPECIFIER = "'../../shared/qr.js'";
 
 export const BOOTSTRAP = `
 document.documentElement.dataset.offline = '1';

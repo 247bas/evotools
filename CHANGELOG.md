@@ -5,6 +5,14 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The funding address can be scanned.** Money for a new identity comes off a
+  phone or an exchange withdrawal page, and both of those scan rather than type.
+  Onboard's funding step shows the key's Dash address as a QR next to it — the
+  plain address, since exchange forms tend to choke on a `dash:` URI. The QR
+  encoder moved to `shared/` now that two tools use it; keygen still inlines it
+  into its offline copy. Its copy button also did nothing at all until now, and
+  copying falls back to a selection when the clipboard API refuses — which is
+  what it does after a detour to a wallet, because the page lost focus.
 - **A claimed contested name no longer looks like a failed one.** Registering a
   short name puts it into a two-week masternode vote, and until that ends the
   name resolves to nobody — so the check for "did it work?" said no, and pressing

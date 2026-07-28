@@ -13,6 +13,7 @@ import {
   loadDashcore, fetchUtxos, spendable, totalDuffs, convertToCredits,
   findAssetLocks, resumeAssetLock, MIN_LOCK_DUFFS, FEE_DUFFS,
 } from '../../shared/assetlock.js';
+import { qrSvg } from '../../shared/qr.js';
 
 // ── constants (credits are bigint; 1 DASH = 100,000,000,000 credits) ────────
 const CREDITS_PER_DASH = 100_000_000_000n;
@@ -90,12 +91,30 @@ function setStep(n) {
 }
 
 async function copyToButton(btn, text) {
-  try {
-    await navigator.clipboard.writeText(text);
+  if (!text) { showError('Nothing to copy yet.'); return; }
+  const done = () => {
     const old = btn.textContent;
     btn.textContent = 'Copied';
     setTimeout(() => { btn.textContent = old; }, 1500);
-  } catch (e) { showError('Copy failed: ' + e.message); }
+  };
+  try {
+    await navigator.clipboard.writeText(text);
+    done();
+  } catch (e) {
+    // The clipboard API refuses when the document is not focused, which happens
+    // after a detour to the Bridge or a wallet. Selecting the text and letting
+    // the old command copy it still works there.
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.append(ta);
+    ta.select();
+    const ok = document.execCommand?.('copy');
+    ta.remove();
+    if (ok) done();
+    else showError('Copy failed: ' + (e?.message || e) + ' — select the text and copy it by hand.');
+  }
 }
 
 function withBusy(btn, label, fn) {
@@ -299,15 +318,17 @@ $('deriveAddrBtn').addEventListener('click', withBusy($('deriveAddrBtn'), 'Deriv
   updateContinue();
   updatePhraseScope();
 }));
-$('copyMnemonic').addEventListener('click', (e) => copyToButton(e.target, state.mnemonic));
-$('copyAddress1').addEventListener('click', (e) => copyToButton(e.target, state.address));
-$('copyAddress2').addEventListener('click', (e) => copyToButton(e.target, state.address));
+$('copyMnemonic').addEventListener('click', (e) => copyToButton(e.currentTarget, state.mnemonic));
+$('copyAddress1').addEventListener('click', (e) => copyToButton(e.currentTarget, state.address));
+$('copyAddress2').addEventListener('click', (e) => copyToButton(e.currentTarget, state.address));
+$('copyCoreAddress').addEventListener('click', (e) => copyToButton(e.currentTarget, state.coreAddress));
 
 $('toFundBtn').addEventListener('click', () => {
   const main = isMainnet();
   $('bridgeBtn').hidden = main;
   $('mainnetFundBlock').hidden = !main;
   $('coreAddressBox').textContent = state.coreAddress ?? '—';
+  showCoreQr();
 
   // Mainnet has no faucet, so converting your own DASH is the whole story there
   // and leads. On testnet the Bridge is one click, but the same conversion sits
@@ -326,6 +347,16 @@ $('toFundBtn').addEventListener('click', () => {
 });
 
 // ── funding route: convert plain DASH from the key's own layer-1 address ─────
+// The money usually comes from a phone or an exchange withdrawal page, and both
+// scan. The plain address is encoded rather than a `dash:` URI: every scanner
+// reads an address, while exchange forms tend to choke on the URI scheme.
+function showCoreQr() {
+  const wrap = $('coreQrWrap');
+  if (!state.coreAddress) { wrap.hidden = true; return; }
+  $('coreQr').innerHTML = qrSvg(state.coreAddress, { scale: 4, quiet: 3 });
+  wrap.hidden = false;
+}
+
 let coreUtxos = [];
 async function pollCoreBalance() {
   if (!state.coreAddress) return;

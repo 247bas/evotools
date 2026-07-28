@@ -10,6 +10,7 @@ import {
   getAddressBalance, checkUsername, fundAddressFromIdentity, verifyIdentityKeys,
 } from '../js/platform.js';
 import { deriveAll } from '../../keygen/js/keys.js';
+import { qrMatrix } from '../../shared/qr.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
 const info = (m) => console.log(`  ·  ${m}`);
@@ -21,6 +22,12 @@ const w = await generateWallet();
 check(typeof w.mnemonic === 'string' && w.mnemonic.split(' ').length >= 12, `mnemonic (${w.mnemonic.split(' ').length} words)`);
 check(w.address.startsWith('tdash1'), `platform address ${w.address}`);
 check(typeof w.addressPrivateKeyWif === 'string' && w.addressPrivateKeyWif.length > 40, 'funding key WIF present');
+
+// Funding money arrives from a phone or an exchange page, so step 2 shows the
+// layer-1 address as a QR next to the copy button.
+const qrWallet = qrMatrix(w.coreAddress);
+check(qrWallet.size === qrWallet.modules.length, `QR of the Dash address, ${qrWallet.size}×${qrWallet.size} modules`);
+check(qrMatrix('X'.repeat(34)).modules.some((row, r) => row.some((m, c) => m !== qrWallet.modules[r]?.[c])), 'another address gives another code');
 
 console.log('\n2. Identity key derivation (DIP-13)');
 const derived = await deriveIdentityKeys(w.mnemonic);
