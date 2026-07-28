@@ -29,6 +29,7 @@ svg.map { display: block; width: 100%; min-width: 860px; height: auto; }
 svg.map a { cursor: pointer; }
 svg.map a:hover .hit { fill: rgba(0, 141, 228, 0.10); }
 svg.map .val { font-family: var(--mono); }
+svg.map .flow { font-family: var(--mono); }
 svg.map .box-live { transition: stroke 0.25s, fill 0.25s; }
 svg.map .box-live.on { stroke: var(--blue); }
 

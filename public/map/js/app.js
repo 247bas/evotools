@@ -44,9 +44,31 @@ function setAddress(id, address, live) {
   });
 }
 
+// What crossed which boundary for the thing you looked up. The diagram carries
+// the general rule; these three lines carry this identity's own numbers, on the
+// arrow the money actually took.
+const FLOW_MINT_DEFAULT = '→ mint 0.0024 · top up   ← pay out, needs the TRANSFER key';
+
+function setFlows(trace) {
+  $('flowLock').textContent = '';
+  $('flowShield').textContent = '';
+  $('flowMint').textContent = FLOW_MINT_DEFAULT;
+  if (!trace) return;
+  if (trace.kind === 'from-asset-lock' && trace.origin?.lockedDash) {
+    $('flowLock').textContent = `${trace.origin.lockedDash} ${unit()} locked away here`;
+  }
+  if (trace.kind === 'from-shielded' && trace.shieldedCredits) {
+    $('flowShield').textContent = `${dashFromCredits(trace.shieldedCredits)} ${unit()} came out`;
+  }
+  if (trace.kind === 'from-addresses' && trace.inputs?.[0]) {
+    $('flowMint').textContent = `→ minted with ${dashFromCredits(trace.inputs[0].credits)} ${unit()} from that address`;
+  }
+}
+
 function reset() {
   for (const id of ['l1Val', 'platVal', 'idVal']) setBox(id, EMPTY, false);
   for (const id of ['l1Addr', 'platAddr', 'idAddr']) setAddress(id, null, false);
+  setFlows(null);
   $('findings').replaceChildren();
   $('mapError').hidden = true;
 }
@@ -235,6 +257,8 @@ function render(state) {
     setBox('idVal', `${dashFromCredits(first.credits)} ${unit()}`, true);
     setAddress('idAddr', first.id, true);
   }
+
+  setFlows(state.trace);
 
   const out = $('findings');
   out.replaceChildren();
