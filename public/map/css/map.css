@@ -1,0 +1,69 @@
+/* map — where DASH, credits and identities sit, and the moves between them */
+.map-wrap { max-width: 960px; margin: 0 auto; padding: 28px 16px 8px; }
+
+.map-head { padding: 26px 0 4px; }
+.map-head h1 { font-size: 1.9rem; margin-bottom: 10px; text-wrap: balance; }
+.map-head h1 .ev { color: var(--blue); }
+
+/* ── the map ─────────────────────────────────────────────────────────────── */
+.map-block { margin: 26px 0 8px; }
+.map-lede { color: var(--muted); font-size: 0.95rem; max-width: 62ch; margin: 0 0 20px; }
+
+.finder { display: flex; gap: 10px; flex-wrap: wrap; }
+.finder input {
+  flex: 1; min-width: 0; padding: 13px 15px; font-size: 16px; font-family: var(--mono);
+  border: 1px solid var(--border); border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text);
+}
+.finder input:focus { outline: none; border-color: var(--blue); }
+.finder select {
+  padding: 13px 12px; font-size: 16px; font-family: var(--mono); cursor: pointer;
+  border: 1px solid var(--border); border-radius: 10px; background: rgba(0, 0, 0, 0.35); color: var(--text);
+}
+.finder select:focus { outline: none; border-color: var(--blue); }
+.finder-note { color: var(--muted); font-size: 0.78rem; margin: 9px 0 0; }
+.finder-note b { color: var(--text); font-weight: 600; }
+
+.map-scroll { overflow-x: auto; margin: 18px 0 4px; }
+svg.map { display: block; width: 100%; min-width: 860px; height: auto; }
+svg.map a { cursor: pointer; }
+svg.map a:hover .hit { fill: rgba(0, 141, 228, 0.10); }
+svg.map .val { font-family: var(--mono); }
+svg.map .box-live { transition: stroke 0.25s, fill 0.25s; }
+svg.map .box-live.on { stroke: var(--blue); }
+
+.map-legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.76rem; color: var(--muted); margin-bottom: 6px; }
+.map-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.map-legend i { width: 22px; height: 0; border-top: 2px solid var(--blue); display: inline-block; }
+.map-legend i.dashed { border-top-style: dashed; border-color: #9b7dea; }
+
+.findings { display: grid; gap: 10px; margin-top: 14px; }
+.finding {
+  border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--card);
+}
+.finding h4 { font-size: 0.92rem; margin-bottom: 4px; }
+.finding .mono { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); overflow-wrap: anywhere; }
+.finding .names { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.finding .names span {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--blue);
+  border: 1px solid rgba(0, 141, 228, 0.35); background: rgba(0, 141, 228, 0.08);
+  border-radius: 999px; padding: 2px 9px;
+}
+.finding .names .chip-more {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--muted); cursor: pointer;
+  border: 1px dashed var(--border); background: none; border-radius: 999px; padding: 2px 9px;
+}
+.finding .names .chip-more:hover { color: var(--text); border-color: var(--blue); }
+
+.finding .row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.83rem; margin-top: 6px; }
+.finding .row.pending { color: var(--warn); }
+.finding .row.pending .v { color: var(--warn); }
+.finding .row .v { font-family: var(--mono); }
+.finding .acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 11px; }
+.finding .acts a { font-size: 0.8rem; color: var(--blue); }
+
+@media (max-width: 480px) {
+  .map-wrap { padding: 20px 16px 8px; }
+  .map-head { padding: 18px 0 2px; }
+  .map-head h1 { font-size: 1.5rem; }
+}

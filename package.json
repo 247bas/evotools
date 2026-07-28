@@ -10,6 +10,7 @@
     "test:explorer": "node public/explorer/test/smoke.mjs",
     "test:name": "node public/name/test/smoke.mjs",
     "test:contests": "node public/contests/test/smoke.mjs",
+    "test:map": "node public/map/test/smoke.mjs",
     "test:keygen": "node public/keygen/test/smoke.mjs",
     "vendor": "cp node_modules/@dashevo/evo-sdk/dist/evo-sdk.module.js public/shared/vendor/evo-sdk.module.js && echo vendored",
     "og": "node tools/og.mjs",

@@ -5,6 +5,23 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A map of where the money is.** Two chains carry the same money under
+  different rules, and nothing showed that: you cannot send DASH to a `dash1…`
+  address, an identity holds no coins, and credits only leave through a
+  withdrawal. `/map` draws the places value can sit and what every move between
+  them costs, and fills them in from anything public you paste — a name, an
+  address, an identity ID. It never asks for a phrase or a key and does not need
+  one: an address already carries the key hash that finds the identity it opens.
+  Given an identity it also walks backwards to the money that paid for it,
+  covering all three routes mainnet uses (a platform address, an asset lock, or
+  the shielded pool), and one click further to the layer-1 transaction behind
+  that. A claim still in a masternode vote is listed too, with the 0.2 DASH
+  parked on its preorder that no balance counts.
+- **Contest tallies now come from the chain when you look closely.** The list is
+  the index's word, which is fast and, for open contests, exactly right. Finished
+  ones can drift — thedesert1ynx reads 61 votes there against 51 on chain — so
+  opening a row asks the chain and says plainly when the two disagree.
+
 - **The chain has the last word on whether a name registered.** A node that
   cannot answer ("Tenderdash is not available") has usually still accepted the
   transition, and the tool called that a failure — `pizza247.dash` was registered
