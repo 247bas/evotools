@@ -184,7 +184,7 @@ function renderName(data) {
       a.href = '/onboard/';
       card.append(a);
     } else {
-      card.append(el('p', 'ex-sub', 'Claiming a mainnet name needs a funded mainnet identity — e.g. via Dash Evo Tool or a Platform wallet. (Onboard is testnet-only.)'));
+      card.append(el('p', 'ex-sub', 'Claiming this name needs a funded identity. Onboard mints one on either network, and dash-name claims a name for an identity you already have.'));
     }
     card.append(snippet(`const available = await sdk.dpns.isNameAvailable('${data.username}');`));
   } else {

@@ -69,3 +69,5 @@ svg.map .box-live.on { stroke: var(--blue); }
   .map-head { padding: 18px 0 2px; }
   .map-head h1 { font-size: 1.5rem; }
 }
+
+.map-source { margin-top: 26px; font-size: 0.75rem; color: var(--muted); opacity: 0.85; max-width: 68ch; }
