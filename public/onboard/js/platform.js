@@ -4,7 +4,9 @@
 
 import { loadEvo, getSdk, getNetwork, hexToBytes, randomBytes32 } from './sdk.js';
 import { deriveIdentityKeys } from './wallet.js';
-import { registerName as registerNameResumable } from '../../shared/dpns-register.js';
+import {
+  registerName as registerNameResumable, contestState, contestEndsAt,
+} from '../../shared/dpns-register.js';
 
 // Balance of a platform address, in credits (bigint). 0n when unfunded.
 export async function getAddressBalance(address) {
@@ -145,7 +147,44 @@ export async function createIdentity({ mnemonic, address, addressPrivateKeyWif, 
   return { identityId, identityObj, derived };
 }
 
+// Does what the last screen shows actually open the identity? Two things can drift
+// apart: the phrase against the keys derived from it, and those keys against the
+// keys the network stored. Both are checked, because a phrase that was swapped
+// mid-flow leaves a .env that looks perfectly normal and opens nothing.
+export async function verifyIdentityKeys({ identityId, mnemonic, derived }) {
+  const Evo = await loadEvo();
+  const sdk = await getSdk();
+  const { PrivateKey } = Evo;
+
+  let phraseMatches = false;
+  try {
+    const fromPhrase = await deriveIdentityKeys(mnemonic);
+    phraseMatches = derived.every((d) => {
+      const same = fromPhrase.find((f) => f.spec.keyId === d.spec.keyId);
+      return same?.publicKeyHex === d.publicKeyHex;
+    });
+  } catch { phraseMatches = false; }
+
+  const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
+  const net = getNetwork();
+  const onChain = keys.map((k) => {
+    const d = derived.find((x) => x.spec.keyId === k.keyId);
+    if (!d) return { keyId: k.keyId, match: false };
+    try { return { keyId: k.keyId, match: k.validatePrivateKey(PrivateKey.fromWIF(d.privateKeyWif).toBytes(), net) }; }
+    catch { return { keyId: k.keyId, match: false }; }
+  });
+
+  return {
+    phraseMatches,
+    keysMatch: onChain.length > 0 && onChain.every((k) => k.match),
+    checked: onChain.length,
+  };
+}
+
 // Live validity/availability check for a username label (no .dash suffix).
+// A contested name that somebody already claimed still reads as "available" —
+// the domain document only appears once the vote ends — so the contest itself has
+// to be read to tell "free" from "already being voted on".
 export async function checkUsername(label) {
   const sdk = await getSdk();
   const valid = await sdk.dpns.isValidUsername(label);
@@ -154,7 +193,17 @@ export async function checkUsername(label) {
     sdk.dpns.isContestedUsername(label),
     sdk.dpns.isNameAvailable(label),
   ]);
-  return { valid, contested, available };
+  if (!contested || !available) return { valid, contested, available };
+
+  const normalizedLabel = await sdk.dpns.convertToHomographSafe(label);
+  const state = await contestState({ sdk, normalizedLabel }).catch(() => undefined);
+  if (state?.outcome === 'Locked') return { valid, contested, available: false, locked: true };
+  if (!state?.contenders?.length) return { valid, contested, available };
+  const endsAt = await contestEndsAt({ sdk, normalizedLabel }).catch(() => undefined);
+  return {
+    valid, contested, available,
+    contest: { contenders: state.contenders.length, endsAt },
+  };
 }
 
 // Register a DPNS name for the identity. Goes through the resumable path rather

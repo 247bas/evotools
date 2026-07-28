@@ -6,7 +6,7 @@
 // Run: node public/shared/test/dpns-register.mjs
 import { randomBytes } from 'node:crypto';
 import {
-  deriveSaltAndEntropy, saltedDomainHash, DPNS_CONTRACT,
+  deriveSaltAndEntropy, saltedDomainHash, contestState, contestEndsAt, DPNS_CONTRACT,
 } from '../dpns-register.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
@@ -56,6 +56,31 @@ check(hex(a.salt).slice(0, 8) !== hex(s2.salt).slice(0, 8), 'two names under one
 
 console.log('\n5. Contract');
 check(DPNS_CONTRACT === 'GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec', 'DPNS contract id is the system one');
+
+// A contested claim only shows up as a contender in a vote poll — the name stays
+// unresolvable for two weeks. Reading that back is what keeps a successful claim
+// from being reported as a failure, so it is checked against whatever contest
+// happens to be running on mainnet.
+console.log('\n6. Live: a running contest reads back (mainnet)');
+const { setNetwork, getSdk } = await import('../../name/js/sdk.js');
+setNetwork('mainnet');
+const sdk = await getSdk();
+const polls = await sdk.voting.votePollsByEndDate().catch(() => []);
+const open = polls.flatMap((e) => (e.votePolls || []).map((p) => ({ endsAt: new Date(Number(e.timestampMs)), poll: p })));
+if (!open.length) {
+  console.log('  ⏭  no contest open on mainnet right now');
+} else {
+  const { poll, endsAt } = open[0];
+  const label = String.fromCharCode(...Array.from(poll.indexValues?.[1] ?? []).slice(2));
+  check(!!label, `open contest found: ${label}.dash, ends ${endsAt.toISOString().slice(0, 16)}`);
+  const found = await contestEndsAt({ sdk, normalizedLabel: label });
+  check(found?.getTime() === endsAt.getTime(), 'contestEndsAt finds that poll by name');
+  const state = await contestState({ sdk, normalizedLabel: label });
+  check(Array.isArray(state.contenders) && state.contenders.length > 0, `${state.contenders.length} contender(s), outcome ${state.outcome ?? 'still open'}`);
+  check(state.outcome === undefined, 'an open contest has no winner yet');
+  const missing = await contestEndsAt({ sdk, normalizedLabel: 'n0tac0ntest' });
+  check(missing === undefined, 'a name without a contest gets no end date');
+}
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

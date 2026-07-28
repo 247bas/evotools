@@ -6,7 +6,9 @@ import {
   generateIdentityMnemonic, platformAddressFromWif, isValidMnemonic, deriveFundingAddress,
 } from '../js/wallet.js';
 import { loadEvo, getSdk, setNetwork } from '../js/sdk.js';
-import { getAddressBalance, checkUsername, fundAddressFromIdentity } from '../js/platform.js';
+import {
+  getAddressBalance, checkUsername, fundAddressFromIdentity, verifyIdentityKeys,
+} from '../js/platform.js';
 import { deriveAll } from '../../keygen/js/keys.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
@@ -129,6 +131,24 @@ try {
 } catch (e) {
   check(/not the TRANSFER key/.test(e.message), `foreign key refused — ${e.message}`);
 }
+
+// The last screen hands over a phrase and a set of keys. If the phrase changed
+// after the identity was minted, both still look perfectly normal and neither
+// opens anything — so the screen checks itself against the chain.
+console.log('\n8. The handover is checked against the identity on chain');
+const BAS = 'CkKwW6VVEvo1EEps7NERZADE13ZWUwwz7kkuZentxVuj'; // bas.dash, mainnet
+const strangerPhrase = await generateIdentityMnemonic();
+const strangerKeys = await deriveIdentityKeys(strangerPhrase);
+const foreign = await verifyIdentityKeys({ identityId: BAS, mnemonic: strangerPhrase, derived: strangerKeys });
+check(foreign.phraseMatches === true, 'a phrase that derives the keys shown is accepted as consistent');
+check(foreign.keysMatch === false, `keys from another phrase are not the ones on ${BAS.slice(0, 8)}… (${foreign.checked} checked)`);
+
+const swapped = await verifyIdentityKeys({
+  identityId: BAS,
+  mnemonic: await generateIdentityMnemonic(), // the phrase that got swapped in
+  derived: strangerKeys,                      // the keys the identity was built from
+});
+check(swapped.phraseMatches === false, 'a phrase that does not derive those keys is caught');
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

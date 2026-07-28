@@ -5,6 +5,22 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A claimed contested name no longer looks like a failed one.** Registering a
+  short name puts it into a two-week masternode vote, and until that ends the
+  name resolves to nobody — so the check for "did it work?" said no, and pressing
+  Register again ran into the network refusing a second claim ("already present
+  in a contest"). A claim that reached the chain is now reported as what it is:
+  in a contest, with the date the vote ends and how many identities are competing
+  for it. Onboard, dash-name and the explorer all say so, including when you look
+  up somebody else's open contest — every availability check calls those names
+  free, because technically nobody owns them yet.
+- **The last onboard screen proves its own keys.** The phrase it hands you is
+  useless if it is not the one the identity carries, and it could quietly become
+  that: coming back through the first screen regenerated the identity phrase,
+  even one you had supplied yourself, leaving a `.env` that looks normal and
+  opens nothing. A phrase you brought stays put now, and the final screen checks
+  both halves against the network — that the phrase derives the keys shown, and
+  that those keys are the ones the identity actually has.
 - **The site fits a phone screen.** Tapping a field in mobile Safari zoomed the
   page in and left it zoomed, which is what put text against the edge of the
   screen; controls are 16px below 760px now, the size iOS needs to leave the zoom

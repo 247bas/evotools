@@ -62,6 +62,62 @@ const isProofGlitch = (err) => /did not contain expected document|incorrect proo
 // the preorder existing, not a problem.
 const isAlreadySubmitted = (err) => /already exists in cache|already in mempool|already exists/i.test(String(err?.message || err));
 
+// The network refuses a second domain document for a name that is already in a
+// contest. The wording blames reused entropy, which is exactly what a rerun with
+// the derived salt does on purpose — so this means the earlier claim is standing,
+// not that anything went wrong.
+const isAlreadyInContest = (err) => /already present in a contest/i.test(String(err?.message || err));
+
+// Contested names are not handed over on submission: the domain document joins a
+// masternode vote poll that runs for two weeks, and the name stays unresolvable
+// until that ends. Resolving the name therefore proves nothing here; being among
+// the contenders does.
+const CONTEST_DAYS = 14;
+
+export async function contestState({ sdk, normalizedLabel }) {
+  const state = await sdk.voting.contestedResourceVoteState({
+    dataContractId: DPNS_CONTRACT,
+    documentTypeName: 'domain',
+    indexName: 'parentNameAndLabel',
+    indexValues: ['dash', normalizedLabel],
+    resultType: 'documentsAndVoteTally',
+    allowIncludeLockedAndAbstainingVoteTally: true,
+  });
+  const winner = state.winner; // only set once the vote has ended
+  return {
+    contenders: (state.contenders || []).map((c) => c.identityId?.toString?.()).filter(Boolean),
+    votes: (state.contenders || []).map((c) => Number(c.voteTally ?? 0)),
+    abstain: Number(state.abstainVoteTally ?? 0),
+    lock: Number(state.lockVoteTally ?? 0),
+    outcome: winner ? winner.kind : undefined,
+    winner: winner?.identityId?.toString?.(),
+  };
+}
+
+// Index values in a vote poll are `[0x12, length, ...ascii]`.
+function decodeIndexValue(raw) {
+  const bytes = Array.from(raw ?? []);
+  if (bytes.length < 2 || bytes[1] !== bytes.length - 2) return undefined;
+  return String.fromCharCode(...bytes.slice(2));
+}
+
+// When the vote ends. The vote state does not carry it, so it comes from the open
+// polls. `startTimeMs` is rejected there (the SDK wants an f64 and a whole number
+// of milliseconds arrives as an integer), so the handful of open polls are
+// fetched whole and filtered here. Undefined when the poll cannot be found.
+export async function contestEndsAt({ sdk, normalizedLabel }) {
+  const entries = await sdk.voting.votePollsByEndDate().catch(() => []);
+  for (const entry of entries) {
+    for (const poll of entry.votePolls || []) {
+      const values = (poll?.indexValues ?? []).map(decodeIndexValue);
+      if (values[0] === 'dash' && values[1] === normalizedLabel) {
+        return new Date(Number(entry.timestampMs));
+      }
+    }
+  }
+  return undefined;
+}
+
 function buildDocument({ Evo, typeName, ownerId, properties, entropy }) {
   // The document id is derived from the entropy, so it has to be supplied at
   // construction — setting it afterwards leaves a stale id the network rejects.
@@ -91,6 +147,25 @@ export async function registerName({
   if (existing) {
     onProgress({ step: 'done', already: true });
     return { name: `${clean}.dash`, identityId: ownerId, alreadyRegistered: true };
+  }
+
+  const contested = await sdk.dpns.isContestedUsername(clean).catch(() => false);
+
+  // A contested claim of our own that is still waiting for the vote looks exactly
+  // like an unregistered name. Standing among the contenders means the work is
+  // done — rebuilding the same documents is what gets refused for reused entropy.
+  if (contested) {
+    const state = await contestState({ sdk, normalizedLabel }).catch(() => undefined);
+    // Never spend the 0.2 DASH voting fee on a name the masternodes already
+    // locked: that contest has no owner and cannot be reopened.
+    if (state?.outcome === 'Locked') {
+      throw new Error(`${clean}.dash is locked by masternode vote — it cannot be registered.`);
+    }
+    const pending = await contestPending({ sdk, clean, normalizedLabel, ownerId, state });
+    if (pending) {
+      onProgress({ step: 'done', contestPending: true });
+      return pending;
+    }
   }
 
   const preorder = buildDocument({ Evo, typeName: 'preorder', ownerId, entropy, properties: { saltedDomainHash: hash } });
@@ -128,13 +203,47 @@ export async function registerName({
   try {
     await sdk.documents.create({ document: domain, identityKey, signer });
   } catch (e) {
-    if (!isProofGlitch(e) && !isAlreadySubmitted(e)) throw e;
+    if (!isProofGlitch(e) && !isAlreadySubmitted(e) && !isAlreadyInContest(e)) throw e;
   }
 
   const owner = await sdk.dpns.resolveName(clean).catch(() => undefined);
-  if (!owner) {
-    throw new Error(`${clean}.dash did not register. Running this again picks up the preorder that was already paid for.`);
+  if (owner) {
+    onProgress({ step: 'done' });
+    return { name: `${clean}.dash`, identityId: owner.toString(), preorderId };
   }
-  onProgress({ step: 'done' });
-  return { name: `${clean}.dash`, identityId: owner.toString(), preorderId };
+
+  // Not resolvable is the normal outcome for a contested name: the claim is in,
+  // the masternodes have two weeks to vote on it.
+  if (contested) {
+    const pending = await contestPending({ sdk, clean, normalizedLabel, ownerId, preorderId });
+    if (pending) {
+      onProgress({ step: 'done', contestPending: true });
+      return pending;
+    }
+  }
+
+  throw new Error(`${clean}.dash did not register. Running this again picks up the preorder that was already paid for.`);
+}
+
+// The result for a contested claim that is waiting on the vote — undefined when
+// this identity is not (yet) a contender, or when the vote has already ended,
+// because then "not resolvable" really is a failure.
+async function contestPending({ sdk, clean, normalizedLabel, ownerId, preorderId, state: known }) {
+  const state = known ?? (await contestState({ sdk, normalizedLabel }).catch(() => undefined));
+  if (state?.outcome) return undefined;
+  if (!state?.contenders?.includes(ownerId)) return undefined;
+  const endsAt = await contestEndsAt({ sdk, normalizedLabel }).catch(() => undefined);
+  return {
+    name: `${clean}.dash`,
+    identityId: ownerId,
+    preorderId,
+    contestPending: true,
+    contest: {
+      contenders: state.contenders.length,
+      endsAt: endsAt ?? new Date(Date.now() + CONTEST_DAYS * 86400000),
+      endsAtExact: !!endsAt,
+      lock: state.lock,
+      abstain: state.abstain,
+    },
+  };
 }

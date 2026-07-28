@@ -19,6 +19,7 @@ const el = (tag, cls, text) => {
   return e;
 };
 const jsonPretty = (o) => JSON.stringify(o, (_k, v) => (typeof v === 'bigint' ? `${v}` : v), 2);
+const fmtDate = (d) => d.toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const dashUnit = () => (getNetwork() === 'mainnet' ? 'DASH' : 'tDASH');
 const explorerBase = () => (getNetwork() === 'mainnet' ? 'https://platform-explorer.com' : 'https://testnet.platform-explorer.com');
 const sdkInit = () => (getNetwork() === 'mainnet' ? 'mainnetTrusted' : 'testnetTrusted');
@@ -169,6 +170,13 @@ function renderName(data) {
     card.append(el('div', 'note warn', 'Not a valid DPNS name (use a-z, 0-9 and hyphens, 3–63 chars).'));
   } else if (data.locked) {
     card.append(el('div', 'note bad', `${data.username}.dash is locked — masternodes voted the contest down, so it has no owner and cannot be claimed.`));
+  } else if (data.available && data.contest?.pending) {
+    // Claimed and waiting on the vote. The name has no owner yet, so every
+    // availability check calls it free — which it is not.
+    const n = data.contest.contenders.length;
+    card.append(el('div', 'note warn', `${data.username}.dash is in an open contest: ${
+      n === 1 ? 'one identity has claimed it' : `${n} identities have claimed it`} and masternodes decide${
+      data.contest.endsAt ? ` on ${fmtDate(data.contest.endsAt)}` : ' within two weeks'}. It resolves to nobody until then.`));
   } else if (data.available) {
     card.append(el('div', 'note ok', `${data.username}.dash is available${data.contested ? ' (contested — premium name, goes through masternode voting)' : ''}.`));
     if (getNetwork() === 'testnet') {

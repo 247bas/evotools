@@ -49,5 +49,23 @@ await rejects('locked name', 'pay', BAS, stranger, 'locked by masternode vote');
 await rejects('key that is not on the identity', 'zqxtestname7788', BAS, stranger, 'does not match any signing key');
 await rejects('malformed WIF', 'zqxtestname7788', BAS, 'not-a-wif', 'not a valid WIF');
 
+// A claimed contested name resolves to nobody until the vote ends, so every
+// availability check calls it available. Reporting that as free is how a claim
+// that worked ends up looking like a claim that failed.
+console.log('\n7. mainnet: a name with an open contest is not simply "available"');
+const sdk = await getSdk();
+const polls = (await sdk.voting.votePollsByEndDate().catch(() => []))
+  .flatMap((e) => (e.votePolls || []).map((p) => ({ endsAt: new Date(Number(e.timestampMs)), poll: p })));
+if (!polls.length) {
+  console.log('  ⏭  no contest open on mainnet right now');
+} else {
+  const { poll, endsAt } = polls[0];
+  const label = String.fromCharCode(...Array.from(poll.indexValues?.[1] ?? []).slice(2));
+  const c = await safe(`checkName(${label})@mainnet`, () => checkName(label));
+  check(c?.contest?.pending === true, `${label}.dash has an open contest (${c?.contest?.contenders?.length} contender(s))`);
+  check(c?.contest?.endsAt?.getTime() === endsAt.getTime(), `it ends ${endsAt.toISOString().slice(0, 16)}, which the tool reports`);
+  check(c?.registered === false, 'and it does not resolve to an owner yet');
+}
+
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

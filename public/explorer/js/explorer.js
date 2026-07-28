@@ -3,6 +3,7 @@
 // object the UI renders + a raw JSON dump.
 
 import { getSdk, getSdkFor, loadEvo } from './sdk.js';
+import { contestState, contestEndsAt } from '../../shared/dpns-register.js';
 
 const CREDITS_PER_DASH = 100_000_000_000n;
 export const creditsToDash = (c) => (Number(c ?? 0n) / Number(CREDITS_PER_DASH)).toFixed(4);
@@ -86,28 +87,20 @@ export async function lookupName(label) {
 async function getContest(label) {
   const sdk = await getSdk();
   const norm = await sdk.dpns.convertToHomographSafe(label);
-  const state = await sdk.voting.contestedResourceVoteState({
-    dataContractId: DPNS_CONTRACT,
-    documentTypeName: 'domain',
-    indexName: 'parentNameAndLabel',
-    indexValues: ['dash', norm],
-    resultType: 'documentsAndVoteTally',
-    allowIncludeLockedAndAbstainingVoteTally: true,
-  });
-  const contenders = (state.contenders || []).map((c) => ({
-    identityId: c.identityId?.toString?.(),
-    votes: c.voteTally ?? 0,
-  }));
-  // `winner` only exists once the contest ended; its `kind` is the outcome
-  // ('Locked' = nobody gets the name, 'WonByIdentity' = awarded).
-  const winner = state.winner;
+  // `outcome` only exists once the contest ended ('Locked' = nobody gets the
+  // name, 'WonByIdentity' = awarded). While it is open the claims are real but
+  // the name resolves to nobody, so an open contest has to be shown as such.
+  const state = await contestState({ sdk, normalizedLabel: norm });
+  const pending = !state.outcome && state.contenders.length > 0;
   return {
     normalizedLabel: norm,
-    contenders,
-    abstain: state.abstainVoteTally ?? 0,
-    lock: state.lockVoteTally ?? 0,
-    outcome: winner ? winner.kind : undefined,
-    winner: winner?.identityId?.toString?.(),
+    contenders: state.contenders.map((identityId, i) => ({ identityId, votes: state.votes[i] ?? 0 })),
+    abstain: state.abstain,
+    lock: state.lock,
+    outcome: state.outcome,
+    winner: state.winner,
+    pending,
+    endsAt: pending ? await contestEndsAt({ sdk, normalizedLabel: norm }).catch(() => undefined) : undefined,
   };
 }
 

@@ -10,6 +10,7 @@ const el = (tag, cls, text) => {
   if (text != null) e.textContent = text;
   return e;
 };
+const fmtDate = (d) => d.toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const explorerLink = (label, id) => {
   const a = el('a', 'dn-link', label);
   a.href = `/explorer/?kind=identity&q=${id}${getNetwork() === 'mainnet' ? '&net=mainnet' : ''}`;
@@ -148,6 +149,15 @@ function renderStatus(r) {
   } else if (r.locked) {
     s.className = 'dn-status bad';
     s.append(el('span', null, `${r.label}.dash is locked — masternodes voted the contest down, so nobody can claim it.`));
+  } else if (r.available && r.contest?.pending) {
+    // Claimed by somebody, but a contested name only resolves once the vote ends,
+    // so "available" would be true and useless. Joining is still allowed.
+    s.className = 'dn-status warn';
+    const n = r.contest.contenders.length;
+    s.append(el('span', null, `${r.label}.dash has an open contest: ${
+      n === 1 ? 'one identity has claimed it' : `${n} identities are competing for it`}, and masternodes decide${
+      r.contest.endsAt ? ` on ${fmtDate(r.contest.endsAt)}` : ' within two weeks'}. Registering now joins the contest.`));
+    showClaim(r);
   } else if (r.available) {
     s.className = 'dn-status ok';
     s.append(el('span', null, `${r.label}.dash is available${r.contested ? " — but it's a contested (premium) name" : ''}.`));
@@ -166,7 +176,8 @@ function contestPanel(c) {
   d.append(el('div', 'dn-contest-head', locked ? '⚖ Contested — locked by masternode vote' : '⚖ Contested — decided by masternode vote'));
   d.append(el('div', 'dn-sub', locked
     ? 'The lock votes beat every contender, which ends the contest with nobody as the owner. Registering it again is not possible.'
-    : 'Short/premium names go through a vote instead of first-come-first-served, and cost 0.2 DASH more (it prefunds the vote). Registering one joins the contest.'));
+    : `Short/premium names go through a vote instead of first-come-first-served, and cost 0.2 DASH more (it prefunds the vote). Registering one joins the contest.${
+      c.pending && c.endsAt ? ` This one is decided on ${fmtDate(c.endsAt)}.` : ''}`));
   for (const ct of c.contenders) {
     const row = el('div', 'dn-contender');
     if (!locked && c.winner && ct.identityId === c.winner) row.append(el('span', 'dn-badge', 'winner'));
@@ -213,7 +224,7 @@ async function claim() {
   out.replaceChildren(el('div', 'dn-sub', 'Registering (preorder + domain)…'));
   try {
     const res = await registerName(r.label, id, wif);
-    showSuccess(res.name, id);
+    showSuccess(res.name, id, res.contestPending ? res.contest : null);
   } catch (e) {
     out.replaceChildren(el('div', 'error', `Registration failed: ${e?.message || e}`));
   } finally {
@@ -221,14 +232,22 @@ async function claim() {
   }
 }
 
-function showSuccess(name, id) {
+function showSuccess(name, id, contest) {
   $('claim').hidden = true;
   token++; // cancel any in-flight check so it can't overwrite this
   const s = $('status');
   s.className = 'dn-status dn-success';
   s.replaceChildren();
-  s.append(el('div', 'dn-success-title', `🎉 ${name} is yours!`));
-  s.append(el('div', 'dn-sub', `Registered on ${getNetwork()} — it now resolves to your identity.`));
+  // A contested claim is on chain but not won: the name stays unresolvable until
+  // the vote ends, and claiming it again is refused. Both are worth saying, or
+  // the next check ("still not registered?") looks like a failure.
+  s.append(el('div', 'dn-success-title', contest ? `✅ ${name} is claimed — now it goes to a vote` : `🎉 ${name} is yours!`));
+  s.append(el('div', 'dn-sub', contest
+    ? `Your claim is on chain on ${getNetwork()}. Masternodes vote until ${
+      contest.endsAt ? fmtDate(contest.endsAt) : 'two weeks from now'}${
+      contest.endsAtExact === false ? ' (about)' : ''}, and ${
+      contest.contenders > 1 ? `${contest.contenders} identities are competing` : 'you are the only contender'}. Until then the name does not resolve, and registering it again is not needed.`
+    : `Registered on ${getNetwork()} — it now resolves to your identity.`));
   const actions = el('div', 'dn-success-actions');
   actions.append(explorerLink('View it on the explorer ↗', id));
   const again = el('button', 'btn ghost sm', 'Register another');

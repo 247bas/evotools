@@ -2,7 +2,9 @@
 // name for an existing identity (reuses onboard's registration + explorer's
 // contest query).
 import { getSdk, loadEvo, getNetwork } from './sdk.js';
-import { registerName as registerNameResumable } from '../../shared/dpns-register.js';
+import {
+  registerName as registerNameResumable, contestState, contestEndsAt,
+} from '../../shared/dpns-register.js';
 
 // Document state transitions may be signed by an AUTHENTICATION key at CRITICAL,
 // HIGH or MEDIUM level. A MASTER key cannot sign documents, and a TRANSFER key
@@ -45,23 +47,21 @@ export async function checkName(label) {
 async function getContest(label) {
   const sdk = await getSdk();
   const norm = await sdk.dpns.convertToHomographSafe(label);
-  const state = await sdk.voting.contestedResourceVoteState({
-    dataContractId: DPNS_CONTRACT,
-    documentTypeName: 'domain',
-    indexName: 'parentNameAndLabel',
-    indexValues: ['dash', norm],
-    resultType: 'documentsAndVoteTally',
-    allowIncludeLockedAndAbstainingVoteTally: true,
-  });
-  // `winner` is only set once the contest has ended. Its `kind` is what decides
-  // the outcome: 'Locked' (nobody gets the name) or 'WonByIdentity'.
-  const winner = state.winner;
+  // `outcome` is only set once the contest has ended: 'Locked' (nobody gets the
+  // name) or 'WonByIdentity'. Until then the claims stand and the name does not
+  // resolve, which is why an open contest needs saying out loud — it reads as
+  // "available" everywhere else.
+  const state = await contestState({ sdk, normalizedLabel: norm });
+  const pending = !state.outcome && state.contenders.length > 0;
+  const endsAt = pending ? await contestEndsAt({ sdk, normalizedLabel: norm }).catch(() => undefined) : undefined;
   return {
-    contenders: (state.contenders || []).map((c) => ({ identityId: c.identityId?.toString?.(), votes: Number(c.voteTally ?? 0) })),
-    abstain: Number(state.abstainVoteTally ?? 0),
-    lock: Number(state.lockVoteTally ?? 0),
-    outcome: winner ? winner.kind : undefined,
-    winner: winner?.identityId?.toString?.(),
+    contenders: state.contenders.map((identityId, i) => ({ identityId, votes: state.votes[i] ?? 0 })),
+    abstain: state.abstain,
+    lock: state.lock,
+    outcome: state.outcome,
+    winner: state.winner,
+    pending,
+    endsAt,
   };
 }
 

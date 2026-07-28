@@ -6,7 +6,7 @@ import {
 } from './wallet.js';
 import {
   getAddressBalance, createIdentity, checkUsername, registerUsername,
-  fundAddressFromIdentity, topUpIdentity,
+  fundAddressFromIdentity, topUpIdentity, verifyIdentityKeys,
 } from './platform.js';
 import { setNetwork, getNetwork, isMainnet, getSdk, loadEvo } from './sdk.js';
 import {
@@ -56,6 +56,7 @@ const state = {
   identityObj: null,
   derived: null,
   username: null,
+  usernamePending: null, // contest details while the masternodes vote on it
 };
 let pollTimer = null;
 let usernameToken = 0;
@@ -63,6 +64,7 @@ let usernameToken = 0;
 // ── tiny DOM helpers ─────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const creditsToDash = (c) => (Number(c) / Number(CREDITS_PER_DASH)).toFixed(4);
+const fmtDate = (d) => d.toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 function showError(err) {
   const box = $('globalError');
@@ -113,6 +115,10 @@ function withBusy(btn, label, fn) {
 $('netsel').addEventListener('change', () => {
   setNetwork($('netsel').value);
   const main = isMainnet();
+  // Keys are derived per network, so a phrase brought in for the other one does
+  // not carry over — start that choice again rather than keep a stale flag.
+  state.ownPhrase = false;
+  state.mnemonic = null;
   $('testnetNote').hidden = main;
   $('mainnetNote').hidden = !main;
   // On mainnet the risk is the user's, so make them say so before starting.
@@ -139,7 +145,10 @@ $('startBtn').addEventListener('click', withBusy($('startBtn'), 'Loading SDK…'
   if (main) {
     // Nothing that holds money is generated here — only the keys of the identity
     // that is about to be created. The funding key comes from the user.
-    state.mnemonic = await generateIdentityMnemonic();
+    // A phrase the user brought themselves has to survive a second pass through
+    // this screen: silently replacing it hands them a recovery phrase that does
+    // not open the identity they walk away with.
+    if (!state.ownPhrase) state.mnemonic = await generateIdentityMnemonic();
     state.address = null;
     state.addressPrivateKeyWif = null;
     $('addressBox1').textContent = 'paste your funding key above';
@@ -549,14 +558,24 @@ function scheduleUsernameCheck(label) {
   const token = ++usernameToken;
   usernameDebounce = setTimeout(async () => {
     try {
-      const { valid, contested, available } = await checkUsername(label);
+      const { valid, contested, available, locked, contest } = await checkUsername(label);
       if (token !== usernameToken) return; // stale
       if (!valid) {
         status.className = 'username-status bad';
         status.textContent = 'Not a valid DPNS name (use a-z, 0-9, hyphens).';
+      } else if (locked) {
+        status.className = 'username-status bad';
+        status.textContent = `${label}.dash is locked by masternode vote — nobody can claim it.`;
       } else if (!available) {
         status.className = 'username-status bad';
         status.textContent = `${label}.dash is already taken.`;
+      } else if (contest) {
+        // Claimed, but the vote decides. Joining is allowed and costs the same
+        // 0.2 DASH, so this is a warning rather than a refusal.
+        status.className = 'username-status warn';
+        status.textContent = `${label}.dash already has ${contest.contenders === 1 ? 'a claim' : `${contest.contenders} claims`} in an open contest${
+          contest.endsAt ? `, decided ${fmtDate(contest.endsAt)}` : ''}. Registering joins it as another contender.`;
+        $('registerBtn').disabled = false;
       } else if (contested) {
         status.className = 'username-status warn';
         status.textContent = isMainnet()
@@ -583,13 +602,16 @@ $('registerBtn').addEventListener('click', async () => {
   $('registerBtn').disabled = true;
   $('skipUsernameBtn').disabled = true;
   try {
-    await registerUsername({
+    const res = await registerUsername({
       label,
       identityId: state.identityId,
       identityObj: state.identityObj,
       derived: state.derived,
     });
     state.username = `${label}.dash`;
+    // A contested name is claimed, not owned: it is in a masternode vote for two
+    // weeks. Saying "registered" there would be a lie in both directions.
+    state.usernamePending = res?.contestPending ? res.contest : null;
     finish();
   } catch (e) {
     $('usernameRegistering').hidden = true;
@@ -613,13 +635,29 @@ function envText() {
 function finish() {
   const summary = $('doneSummary');
   const rows = [];
-  if (state.username) rows.push(['Username', state.username]);
+  const pending = state.usernamePending;
+  if (state.username) rows.push([pending ? 'Username (in contest)' : 'Username', state.username]);
   rows.push(['Identity', state.identityId]);
   rows.push(['Network', getNetwork()]);
   rows.push(['Explorer', cfg().explorer.replace('https://', '')]);
   summary.innerHTML = rows.map(([k, v]) => `<div class="item"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
 
+  // A contested name is not yours until the masternodes have voted, and until
+  // then it does not resolve. Say that here instead of letting the tools look
+  // like the registration failed.
+  const note = $('doneNote');
+  if (pending) {
+    note.className = 'note warn';
+    note.textContent = `${state.username} is a contested name: your claim is on chain and masternodes vote on it until ${
+      fmtDate(pending.endsAt)}${pending.endsAtExact ? '' : ' (about two weeks)'}. Until then the name does not resolve yet, and ${
+      pending.contenders > 1 ? `${pending.contenders} identities are competing for it` : 'you are the only contender'}. Registering it again is not needed and will be refused.`;
+    note.hidden = false;
+  } else {
+    note.hidden = true;
+  }
+
   $('envBox').textContent = envText();
+  verifyKeys();
   showSweep();
 
   $('allKeys').innerHTML = state.derived.map((d) => `
@@ -629,6 +667,35 @@ function finish() {
     </div>`).join('');
 
   showPanel('done', 5);
+}
+
+// The phrase and the keys on this screen are the only way back into the identity,
+// so they are checked against the identity the network actually stored before
+// anyone is told to save them.
+async function verifyKeys() {
+  const line = $('keyCheck');
+  line.className = 'note info';
+  line.textContent = 'Checking that these keys open the identity…';
+  line.hidden = false;
+  try {
+    const { phraseMatches, keysMatch, checked } = await verifyIdentityKeys({
+      identityId: state.identityId,
+      mnemonic: state.mnemonic,
+      derived: state.derived,
+    });
+    if (phraseMatches && keysMatch) {
+      line.className = 'note ok';
+      line.textContent = `Verified: the phrase below derives these ${checked} keys, and they are the keys ${state.identityId.slice(0, 8)}… carries on ${getNetwork()}.`;
+      return;
+    }
+    line.className = 'note bad';
+    line.textContent = !keysMatch
+      ? `Warning: the keys shown here do not match the ones on identity ${state.identityId}. Save everything on this page anyway and check it in keygen before you rely on it.`
+      : 'Warning: the phrase below does not derive the keys shown here. Keep the keys — they are the ones on the identity — and treat the phrase as unreliable.';
+  } catch (e) {
+    line.className = 'note info';
+    line.textContent = `Could not verify the keys against the network (${e?.message || e}). The keys below are the ones this page used.`;
+  }
 }
 
 $('copyEnv').addEventListener('click', (e) => copyToButton(e.target, envText()));
