@@ -161,6 +161,7 @@ function renderStatus(r) {
   } else if (r.available) {
     s.className = 'dn-status ok';
     s.append(el('span', null, `${r.label}.dash is available${r.contested ? " — but it's a contested (premium) name" : ''}.`));
+    s.append(priceLine(r.contested));
     showClaim(r);
   } else {
     s.className = 'dn-status warn';
@@ -168,6 +169,25 @@ function renderStatus(r) {
   }
   if (r.contest && (r.contest.contenders?.length || r.contest.lock || r.contest.abstain)) s.append(contestPanel(r.contest));
   if (r.valid) s.append(snippet(checkCode(r.label, r.contested)));
+}
+
+// What a registration actually costs, measured on mainnet 2026-07-28 from three
+// registrations by one identity (preorder + domain, in credits):
+//   pizza2go  23,469,080 + 32,690,980 = 0.00056160 DASH
+//   pizza247  23,520,440 + 40,285,160 = 0.00063806 DASH
+//   pizza     35,098,140 + 80,423,140 = 0.00115521 DASH — contested, so its two
+//             transitions cost more, and the preorder also carries the 0.2 DASH
+//             voting balance (20,000,000,000 credits) that pays for the vote.
+// The fee follows the size of the transition, so it moves a little per name.
+const FEE_HINT = 'about 0.0006 DASH';
+const CONTESTED_FEE_HINT = 'about 0.0012 DASH';
+
+function priceLine(contested) {
+  const unit = getNetwork() === 'mainnet' ? 'DASH' : 'tDASH';
+  const text = contested
+    ? `Costs 0.2 ${unit} for the vote plus ${CONTESTED_FEE_HINT.replace('DASH', unit)} in network fees, and takes two weeks.`
+    : `Costs ${FEE_HINT.replace('DASH', unit)} in network fees, and is yours the moment it lands.`;
+  return el('div', 'dn-price', text);
 }
 
 function contestPanel(c) {

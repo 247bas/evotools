@@ -42,6 +42,7 @@
 .dn-status.muted { color: var(--muted); }
 .dn-link { margin-left: 6px; font-size: 0.85rem; }
 .dn-sub { color: var(--muted); font-size: 0.85rem; margin: 8px 0; }
+.dn-price { color: var(--muted); font-size: 0.82rem; margin-top: 6px; }
 
 /* contested panel */
 .dn-contest { margin-top: 14px; padding: 13px; border: 1px solid rgba(157, 50, 228, 0.4); background: rgba(157, 50, 228, 0.08); border-radius: 10px; }
