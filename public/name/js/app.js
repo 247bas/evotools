@@ -190,6 +190,9 @@ function contestPanel(c) {
   tally.append(el('span', 'dn-cid', 'lock / abstain'));
   tally.append(el('span', 'dn-votes', `${c.lock} / ${c.abstain} votes`));
   d.append(tally);
+  const all = el('a', 'dn-link', 'Every contest, open and decided →');
+  all.href = `/contests/${getNetwork() === 'testnet' ? '?net=testnet' : ''}`;
+  d.append(all);
   return d;
 }
 

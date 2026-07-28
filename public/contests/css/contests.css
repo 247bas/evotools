@@ -1,0 +1,76 @@
+/* contests — open and decided .dash name votes */
+.ct-wrap { max-width: 860px; }
+.tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 18px; }
+
+.ct-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.ct-netsel {
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.82rem; font-family: var(--mono); padding: 7px 10px; cursor: pointer;
+}
+.ct-netsel:focus { outline: none; border-color: var(--blue); }
+
+.ct-stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
+.ct-stat b { color: var(--text); font-weight: 600; }
+.ct-stat.next { color: var(--blue); }
+
+.ct-section { margin-top: 32px; }
+.ct-section h2 { font-size: 1.05rem; margin-bottom: 6px; }
+.ct-count { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
+.ct-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 14px; }
+.ct-empty { color: var(--muted); font-size: 0.9rem; padding: 18px 0; }
+
+.ct-list { display: flex; flex-direction: column; gap: 8px; }
+.ct-row { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: rgba(0, 0, 0, 0.18); }
+
+/* The whole header is the toggle, so it has to look like a row, not a button */
+.ct-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px;
+  width: 100%; padding: 13px 15px; text-align: left; cursor: pointer;
+  background: none; border: none; color: var(--text); font: inherit;
+}
+.ct-head:hover { background: rgba(255, 255, 255, 0.03); }
+.ct-head:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.ct-name { min-width: 0; }
+.ct-label { font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; }
+
+.ct-badge {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+}
+.ct-badge.open { color: #ffe08a; border-color: rgba(255, 193, 7, 0.45); background: rgba(255, 193, 7, 0.10); }
+.ct-badge.won { color: #7ee2a0; border-color: rgba(40, 167, 69, 0.5); background: rgba(40, 167, 69, 0.12); }
+.ct-badge.locked { color: #ffb3ba; border-color: rgba(255, 92, 108, 0.5); background: rgba(255, 92, 108, 0.12); }
+
+.ct-tallies { display: flex; gap: 10px; font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+.ct-tally b { font-family: var(--mono); }
+.ct-tally.for b { color: #7ee2a0; }
+.ct-tally.lock b { color: #ffb3ba; }
+.ct-tally.abstain b { color: var(--muted); }
+
+.ct-dates { display: flex; flex-direction: column; gap: 2px; font-size: 0.72rem; color: var(--muted); text-align: right; }
+.ct-date { display: flex; gap: 6px; justify-content: flex-end; }
+.ct-date-k { opacity: 0.7; }
+.ct-date-rel { color: var(--blue); opacity: 0.85; }
+
+.ct-body { padding: 4px 15px 15px; border-top: 1px solid var(--border); }
+.ct-contender {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.ct-cid { font-size: 0.75rem; color: var(--muted); overflow-wrap: anywhere; }
+.ct-claimed { font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
+.ct-link { color: var(--blue); font-size: 0.75rem; text-decoration: none; }
+.ct-link:hover { text-decoration: underline; }
+.ct-detail-links { margin-top: 12px; }
+
+.ct-pager { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.ct-page { font-size: 0.8rem; color: var(--muted); }
+.ct-source { margin-top: 30px; font-size: 0.75rem; color: var(--muted); opacity: 0.8; }
+
+/* Phone: the four-column header stacks, and the dates stop hugging the right */
+@media (max-width: 760px) {
+  .ct-head { grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .ct-tallies { grid-column: 1 / -1; }
+  .ct-dates { grid-column: 1 / -1; text-align: left; }
+  .ct-date { justify-content: flex-start; }
+}

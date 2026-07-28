@@ -5,6 +5,15 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A contests page.** Which `.dash` names are being voted on, and which ones the
+  masternodes already settled — the two questions the other tools can only answer
+  one name at a time. Open contests are sorted by which ends soonest; decided ones
+  are paginated back through 700-odd names, each showing votes for, lock and
+  abstain, when it was claimed and when it was settled. Expanding a row lists the
+  contenders with their own tallies and marks the winner, or the one leading while
+  the vote runs. This is the first page here that leans on an index rather than
+  the chain — a list is exactly what the SDK cannot produce — so every row links
+  back into our explorer, which re-reads that name from the chain with a proof.
 - **The `.env` says which key it hands you.** `EVO_PRIVATE_WIF` is the identity's
   CRITICAL key — the one that signs — but the name reads like the funding key,
   which is a different key on a different path that only pays. Comparing the two

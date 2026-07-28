@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contests — every .dash name being voted on · evotools</title>
+  <meta name="description" content="Every contested .dash username masternodes are voting on right now, and every one they have decided — with contenders, votes and dates." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="evotools" />
+  <meta property="og:title" content="Contests — every .dash name being voted on" />
+  <meta property="og:description" content="Open and decided .dash name contests: contenders, votes for, lock and abstain, and the dates that matter." />
+  <meta property="og:url" content="https://evotools.dev/contests/" />
+  <meta property="og:image" content="https://evotools.dev/og/home.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Contests — every .dash name being voted on" />
+  <meta name="twitter:description" content="Open and decided .dash name contests: contenders, votes, and the dates that matter." />
+  <meta name="twitter:image" content="https://evotools.dev/og/home.png" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="css/contests.css" />
+</head>
+<body>
+  <div class="wrap ct-wrap">
+    <p class="tagline">
+      Short and premium <code>.dash</code> names are not first-come-first-served:
+      masternodes vote on them for two weeks. Here is what is being voted on right
+      now, and what has already been decided.
+    </p>
+
+    <div class="ct-controls">
+      <select id="netsel" class="ct-netsel" aria-label="Network">
+        <option value="mainnet">mainnet</option>
+        <option value="testnet">testnet</option>
+      </select>
+      <div class="ct-stats" id="stats"></div>
+    </div>
+
+    <div class="error" id="error" hidden></div>
+
+    <section class="ct-section">
+      <h2>Being voted on now <span class="ct-count" id="openCount"></span></h2>
+      <p class="ct-sub" id="openSub">
+        A claim is on chain the moment it is made, but the name resolves to nobody
+        until the vote ends.
+      </p>
+      <div id="openList" class="ct-list"></div>
+    </section>
+
+    <section class="ct-section">
+      <h2>Decided <span class="ct-count" id="doneCount"></span></h2>
+      <p class="ct-sub">
+        Won by an identity, or locked — a lock means the votes went against every
+        contender, and nobody can ever claim that name.
+      </p>
+      <div id="doneList" class="ct-list"></div>
+      <div class="ct-pager" id="pager" hidden>
+        <button class="btn ghost sm" id="prevBtn">← Newer</button>
+        <span class="ct-page" id="pageLabel"></span>
+        <button class="btn ghost sm" id="nextBtn">Older →</button>
+      </div>
+    </section>
+
+    <p class="ct-source" id="source"></p>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
