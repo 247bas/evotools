@@ -1,7 +1,7 @@
 // Smoke test for keygen: derivation is offline and deterministic, the QR encodes
 // the address, and the result matches what onboard derives from the same phrase.
 // Run: node public/keygen/test/smoke.mjs
-import { readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet } from '../js/keys.js';
 import { qrMatrix } from '../../shared/qr.js';
 import {
@@ -65,6 +65,16 @@ const sources = {
   qrJs: read('../../shared/qr.js'),
   sdk: read('../../shared/vendor/evo-sdk.module.js'),
 };
+// The page fetches those same sources by URL to build the copy in the browser,
+// and this test reads them from disk — so a file that moves passes here while
+// the download 404s in production. Check the URLs the page actually asks for.
+const fetched = [...sources.appJs.matchAll(/fetchText\('([^']+)'\)/g)].map((m) => m[1]);
+check(fetched.length === 7, `the offline build fetches ${fetched.length} sources`);
+for (const url of fetched) {
+  // The site is served from public/, which is two levels up from this test.
+  check(existsSync(new URL(`../..${url}`, import.meta.url)), `${url} exists where the page asks for it`);
+}
+
 // The bootstrap rewires imports by string replacement — if a specifier ever
 // changes, the offline copy breaks silently, so assert they still match.
 check(sources.keysJs.includes(SDK_SPECIFIER), `keys.js still imports ${SDK_SPECIFIER}`);

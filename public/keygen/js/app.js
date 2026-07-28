@@ -176,7 +176,7 @@ async function buildOfflineCopy() {
     fetchText('/keygen/css/keygen.css'),
     fetchText('/keygen/js/app.js'),
     fetchText('/keygen/js/keys.js'),
-    fetchText('/keygen/js/qr.js'),
+    fetchText('/shared/qr.js'),
     fetchText('/shared/vendor/evo-sdk.module.js'),
   ]);
   const html = buildOfflineHtml({ page, theme, css, appJs, keysJs, qrJs, sdk });
