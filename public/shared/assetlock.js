@@ -24,6 +24,11 @@ export const MIN_LOCK_DUFFS = 200_000;
 // transaction of this size. Raising this will break broadcasting, not speed it.
 export const FEE_DUFFS = 1_000;
 
+// A ceiling on what may quietly become a fee. The change output is dropped when
+// what is left over is dust, which is a real and harmless case (a few hundred
+// duffs); a change calculation that went wrong is not, and looks nothing like it.
+export const MAX_FEE_DUFFS = 10_000; // 0.0001 DASH
+
 const api = (network) => INSIGHT[network] || INSIGHT.testnet;
 const coreNetwork = (network) => (network === 'mainnet' ? 'livenet' : 'testnet');
 
@@ -115,6 +120,16 @@ export function buildAssetLock({ dc, wif, utxos, lockDuffs, network }) {
   tx.sign(key);
 
   if (!tx.isFullySigned()) throw new Error('The transaction could not be signed with this key.');
+
+  // `serialize(true)` skips dashcore's checks — it has to, because they do not
+  // know this special transaction type. One of the checks it skips is the guard
+  // against a runaway fee, and everything not locked or returned as change goes
+  // to miners. So the arithmetic is verified here before anything is signed away.
+  const outgoing = tx.outputs.reduce((sum, o) => sum + o.satoshis, 0);
+  const impliedFee = available - outgoing;
+  if (impliedFee > MAX_FEE_DUFFS) {
+    throw new Error(`Refusing to sign: this would pay ${impliedFee / 1e8} DASH in fees, not ${FEE_DUFFS / 1e8}. Nothing was broadcast.`);
+  }
   return { rawtx: tx.serialize(true), txid: tx.id };
 }
 

@@ -677,7 +677,19 @@ function finish() {
   rows.push(['Identity', state.identityId]);
   rows.push(['Network', getNetwork()]);
   rows.push(['Explorer', cfg().explorer.replace('https://', '')]);
-  summary.innerHTML = rows.map(([k, v]) => `<div class="item"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  // Built as nodes, not as HTML: one of these values is a name the user typed.
+  summary.replaceChildren(...rows.map(([k, v]) => {
+    const item = document.createElement('div');
+    item.className = 'item';
+    const key = document.createElement('span');
+    key.className = 'k';
+    key.textContent = k;
+    const val = document.createElement('span');
+    val.className = 'v';
+    val.textContent = v;
+    item.append(key, val);
+    return item;
+  }));
 
   // A contested name is not yours until the masternodes have voted, and until
   // then it does not resolve. Say that here instead of letting the tools look

@@ -43,6 +43,11 @@ export function detect(raw) {
   if (!s) return { kind: 'empty' };
   if (words(s).length >= 12) return { kind: 'secret' };
   if (/^[X7c][1-9A-HJ-NP-Za-km-z]{50,51}$/.test(s)) return { kind: 'secret' };
+  // A raw key or a fragment of one is hex and long. Without this a 62-character
+  // hex string reads as a DPNS label and gets sent to a node as a name lookup —
+  // which is exactly what this page promises never to do.
+  if (/^[0-9a-f]{32,}$/i.test(s)) return { kind: 'secret' };
+  if (/^([xt]prv|[xt]pub)[1-9A-HJ-NP-Za-km-z]{50,}$/.test(s)) return { kind: 'secret' };
   if (/\.dash$/i.test(s)) return { kind: 'name' };
   if (/^dash1[0-9a-z]{20,}$/i.test(s)) return { kind: 'platform-address', network: 'mainnet' };
   if (/^tdash1[0-9a-z]{20,}$/i.test(s)) return { kind: 'platform-address', network: 'testnet' };

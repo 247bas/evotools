@@ -1,6 +1,14 @@
+# The CSP below carries only the directives that cannot break a site which loads
+# no plugins, sets no <base> and submits no cross-site forms. script-src is left
+# out on purpose until it has been walked through a real browser: the WASM SDK
+# needs 'unsafe-eval', and the playground and keygen build blob: modules, so the
+# line to try is
+#   script-src 'self' blob: 'unsafe-eval' 'wasm-unsafe-eval'
+# and getting that wrong takes the whole site down without an error anyone sees.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'

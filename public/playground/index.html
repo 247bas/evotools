@@ -58,6 +58,10 @@
 
         <div class="pg-env" id="envBox" hidden>
           <label for="envInput">Optional environment — one <code>KEY=value</code> per line. Paste your onboard <code>.env</code> to run the write path for real.</label>
+          <p class="pg-warn">Whatever is in the editor when you press Run receives these values, and the code
+          runs in your browser with your keys in reach. The recipes are fetched from
+          <a href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener">247bas/evo-cookbook</a>
+          and you can edit them freely — so paste a key you would not mind losing, and prefer testnet.</p>
           <textarea id="envInput" spellcheck="false" placeholder="EVO_IDENTITY_ID=...&#10;EVO_PRIVATE_WIF=..."></textarea>
         </div>
 
