@@ -3,7 +3,18 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
-## Unreleased
+## 2.0.0 — 2026-07-28
+
+Getting onto Dash Platform no longer needs any other software, and the suite now
+explains the chain instead of only operating on it. Four tools joined the four
+from 1.0: **keygen** (cold keys, with an offline copy you can download and run
+disconnected), **credits** (an identity's balance and every way to move it),
+**contests** (every `.dash` name masternodes are voting on, and every one they
+decided) and **map** (where DASH, credits and identities sit, what each move
+costs, and where any identity's money came from). Layer-1 funding, name
+registration and withdrawal all run in the browser now, each verified with real
+money on mainnet.
+
 
 - **A map of where the money is.** Two chains carry the same money under
   different rules, and nothing showed that: you cannot send DASH to a `dash1…`
