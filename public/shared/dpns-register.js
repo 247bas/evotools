@@ -134,8 +134,19 @@ function buildDocument({ Evo, typeName, ownerId, properties, entropy }) {
 // preorder is only paid for once.
 export async function registerName({
   sdk, Evo, label, identity, identityKey, signer, privateKeyBytes, network,
-  attempt = 0, onProgress = () => {},
+  attempt = 0, onProgress = () => {}, settleMs = 2000,
 }) {
+  // A write is only visible once its block is in, so a read straight after a
+  // broadcast can miss a document that is on its way. Give it a few tries before
+  // concluding that nothing happened.
+  const settle = async (read) => {
+    for (let i = 0; ; i++) {
+      const found = await read().catch(() => undefined);
+      if (found || i >= 2) return found;
+      await new Promise((r) => setTimeout(r, settleMs));
+    }
+  };
+
   const clean = label.replace(/\.dash$/i, '').trim().toLowerCase();
   const normalizedLabel = await sdk.dpns.convertToHomographSafe(clean);
   const ownerId = identity.id.toString();
@@ -179,8 +190,13 @@ export async function registerName({
     try {
       await sdk.documents.create({ document: preorder, identityKey, signer });
     } catch (e) {
-      if (!isProofGlitch(e) && !isAlreadySubmitted(e)) throw e;
-      if (isAlreadySubmitted(e)) onProgress({ step: 'preorder', reused: true, preorderId });
+      // Ask the chain whether the preorder is there instead of reading the
+      // error: a node that fails to answer has still often accepted the
+      // transition, and giving up here pays for the preorder twice — which for
+      // a contested name is 0.2 DASH twice.
+      const landed = await settle(() => sdk.documents.get(DPNS_CONTRACT, 'preorder', preorderId));
+      if (!landed && !isProofGlitch(e) && !isAlreadySubmitted(e)) throw e;
+      if (landed || isAlreadySubmitted(e)) onProgress({ step: 'preorder', reused: true, preorderId });
     }
   }
 
@@ -200,13 +216,19 @@ export async function registerName({
       subdomainRules: { allowSubdomains: false },
     },
   });
+  // Whatever comes back from the broadcast, the chain decides whether the name
+  // is registered — a node that answers badly, a proof the SDK cannot verify and
+  // a reply that never arrives all look like failure and are not. So the error
+  // is kept, and only used if the name really is not there afterwards.
+  let broadcastError;
   try {
     await sdk.documents.create({ document: domain, identityKey, signer });
   } catch (e) {
-    if (!isProofGlitch(e) && !isAlreadySubmitted(e) && !isAlreadyInContest(e)) throw e;
+    if (isProofGlitch(e) || isAlreadySubmitted(e) || isAlreadyInContest(e)) broadcastError = undefined;
+    else broadcastError = e;
   }
 
-  const owner = await sdk.dpns.resolveName(clean).catch(() => undefined);
+  const owner = await settle(() => sdk.dpns.resolveName(clean));
   if (owner) {
     onProgress({ step: 'done' });
     return { name: `${clean}.dash`, identityId: owner.toString(), preorderId };
@@ -222,6 +244,9 @@ export async function registerName({
     }
   }
 
+  if (broadcastError) {
+    throw new Error(`${clean}.dash is not registered — the node answered: ${broadcastError.message || broadcastError}. Nothing was lost: running this again picks up the preorder that was already paid for.`);
+  }
   throw new Error(`${clean}.dash did not register. Running this again picks up the preorder that was already paid for.`);
 }
 

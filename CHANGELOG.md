@@ -5,6 +5,13 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The chain has the last word on whether a name registered.** A node that
+  cannot answer ("Tenderdash is not available") has usually still accepted the
+  transition, and the tool called that a failure — `pizza247.dash` was registered
+  and reported as broken in the same breath. Both steps now ask the chain what
+  actually happened before believing an error, with a moment's patience for the
+  block to land. A real failure keeps the node's own words and says plainly that
+  running it again costs nothing extra.
 - **A contests page.** Which `.dash` names are being voted on, and which ones the
   masternodes already settled — the two questions the other tools can only answer
   one name at a time. Open contests are sorted by which ends soonest; decided ones

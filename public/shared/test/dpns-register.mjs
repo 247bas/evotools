@@ -6,7 +6,7 @@
 // Run: node public/shared/test/dpns-register.mjs
 import { randomBytes } from 'node:crypto';
 import {
-  deriveSaltAndEntropy, saltedDomainHash, contestState, contestEndsAt, DPNS_CONTRACT,
+  deriveSaltAndEntropy, saltedDomainHash, registerName, contestState, contestEndsAt, DPNS_CONTRACT,
 } from '../dpns-register.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
@@ -56,6 +56,72 @@ check(hex(a.salt).slice(0, 8) !== hex(s2.salt).slice(0, 8), 'two names under one
 
 console.log('\n5. Contract');
 check(DPNS_CONTRACT === 'GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec', 'DPNS contract id is the system one');
+
+// Measured on mainnet 2026-07-28: pizza247.dash registered fine while the tool
+// showed "state transition broadcast error: Tenderdash is not available". The
+// node failing to answer says nothing about whether the transition landed, so
+// the chain is asked before anything is called a failure. Both halves of that
+// are exercised here against a stand-in SDK — the real one costs credits.
+console.log('\n5b. A broadcast that fails on a transition that landed');
+const fakeEvo = {
+  Document: class { constructor(o) { Object.assign(this, o); this.id = { toString: () => `doc-${o.documentTypeName}` }; } },
+};
+const identity = { id: { toString: () => 'OWNER1', toBytes: () => new Uint8Array(32) } };
+
+function stubSdk({ failOn, resolvesAfter, preorderExists = false }) {
+  let creates = 0;
+  let resolves = 0;
+  return {
+    calls: () => ({ creates, resolves }),
+    dpns: {
+      convertToHomographSafe: async (s) => s,
+      isContestedUsername: async () => false,
+      resolveName: async () => (++resolves >= resolvesAfter ? 'OWNER1' : undefined),
+    },
+    documents: {
+      get: async () => (preorderExists ? { id: 'preorder' } : undefined),
+      create: async ({ document }) => {
+        creates++;
+        if (document.documentTypeName === failOn) throw new Error('state transition broadcast error: Tenderdash is not available');
+      },
+    },
+  };
+}
+
+const registered = await (async () => {
+  const sdk = stubSdk({ failOn: 'domain', resolvesAfter: 3 });
+  const res = await registerName({
+    sdk, Evo: fakeEvo, label: 'pizza247', identity, identityKey: {}, signer: {},
+    privateKeyBytes: key, network: 'mainnet', settleMs: 0,
+  });
+  return res;
+})().catch((e) => ({ threw: e.message }));
+check(registered?.name === 'pizza247.dash', `a name that landed is reported as registered (${registered?.name ?? registered?.threw})`);
+check(registered?.identityId === 'OWNER1', 'and it names the owner the chain returned');
+
+// The other direction: a broadcast that failed and left nothing behind must
+// still fail, with the node's own words and the reassurance that a rerun is safe.
+const reallyFailed = await (async () => {
+  const sdk = stubSdk({ failOn: 'domain', resolvesAfter: 99 });
+  await registerName({
+    sdk, Evo: fakeEvo, label: 'pizza247', identity, identityKey: {}, signer: {},
+    privateKeyBytes: key, network: 'mainnet', settleMs: 0,
+  });
+  return undefined;
+})().catch((e) => e.message);
+check(/Tenderdash is not available/.test(reallyFailed ?? ''), 'a real failure keeps the node\'s own message');
+check(/picks up the preorder/.test(reallyFailed ?? ''), 'and says a rerun costs nothing extra');
+
+// A preorder that landed under a failed broadcast must not be paid for twice.
+const preorderKept = await (async () => {
+  const sdk = stubSdk({ failOn: 'preorder', resolvesAfter: 2, preorderExists: true });
+  const res = await registerName({
+    sdk, Evo: fakeEvo, label: 'pizza247', identity, identityKey: {}, signer: {},
+    privateKeyBytes: key, network: 'mainnet', settleMs: 0,
+  });
+  return res;
+})().catch((e) => ({ threw: e.message }));
+check(preorderKept?.name === 'pizza247.dash', 'a failed preorder broadcast that landed still finishes the registration');
 
 // A contested claim only shows up as a contender in a vote poll — the name stays
 // unresolvable for two weeks. Reading that back is what keeps a successful claim
