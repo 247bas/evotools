@@ -58,7 +58,8 @@ svg.map .box-live.on { stroke: var(--blue); }
 .finding .row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.83rem; margin-top: 6px; }
 .finding .row.pending { color: var(--warn); }
 .finding .row.pending .v { color: var(--warn); }
-.finding .row .v { font-family: var(--mono); }
+.finding .row .v { font-family: var(--mono); overflow-wrap: anywhere; text-align: right; }
+.finding .row { align-items: baseline; }
 .finding .acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 11px; }
 .finding .acts a { font-size: 0.8rem; color: var(--blue); }
 

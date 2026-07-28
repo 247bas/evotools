@@ -10,19 +10,43 @@ const el = (tag, cls, text) => {
   if (text != null) e.textContent = text;
   return e;
 };
-const short = (s, head = 10, tail = 6) => (s && s.length > head + tail + 1 ? `${s.slice(0, head)}…${s.slice(-tail)}` : s || '');
 const unit = () => (getNetwork() === 'mainnet' ? 'DASH' : 'tDASH');
 const fmtDate = (d) => (d ? d.toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
 const EMPTY = '—';
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 function setBox(id, value, live) {
   $(id).textContent = value ?? EMPTY;
   const box = $(`${id}-box`);
   if (box) box.classList.toggle('on', !!live);
 }
 
+// An address is worth nothing with its middle cut out — you cannot check it, copy
+// it or recognise it. SVG text does not wrap, so it is split over two lines here
+// instead, at the halfway mark.
+function setAddress(id, address, live) {
+  const node = $(id);
+  const box = $(`${id.replace('Addr', 'Val')}-box`);
+  if (box) box.classList.toggle('on', !!live);
+  node.replaceChildren();
+  if (!address) { node.textContent = EMPTY; return; }
+  const x = node.getAttribute('x');
+  const y = Number(node.getAttribute('y'));
+  const half = Math.ceil(address.length / 2);
+  const lines = address.length > 22 ? [address.slice(0, half), address.slice(half)] : [address];
+  lines.forEach((line, i) => {
+    const t = document.createElementNS(SVG_NS, 'tspan');
+    t.setAttribute('x', x);
+    t.setAttribute('y', y + i * 13);
+    t.textContent = line;
+    node.append(t);
+  });
+}
+
 function reset() {
-  for (const id of ['l1Val', 'l1Addr', 'platVal', 'platAddr', 'idVal', 'idAddr']) setBox(id, EMPTY, false);
+  for (const id of ['l1Val', 'platVal', 'idVal']) setBox(id, EMPTY, false);
+  for (const id of ['l1Addr', 'platAddr', 'idAddr']) setAddress(id, null, false);
   $('findings').replaceChildren();
   $('mapError').hidden = true;
 }
@@ -109,7 +133,7 @@ function traceEl(trace, network) {
     if (trace.lock?.txid) {
       const r = el('div', 'row');
       r.append(el('span', null, 'asset lock'));
-      r.append(el('span', 'v', `${trace.lock.txid.slice(0, 20)}…:${trace.lock.vout}`));
+      r.append(el('span', 'v', `${trace.lock.txid}:${trace.lock.vout}`));
       d.append(r);
     }
     if (trace.origin) {
@@ -122,7 +146,7 @@ function traceEl(trace, network) {
       if (trace.origin.from.length) {
         const r = el('div', 'row');
         r.append(el('span', null, 'paid by'));
-        r.append(el('span', 'v', trace.origin.from.map((a) => short(a, 12, 6)).join(', ')));
+        r.append(el('span', 'v', trace.origin.from.join(', ')));
         d.append(r);
       }
       if (trace.origin.when) d.append(el('div', 'mono', `locked ${fmtDate(trace.origin.when)}`));
@@ -180,8 +204,8 @@ function traceEl(trace, network) {
         const line = el('div', 'mono', hop.isLock
           ? `${fmtDate(hop.when)} — the asset lock itself: coins left layer 1 here`
           : hop.from.length
-            ? `${fmtDate(hop.when)} — paid in from ${hop.from.map((a) => short(a, 10, 5)).join(', ')}`
-            : `${fmtDate(hop.when)} — ${hop.txid.slice(0, 16)}…`);
+            ? `${fmtDate(hop.when)} — paid in from ${hop.from.join(', ')}`
+            : `${fmtDate(hop.when)} — ${hop.txid}`);
         d.append(line);
       }
     } catch (e) {
@@ -200,16 +224,16 @@ function render(state) {
 
   if (state.l1) {
     setBox('l1Val', `${dashFromDuffs(state.l1.duffs)} ${unit()}`, true);
-    setBox('l1Addr', short(state.l1.address, 12, 6), true);
+    setAddress('l1Addr', state.l1.address, true);
   }
   if (state.platform) {
     setBox('platVal', `${dashFromCredits(state.platform.credits)} ${unit()}`, true);
-    setBox('platAddr', short(state.platform.address, 12, 6), true);
+    setAddress('platAddr', state.platform.address, true);
   }
   const first = state.identities?.[0];
   if (first) {
     setBox('idVal', `${dashFromCredits(first.credits)} ${unit()}`, true);
-    setBox('idAddr', short(first.id, 10, 5), true);
+    setAddress('idAddr', first.id, true);
   }
 
   const out = $('findings');
@@ -231,7 +255,7 @@ function render(state) {
   // An empty box invites the wrong conclusion. Say why it is empty.
   if (state.platformUnused) {
     setBox('platVal', 'not used', false);
-    setBox('platAddr', '—', false);
+    setAddress('platAddr', null, false);
     const p = card('No platform address in this story');
     p.append(el('div', 'mono', state.platformUnused));
     out.append(p);
