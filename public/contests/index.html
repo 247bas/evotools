@@ -27,6 +27,13 @@
       masternodes vote on them for two weeks. Here is what is being voted on right
       now, and what has already been decided.
     </p>
+    <p class="ct-rule">
+      A name goes to a vote when it matches <code>^[a-zA-Z01-]{3,19}$</code> — the
+      rule in the DPNS contract itself. So 3 to 19 characters of letters,
+      <code>0</code>, <code>1</code> and hyphens: <code>coffee-shop</code> is
+      contested, <code>hello2you</code> is not, because any other digit takes a
+      name out of it.
+    </p>
 
     <div class="ct-controls">
       <select id="netsel" class="ct-netsel" aria-label="Network">

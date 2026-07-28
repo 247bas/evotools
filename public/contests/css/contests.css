@@ -2,6 +2,9 @@
 .ct-wrap { max-width: 860px; }
 .tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 18px; }
 
+.ct-rule { color: var(--muted); font-size: 0.85rem; margin: -8px 0 18px; }
+.ct-rule code { font-size: 0.8rem; }
+
 .ct-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
 .ct-netsel {
   background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px;
