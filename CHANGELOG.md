@@ -3,6 +3,38 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
+## Unreleased
+
+- **The map can be handed to somebody.** It now offers a worked example per
+  network (`evotools.dash` on mainnet, `247bas.dash` on testnet — both fill every
+  box, including the funding trace), and it keeps the query in the URL, so
+  `?q=evotools.dash&net=mainnet` opens the same map for the person you send it
+  to. The link is built by `linkFor()` in `map.js` rather than in the DOM layer,
+  which is what lets the smoke test hold it to its rules: a secret is never
+  written into the address bar, the network comes out of a fixed list of two
+  instead of the URL, nothing over 120 characters is carried, and every character
+  is percent-encoded. A link that arrives carrying a key is refused and stripped
+  from the address bar. The page builds every node with `textContent`, so a query
+  is text on the way in and on the way out.
+- **The map is a diagram again, not a menu.** The asset lock, the withdrawal and
+  the fee row used to be links to `/onboard/`, `/credits/` and `/name/`. A reader
+  following the money does not want to leave the page mid-thought, so the arrows
+  are arrows now. The invisible click targets and their hover styling went with
+  them.
+
+- **A pasted key is refused by the field, not by the SDK.** Every tool that takes
+  an identifier now runs its input past `shared/secrets.js` first. The reason is
+  narrower than "be careful with keys": a WIF is 52 characters of base58, which
+  DPNS accepts as a valid label, so an unguarded name lookup would carry a pasted
+  key to a Platform node — and in the explorer, `syncUrl` would write it into the
+  address bar and the browser's history on the way there. dash-name's Identity ID
+  field, its name field, the explorer's search box and credits' identity box all
+  empty themselves now and say which box the key belongs in. `/map` keeps its own
+  wording and shares the detector. The identity ID field was already safe by
+  accident (the SDK rejects the length locally, in about 1 ms, before any
+  connection opens) but reported it as "byte length not 32 bytes", which reads
+  like a typo rather than a warning.
+
 ## 2.0.0 — 2026-07-28
 
 Getting onto Dash Platform no longer needs any other software, and the suite now
