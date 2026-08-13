@@ -3,7 +3,10 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
-## Unreleased
+## 2.1.0 — 2026-08-13
+
+A key pasted into the wrong box is now refused by the box, and a map worth
+reading is a map worth sending.
 
 - **The map can be handed to somebody.** It now offers a worked example per
   network (`evotools.dash` on mainnet, `247bas.dash` on testnet — both fill every
@@ -21,7 +24,6 @@ rather than installable releases.
   following the money does not want to leave the page mid-thought, so the arrows
   are arrows now. The invisible click targets and their hover styling went with
   them.
-
 - **A pasted key is refused by the field, not by the SDK.** Every tool that takes
   an identifier now runs its input past `shared/secrets.js` first. The reason is
   narrower than "be careful with keys": a WIF is 52 characters of base58, which
@@ -34,6 +36,8 @@ rather than installable releases.
   accident (the SDK rejects the length locally, in about 1 ms, before any
   connection opens) but reported it as "byte length not 32 bytes", which reads
   like a typo rather than a warning.
+- **The homepage credits are links.** "open source" points at the repo, "247bas"
+  at X.
 
 ## 2.0.0 — 2026-07-28
 
