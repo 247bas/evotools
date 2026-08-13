@@ -11,6 +11,7 @@
 // well, never from an identity directly.
 
 import { getSdk, loadEvo, getNetwork } from './sdk.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 import {
   loadDashcore, fetchUtxos, spendable, totalDuffs, convertToCredits as runConversion,
   findAssetLocks, resumeAssetLock, MIN_LOCK_DUFFS, FEE_DUFFS,
@@ -62,6 +63,13 @@ async function fetchIdentity(sdk, identityId, tries = 3) {
 
 // Accepts an identity id or a .dash name.
 export async function lookupIdentity(idOrName) {
+  // Anything that is not a 43-44 character ID falls through to a DPNS lookup
+  // below, and a WIF is a valid DPNS label — so a key pasted in the wrong box
+  // would go to a node as a name. This box only ever wants public identifiers;
+  // the key fields on this page are separate and never leave the browser.
+  if (looksLikeSecret(idOrName)) {
+    throw new Error('That looks like a private key or a recovery phrase, not an identity ID or a name. Nothing was sent. Paste the identity ID or its .dash name — the key fields are further down.');
+  }
   const sdk = await getSdk();
   const input = idOrName.trim();
   let identityId = input;

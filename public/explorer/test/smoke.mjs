@@ -90,5 +90,17 @@ check(nul && typeof nul.isSpent === 'boolean', `all-zero nullifier spent: ${nul?
 const bad = await checkNullifier('mainnet', 'nope').then(() => null, (e) => e);
 check(bad instanceof Error, 'malformed nullifier is rejected client-side');
 
+// A WIF is 52 characters of base58, which DPNS accepts as a label — so an
+// unguarded search would carry a pasted key to a node, and syncUrl would put it
+// in the address bar on the way. The page catches it before either happens; this
+// pins the module-level backstop.
+console.log('\nA pasted secret never becomes a name lookup');
+const { looksLikeSecret } = await import('../../shared/secrets.js');
+const wif = 'XKEWvCA1Fxu4MWWzQM9oGApNPpUpQMCH5kwKMfhQducphcd9HHgt';
+check(looksLikeSecret(wif), 'a WIF is recognised as a secret');
+check(!looksLikeSecret('Bt5vvxCx1bHJgmSJRHLPGvJMYcNTvJUEeqNvSWCTkVfr'), 'an identity ID is not');
+const leaked = await lookupName(wif).then(() => null, (e) => e);
+check(leaked instanceof Error && /not a name/.test(leaked.message), `refused — ${leaked?.message?.slice(0, 60)}…`);
+
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

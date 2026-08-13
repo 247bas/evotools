@@ -2,7 +2,7 @@
 // onboard's verified registerName and needs a funded identity + key, so it's not
 // exercised here. Run: node public/name/test/smoke.mjs
 import { randomBytes } from 'node:crypto';
-import { checkName, registerName } from '../js/name.js';
+import { checkName, registerName, topUpIdentity } from '../js/name.js';
 import { setNetwork, loadEvo, getSdk } from '../js/sdk.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
@@ -66,6 +66,34 @@ if (!polls.length) {
   check(c?.contest?.endsAt?.getTime() === endsAt.getTime(), `it ends ${endsAt.toISOString().slice(0, 16)}, which the tool reports`);
   check(c?.registered === false, 'and it does not resolve to an owner yet');
 }
+
+// The identity ID and the key sit one field apart, and the key ends up in the
+// wrong one sooner or later. Two different things go wrong per field, so both are
+// pinned here.
+console.log('\n8. a pasted secret is refused before it goes anywhere');
+const { looksLikeSecret } = await import('../../shared/secrets.js');
+const phrase = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+for (const [what, value] of [
+  ['a WIF', stranger],
+  ['a recovery phrase', phrase],
+  ['a raw hex key', '7'.repeat(64)],
+  ['an xprv', 'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi'],
+]) check(looksLikeSecret(value), `${what} is recognised as a secret`);
+check(!looksLikeSecret(BAS), 'a real identity ID is not — 44 characters, no false positive');
+
+// The ID field: nothing leaves the browser (the SDK rejects the length locally),
+// but the SDK's complaint is about bytes and reads like a typo.
+await rejects('a WIF pasted into the identity ID field', 'zqxtestname7788', stranger, stranger, 'not an identity ID');
+await rejects('a phrase pasted into the identity ID field', 'zqxtestname7788', phrase, stranger, 'not an identity ID');
+let topUpRefused = '';
+try { await topUpIdentity({ identityId: stranger, addressWif: stranger }); } catch (e) { topUpRefused = e.message; }
+check(/not an identity ID/.test(topUpRefused), 'top-up refuses it too — same field, same slip');
+
+// The name field is the dangerous one: a WIF is a valid DPNS label, so without a
+// guard the live check sends it to a node as a name lookup. Lowercasing does not
+// save it — a WIF carries its own checksum, so the casing is recoverable offline.
+check(await sdk.dpns.isValidUsername(stranger.toLowerCase()),
+  'a lowercased WIF is a valid DPNS label — which is why the name field is guarded, not sanitised');
 
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

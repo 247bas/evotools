@@ -5,11 +5,25 @@ import { getSdk, loadEvo, getNetwork } from './sdk.js';
 import {
   registerName as registerNameResumable, contestState, contestEndsAt,
 } from '../../shared/dpns-register.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 
 // Document state transitions may be signed by an AUTHENTICATION key at CRITICAL,
 // HIGH or MEDIUM level. A MASTER key cannot sign documents, and a TRANSFER key
 // has the wrong purpose — same rule Dash Evo Tool applies for DPNS.
 const DOC_SIGNING_LEVELS = ['CRITICAL', 'HIGH', 'MEDIUM'];
+
+// The identity ID and the key sit next to each other in the form, and pasting the
+// key into the ID field is one slip. Nothing leaves the browser when that happens
+// — the SDK rejects the length locally — but the SDK's complaint is about bytes,
+// so it reads like a typo instead of a warning. Refuse it here, by name.
+export const SECRET_IN_ID_FIELD =
+  'That looks like a private key or a recovery phrase, not an identity ID. '
+  + 'It was not sent anywhere. Your identity ID is the shorter base58 string (44 characters, no X in front); '
+  + 'the key belongs in the key field below.';
+
+function refuseSecretId(identityId) {
+  if (looksLikeSecret(identityId)) throw new Error(SECRET_IN_ID_FIELD);
+}
 
 const str = (x) => (typeof x === 'string' ? x : x?.toString?.());
 // DPNS system contract — identical on testnet and mainnet.
@@ -68,6 +82,7 @@ async function getContest(label) {
 // Claim a name for an existing identity, signed with whichever authentication key
 // the supplied WIF belongs to.
 export async function registerName(label, identityId, wif) {
+  refuseSecretId(identityId);
   const Evo = await loadEvo();
   const sdk = await getSdk();
   const { IdentitySigner, PrivateKey } = Evo;
@@ -123,6 +138,7 @@ export async function registerName(label, identityId, wif) {
 // eats credits faster than people expect, and an identity that runs dry mid-way
 // is a dead end without this.
 export async function topUpIdentity({ identityId, addressWif, amount }) {
+  refuseSecretId(identityId);
   const Evo = await loadEvo();
   const sdk = await getSdk();
   const { PlatformAddressSigner, PrivateKey } = Evo;

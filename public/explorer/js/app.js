@@ -10,6 +10,7 @@ import {
   shieldedPool, checkNullifier,
 } from './explorer.js';
 import { setNetwork, getNetwork, NETWORKS } from './sdk.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -379,6 +380,16 @@ async function search() {
   const q = $('q').value.trim();
   $('err').hidden = true;
   if (!q) return;
+  // Before syncUrl, and before any lookup. This page reads only public data, so a
+  // key in this box is always a slip — and it is the costliest box in the suite to
+  // slip in: a WIF is a valid DPNS label, so the search would send it to a node,
+  // and syncUrl would write it into the address bar and the browser's history.
+  if (looksLikeSecret(q)) {
+    $('q').value = '';
+    showError('That looks like a private key or a recovery phrase. Nothing was sent and the field has been emptied. '
+      + 'This page only reads public data — an identity ID, a .dash name, a contract or a token ID all work, and none of them is a secret.');
+    return;
+  }
   syncUrl(kind, q);
   const results = $('results');
   results.replaceChildren(el('div', 'ex-loading', 'Looking up…'));

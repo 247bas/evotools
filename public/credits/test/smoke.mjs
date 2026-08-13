@@ -89,5 +89,12 @@ console.log('\n5. Constants match the protocol');
 check(MIN_WITHDRAW_CREDITS === 400_000_000n, 'withdrawal minimum is 0.004 DASH');
 check(SWEEP_MARGIN > 0n && SWEEP_MARGIN < MIN_WITHDRAW_CREDITS, `sweeps leave ${SWEEP_MARGIN} credits for the fee`);
 
+// The identity box takes an ID or a name, and anything that is not an ID falls
+// through to a DPNS lookup — where a WIF passes as a label. The key fields on
+// this page are a few centimetres below it.
+console.log('\n6. A key pasted into the identity box is refused, not resolved');
+await refuses(() => lookupIdentity(stranger), 'Nothing was sent', 'a WIF in the identity box');
+await refuses(() => lookupIdentity('abandon '.repeat(11) + 'about'), 'Nothing was sent', 'a recovery phrase in the identity box');
+
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);
