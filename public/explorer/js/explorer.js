@@ -4,6 +4,7 @@
 
 import { getSdk, getSdkFor, loadEvo } from './sdk.js';
 import { contestState, contestEndsAt } from '../../shared/dpns-register.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 
 const CREDITS_PER_DASH = 100_000_000_000n;
 export const creditsToDash = (c) => (Number(c ?? 0n) / Number(CREDITS_PER_DASH)).toFixed(4);
@@ -63,6 +64,12 @@ export async function lookupIdentity(id, { proof = false } = {}) {
 }
 
 export async function lookupName(label) {
+  // A WIF is 52 characters of base58 and therefore a valid DPNS label, so without
+  // this the lookup below would carry a pasted key to a Platform node. The UI
+  // catches it first; this is the backstop for every other caller.
+  if (looksLikeSecret(label)) {
+    throw new Error('That looks like a private key or a recovery phrase, not a name. Nothing was sent. This page only reads public data.');
+  }
   const sdk = await getSdk();
   const clean = label.replace(/\.dash$/i, '').trim().toLowerCase();
   const [owner, valid, contested] = await Promise.all([

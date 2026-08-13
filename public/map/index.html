@@ -44,6 +44,7 @@
         </select>
         <button class="btn primary" id="goBtn" type="submit">Show it</button>
       </form>
+      <p class="finder-eg" id="examples" hidden></p>
       <p class="finder-note">
         <b>This page never asks for a recovery phrase or a private key.</b>
         It does not need one: an address already carries the key hash that finds the
@@ -97,10 +98,8 @@
           <path d="M738 196 L728 196" stroke="#008de4" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
           <text id="flowMint" x="542" y="232" font-size="11" fill="#9aa4b8">→ mint 0.0024 · top up   ← pay out, needs the TRANSFER key</text>
 
-          <a href="/name/">
-            <rect class="hit" x="542" y="244" width="376" height="30" rx="8" fill="transparent" stroke="rgba(255,255,255,0.12)" stroke-dasharray="4 4"/>
-            <text x="558" y="264" font-size="11.5" fill="#9aa4b8">spent on names and documents — 0.0006, or 0.2 for a contested one</text>
-          </a>
+          <rect x="542" y="244" width="376" height="30" rx="8" fill="transparent" stroke="rgba(255,255,255,0.12)" stroke-dasharray="4 4"/>
+          <text x="558" y="264" font-size="11.5" fill="#9aa4b8">spent on names and documents — 0.0006, or 0.2 for a contested one</text>
 
           <!-- Orchard -->
           <rect x="520" y="366" width="420" height="126" rx="14"
@@ -111,19 +110,14 @@
           <text x="542" y="470" font-size="11.5" fill="#9b7dea">evo-sdk reads this pool; other software mints identities straight out of it</text>
 
           <!-- moves -->
-          <a href="/onboard/">
-            <rect class="hit" x="286" y="86" width="228" height="52" rx="8" fill="transparent"/>
-            <path d="M272 200 C 360 150, 430 112, 516 104" stroke="#008de4" stroke-width="2" fill="none" marker-end="url(#ar)"/>
-            <text x="300" y="112" font-size="12.5" fill="#e6e9ef" font-family="SF Mono, Monaco, Consolas, monospace">asset lock</text>
-            <text x="300" y="130" font-size="11" fill="#9aa4b8">min 0.002 · 1 confirmation</text>
-            <text id="flowLock" class="flow" x="300" y="150" font-size="11.5" fill="#008de4"></text>
-          </a>
-          <a href="/credits/">
-            <rect class="hit" x="300" y="232" width="214" height="52" rx="8" fill="transparent"/>
-            <path d="M516 186 C 430 232, 360 272, 276 274" stroke="#008de4" stroke-width="2" fill="none" marker-end="url(#ar)"/>
-            <text x="316" y="256" font-size="12.5" fill="#e6e9ef" font-family="SF Mono, Monaco, Consolas, monospace">withdrawal</text>
-            <text x="316" y="274" font-size="11" fill="#9aa4b8">min 0.004 · back to layer 1</text>
-          </a>
+          <path d="M272 200 C 360 150, 430 112, 516 104" stroke="#008de4" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+          <text x="300" y="112" font-size="12.5" fill="#e6e9ef" font-family="SF Mono, Monaco, Consolas, monospace">asset lock</text>
+          <text x="300" y="130" font-size="11" fill="#9aa4b8">min 0.002 · 1 confirmation</text>
+          <text id="flowLock" class="flow" x="300" y="150" font-size="11.5" fill="#008de4"></text>
+
+          <path d="M516 186 C 430 232, 360 272, 276 274" stroke="#008de4" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+          <text x="316" y="256" font-size="12.5" fill="#e6e9ef" font-family="SF Mono, Monaco, Consolas, monospace">withdrawal</text>
+          <text x="316" y="274" font-size="11" fill="#9aa4b8">min 0.004 · back to layer 1</text>
 
           <path d="M640 288 L640 362" stroke="#9b7dea" stroke-width="1.7" fill="none" stroke-dasharray="6 5" marker-end="url(#arv)"/>
           <text x="650" y="326" font-size="11.5" fill="#9b7dea" font-family="SF Mono, Monaco, Consolas, monospace">Shield</text>

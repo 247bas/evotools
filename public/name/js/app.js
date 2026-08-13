@@ -1,7 +1,8 @@
 // dash-name — check a .dash name and claim it for an existing identity.
 // All looked-up data + keys stay client-side; the key is used only to sign.
-import { checkName, registerName, topUpIdentity, DPNS_CONTRACT } from './name.js';
+import { checkName, registerName, topUpIdentity, DPNS_CONTRACT, SECRET_IN_ID_FIELD } from './name.js';
 import { setNetwork, getNetwork } from './sdk.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -107,8 +108,32 @@ let debounce = null;
 let token = 0;
 let last = null;
 
+// A pasted secret has to be caught in this field before anything else happens.
+// A 52-character WIF is a *valid* DPNS label, so the live check would send it to
+// a Platform node as a name lookup — lowercased, but a WIF carries its own
+// checksum, so the casing can be recovered from it offline. This is the one field
+// on the page where a slip actually leaves the browser.
+const SECRET_IN_NAME_FIELD =
+  'That looks like a private key or a recovery phrase, not a name. Nothing was sent and the field has been emptied — '
+  + 'checking a name asks a Platform node, so this is the one field where a pasted key would leave your browser. '
+  + 'Your key belongs in the key field of the claim panel, which never goes anywhere.';
+
+function refuseSecret(input, message) {
+  input.value = '';
+  const s = $('status');
+  s.className = 'dn-status bad';
+  s.replaceChildren(el('span', null, message));
+  $('claim').hidden = true;
+  last = null;
+  clearTimeout(debounce);
+  token++; // cancel anything already in flight
+}
+
 // ── live check ───────────────────────────────────────────────────────────────
 function check() {
+  // Before the value is touched: lowercasing a WIF hides the capital X the
+  // detector recognises it by.
+  if (looksLikeSecret($('name').value)) { refuseSecret($('name'), SECRET_IN_NAME_FIELD); return; }
   const label = $('name').value.trim().toLowerCase();
   $('name').value = label;
   clearTimeout(debounce);
@@ -284,8 +309,22 @@ function showSuccess(name, id, contest) {
   s.append(actions);
 }
 
+// The ID field sits one field above the key field, so the key lands in it sooner
+// or later. Nothing goes out over the wire when it does — the SDK rejects the
+// length locally — but a key sitting in a visible text input is the part that
+// costs something: it stays on screen, in the DOM and in any screenshot. So the
+// field empties itself and says which box the key belongs in.
+function guardIdField() {
+  const input = $('idInput');
+  const warn = $('idWarn');
+  if (!looksLikeSecret(input.value)) { warn.replaceChildren(); return; }
+  input.value = '';
+  warn.replaceChildren(el('div', 'error', SECRET_IN_ID_FIELD));
+}
+
 // ── wiring ───────────────────────────────────────────────────────────────────
 $('name').addEventListener('input', check);
+$('idInput').addEventListener('input', guardIdField);
 $('claimBtn').addEventListener('click', claim);
 $('netsel').addEventListener('change', () => {
   setNetwork($('netsel').value);

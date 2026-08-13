@@ -12,10 +12,11 @@
 //   Insight        — layer-1 balances and the transactions behind them
 //   the indexer    — which transition created an identity (nothing else knows)
 
-import { setNetwork, getNetwork, getSdk, loadEvo } from './sdk.js';
+import { setNetwork, getNetwork, getSdk, loadEvo, NETWORKS } from './sdk.js';
 import { fetchUtxos, spendable, totalDuffs } from '../../shared/assetlock.js';
 import { hashFromL1, l1FromHash, hashFromPlatform, platformFromHash, toHex } from './addresses.js';
 import { contestState, contestEndsAt } from '../../shared/dpns-register.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 
 export const CREDITS_PER_DASH = 100_000_000_000n;
 export const DUFFS_PER_DASH = 100_000_000;
@@ -34,20 +35,47 @@ const INSIGHT = {
   testnet: 'https://insight.testnet.networks.dash.org/insight-api',
 };
 
-const words = (s) => s.trim().split(/\s+/).filter(Boolean);
+// Exported because the screen side refuses a secret before it writes anything to
+// the address bar, and both halves should say the same thing.
+export const SECRET_REFUSED =
+  'This page never takes a recovery phrase or a private key — and does not need one. '
+  + 'Paste your Dash address, your platform address, your identity ID or your .dash name instead: '
+  + 'every one of them opens the same map.';
 
-// What did somebody just paste? Length separates the two things that both start
-// with an X on mainnet: an address is 34 characters, a private key is 52.
+// The longest identifier this page takes is a .dash name (63 characters plus the
+// suffix). Anything much longer is not an identifier, and it has no business
+// being put in a URL either.
+export const MAX_INPUT = 120;
+
+// One worked example per network, offered on the page as a starting point. Both
+// are names whose identity, addresses and funding are all readable, so every box
+// on the map fills in — a half-empty example teaches the wrong thing. The smoke
+// test resolves each of these, so an example that goes stale fails the build
+// rather than the visitor.
+export const EXAMPLES = {
+  mainnet: [{ q: 'evotools.dash', note: 'this suite' }],
+  testnet: [{ q: '247bas.dash', note: 'a testnet identity' }],
+};
+
+// The shareable link. This is the one place where what somebody typed is written
+// back into the page's own address, so it is built here — without a DOM — and the
+// test holds it to all four rules at once: never a secret, never longer than an
+// identifier can be, a network only from the known list, and every character
+// percent-encoded on the way out. It returns '' for anything it will not carry,
+// which the caller turns into a bare path.
+export function linkFor(q, network) {
+  const s = (q ?? '').trim();
+  if (!s || looksLikeSecret(s) || s.length > MAX_INPUT) return '';
+  const net = NETWORKS.includes(network) ? network : getNetwork();
+  return `?q=${encodeURIComponent(s)}&net=${encodeURIComponent(net)}`;
+}
+
+// What did somebody just paste? The secret cases live in shared/secrets.js, so
+// this page and the tools that do take a key apply the same rule.
 export function detect(raw) {
   const s = (raw || '').trim();
   if (!s) return { kind: 'empty' };
-  if (words(s).length >= 12) return { kind: 'secret' };
-  if (/^[X7c][1-9A-HJ-NP-Za-km-z]{50,51}$/.test(s)) return { kind: 'secret' };
-  // A raw key or a fragment of one is hex and long. Without this a 62-character
-  // hex string reads as a DPNS label and gets sent to a node as a name lookup —
-  // which is exactly what this page promises never to do.
-  if (/^[0-9a-f]{32,}$/i.test(s)) return { kind: 'secret' };
-  if (/^([xt]prv|[xt]pub)[1-9A-HJ-NP-Za-km-z]{50,}$/.test(s)) return { kind: 'secret' };
+  if (looksLikeSecret(s)) return { kind: 'secret' };
   if (/\.dash$/i.test(s)) return { kind: 'name' };
   if (/^dash1[0-9a-z]{20,}$/i.test(s)) return { kind: 'platform-address', network: 'mainnet' };
   if (/^tdash1[0-9a-z]{20,}$/i.test(s)) return { kind: 'platform-address', network: 'testnet' };
@@ -325,9 +353,7 @@ async function fromName(name, network) {
 export async function resolve(raw, { network } = {}) {
   const d = detect(raw);
   if (d.kind === 'empty') throw new Error('Paste an address, an identity ID or a .dash name.');
-  if (d.kind === 'secret') {
-    throw new Error('This page never takes a recovery phrase or a private key — and does not need one. Paste your Dash address, your platform address, your identity ID or your .dash name instead: every one of them opens the same map.');
-  }
+  if (d.kind === 'secret') throw new Error(SECRET_REFUSED);
   if (d.kind === 'unknown') throw new Error('That is not something this map recognises. Try a Dash address, a dash1… platform address, an identity ID or a .dash name.');
   if (d.network) setNetwork(d.network);
   else if (network) setNetwork(network);

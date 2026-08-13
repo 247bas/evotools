@@ -24,10 +24,16 @@
 .finder-note { color: var(--muted); font-size: 0.78rem; margin: 9px 0 0; }
 .finder-note b { color: var(--text); font-weight: 600; }
 
+.finder-eg { color: var(--muted); font-size: 0.8rem; margin: 10px 0 0; }
+.finder-eg .eg {
+  font-family: var(--mono); font-size: 0.8rem; color: var(--blue); cursor: pointer;
+  background: none; border: 0; border-bottom: 1px dashed currentColor; padding: 0;
+}
+.finder-eg .eg:hover { color: var(--text); }
+.finder-eg .eg-note { color: var(--muted); }
+
 .map-scroll { overflow-x: auto; margin: 18px 0 4px; }
 svg.map { display: block; width: 100%; min-width: 860px; height: auto; }
-svg.map a { cursor: pointer; }
-svg.map a:hover .hit { fill: rgba(0, 141, 228, 0.10); }
 svg.map .val { font-family: var(--mono); }
 svg.map .flow { font-family: var(--mono); }
 svg.map .box-live { transition: stroke 0.25s, fill 0.25s; }
