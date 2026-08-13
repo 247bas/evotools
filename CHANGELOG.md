@@ -5,6 +5,17 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A donation address, and an about page that had stopped being true.** The
+  page listed three tools and filed a scaffolder, an explorer and a username
+  claim under "next up" — all shipped months ago — and credited none of the
+  infrastructure it runs on. Both fixed. The donation block states one key in
+  both spellings: the layer-1 address any wallet can pay, and the `dash1…` the
+  same key has on Platform, which is not a second address but offline
+  arithmetic, with a link to the map that shows it. The addresses live in the
+  markup, so the page still shows something payable with JavaScript off; the
+  script only draws the QR and copies. `npm run test:about` checks the pair in
+  both directions against the map's own derivation.
+
 - **The suite eats its own cooking on the front page.** The hub now shows
   `evotools.dash` and the identity behind it, each linking into the tools on
   this site that read them off mainnet — the map for the name, the explorer

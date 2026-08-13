@@ -30,6 +30,15 @@
     .about li::before { content: '◈'; color: var(--blue); position: absolute; left: 0; }
     .about li .t { color: var(--text); font-weight: 600; }
     .about .soon { color: var(--muted); }
+    .donate { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; margin: 4px 0 8px; }
+    .donate-qr { flex: none; width: 132px; height: 132px; border-radius: 10px; overflow: hidden; background: #fff; }
+    .donate-qr svg { display: block; width: 100%; height: 100%; }
+    .donate-body { flex: 1; min-width: 240px; }
+    .donate-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    /* A 34-character address and a 44-character one both have to be able to wrap,
+       or they push the page sideways on a phone. */
+    .donate code { overflow-wrap: anywhere; font-size: 0.86rem; color: var(--text); }
+    .donate .fineprint { color: var(--muted); font-size: 0.8rem; margin-top: 10px; line-height: 1.6; }
     .about .built { margin: 30px 0 8px; }
     .about .disclaimer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 26px; }
     @media (max-width: 480px) {
@@ -41,7 +50,7 @@
 <body>
   <div class="wrap about">
     <h1>About evotools</h1>
-    <p class="lead">A small, growing set of open-source tools that make building on the Dash Evolution chain easier to start. Testnet-first, built in the open.</p>
+    <p class="lead">A set of open-source tools that make building on the Dash Evolution chain easier to start. Testnet to learn on, mainnet when you mean it, built in the open.</p>
 
     <h2>Why this exists</h2>
     <p>
@@ -57,11 +66,21 @@
 
     <h2>What's here</h2>
     <ul>
-      <li><a href="/onboard/"><span class="t">Onboard</span></a> — from nothing to a funded testnet identity with a <code>.dash</code> name, and a ready <code>.env</code>.</li>
-      <li><a href="/playground/"><span class="t">Playground</span></a> — run the cookbook recipes live in the browser against testnet, no install.</li>
+      <li><a href="/map/"><span class="t">Map</span></a> — where DASH, credits and identities sit, what each move costs, and where any identity's money came from.</li>
+      <li><a href="/onboard/"><span class="t">Onboard</span></a> — from nothing to a funded identity with a <code>.dash</code> name, and a ready <code>.env</code>.</li>
+      <li><a href="/keygen/"><span class="t">Keygen</span></a> — one phrase to a funding address and the five identity keys, fully offline, with a copy you can download and run disconnected.</li>
+      <li><a href="/credits/"><span class="t">Credits</span></a> — an identity's balance and every way to move it, including a withdrawal back to layer 1.</li>
+      <li><a href="/playground/"><span class="t">Playground</span></a> — run the cookbook recipes live in the browser, no install.</li>
+      <li><a href="/explorer/"><span class="t">Explorer</span></a> — identities, names, contracts, tokens, documents and the shielded pool, with proofs.</li>
+      <li><a href="/name/"><span class="t">dash-name</span></a> — check and claim a <code>.dash</code> username for your identity.</li>
+      <li><a href="/contests/"><span class="t">Contests</span></a> — every <code>.dash</code> name masternodes are voting on, and every one they decided.</li>
       <li><a href="https://github.com/247bas/evo-cookbook" target="_blank" rel="noopener"><span class="t">Cookbook</span></a> — verified, runnable <code>@dashevo/evo-sdk</code> v4 recipes.</li>
-      <li class="soon"><span class="t">Next up</span> — a project scaffolder, a data explorer, and a polished username claim.</li>
+      <li><a href="https://github.com/247bas/create-evo-app" target="_blank" rel="noopener"><span class="t">create-evo-app</span></a> — scaffold a Platform app with <code>npm create evo-app</code>.</li>
     </ul>
+    <p class="muted">
+      All of it runs in your browser on testnet and mainnet. No server holds your
+      keys, because there is no server.
+    </p>
 
     <h2>Who's building it</h2>
     <p>
@@ -80,6 +99,47 @@
     </p>
     <p class="muted">Say hi on <a href="https://github.com/247bas" target="_blank" rel="noopener">GitHub</a>, <a href="https://x.com/247bas" target="_blank" rel="noopener">X</a>, or <a href="https://discord.com/invite/PXbUxJB" target="_blank" rel="noopener">Discord</a>.</p>
 
+    <h2 id="support">Support this project</h2>
+    <p>
+      evotools is free, carries no ads and asks for no account. Every tool here is
+      tested against mainnet with real money, and that is what a donation pays for.
+    </p>
+    <!-- The addresses live in the markup, not in the script: with JavaScript off
+         the page still shows them. The script only draws the QR and copies. -->
+    <div class="donate">
+      <div class="donate-qr" id="donateQr"></div>
+      <div class="donate-body">
+        <div class="donate-row">
+          <code class="mono" id="donateL1">Xt4bNjax7F6ynNL2r1LmEXTNPUSiPVtXpR</code>
+          <button class="btn ghost sm" id="donateCopy" type="button">Copy</button>
+        </div>
+        <p class="fineprint">
+          Any Dash wallet can pay that. It is also
+          <code class="mono" id="donatePlatform">dash1kzlfww9p9qscm5dnfp3y2jn9hdnsex0u6vdhgsma</code>
+          — not a second address but the same key spelled the way Platform spells
+          it, which is arithmetic anyone can redo offline. Layer 1 is the one to
+          send to; the Platform side is where credits would sit.
+          <a href="/map/?q=Xt4bNjax7F6ynNL2r1LmEXTNPUSiPVtXpR&amp;net=mainnet">See both on the map ↗</a>
+        </p>
+      </div>
+    </div>
+
+    <h2>What this runs on</h2>
+    <p class="muted">
+      evotools is a thin layer over other people's work:
+      <a href="https://www.npmjs.com/package/@dashevo/evo-sdk" target="_blank" rel="noopener"><code>@dashevo/evo-sdk</code></a>
+      and dashcore-lib by Dash Core Group; the masternodes serving DAPI, which
+      answer every lookup and broadcast here; the
+      <a href="https://bridge.thepasta.org/" target="_blank" rel="noopener">Dash Bridge</a>
+      by <a href="https://github.com/PastaPastaPasta" target="_blank" rel="noopener">PastaPastaPasta</a>,
+      where testnet DASH comes from;
+      <a href="https://github.com/pshenmic/platform-explorer" target="_blank" rel="noopener">pshenmic's Platform Explorer</a>,
+      whose index makes the contests list and the funding trace possible at all,
+      because Platform can prove a thing you name but cannot list things; and the
+      Insight API behind every layer-1 read. All of it is public infrastructure
+      this project uses as a guest.
+    </p>
+
     <div class="built">
       <span class="built-badge" aria-label="Built on Dash Evolution">
         Built on
@@ -95,5 +155,6 @@
   </div>
 
   <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/support.js"></script>
 </body>
 </html>
