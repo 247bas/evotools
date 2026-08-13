@@ -1,4 +1,4 @@
-# evotools ◈
+<h1><img src=".github/mark.svg" alt="" width="30" height="30" align="absmiddle"> evotools</h1>
 
 **Tools that make building on the Dash Evolution chain approachable.**
 

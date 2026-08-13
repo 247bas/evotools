@@ -3,6 +3,14 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
+## Unreleased
+
+- **The suite eats its own cooking on the front page.** The hub now shows
+  `evotools.dash` and the identity behind it, each linking into the tools on
+  this site that read them off mainnet — the map for the name, the explorer
+  (with proof on) for the identity. The readmes carry the real mark instead of
+  the `◈` that stood in for it.
+
 ## 2.1.0 — 2026-08-13
 
 A key pasted into the wrong box is now refused by the box, and a map worth

@@ -1,4 +1,4 @@
-# Onboard ◈ (evotools)
+<h1><img src="../../.github/mark.svg" alt="" width="26" height="26" align="absmiddle"> Onboard (evotools)</h1>
 
 **From nothing to a funded Dash Platform identity with a `.dash` username — in your browser.**
 

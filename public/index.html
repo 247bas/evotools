@@ -34,6 +34,20 @@
       text-decoration-color: rgba(255, 255, 255, 0.28);
     }
     .hero .sub a:hover { color: var(--text); text-decoration-color: currentColor; }
+    /* A 44-character identity ID has to be allowed to wrap, or it pushes the
+       hero off a phone screen — `anywhere`, never `break-all`. */
+    /* Two classes, so it outranks `.hero p` — same reason `.hero .sub` is written
+       that way. */
+    .hero .hero-onchain {
+      margin: 14px auto 0; font-size: 0.78rem; overflow-wrap: anywhere;
+    }
+    .hero .hero-onchain code { font-family: var(--mono); font-size: 0.95em; }
+    .hero .hero-onchain a {
+      color: var(--muted); text-decoration: underline; text-underline-offset: 3px;
+      text-decoration-color: rgba(255, 255, 255, 0.22);
+    }
+    .hero .hero-onchain a:hover { color: var(--blue); text-decoration-color: currentColor; }
+    .hero .hero-onchain .sep { opacity: 0.5; padding: 0 2px; }
     .hero .cta { margin-top: 22px; }
     .hero-built {
       margin-top: 22px; display: inline-flex; align-items: center; gap: 11px;
@@ -89,6 +103,15 @@
         <span class="lbl">Built on</span>
         <a href="https://www.dash.org" target="_blank" rel="noopener" aria-label="Dash Evolution"><img class="evo-logo" src="/shared/dash-evolution.svg" alt="Dash Evolution" width="554" height="230" /></a>
       </div>
+      <!-- The suite eats its own cooking: this name and this identity are on
+           mainnet, and both links open the tools on this site reading them off
+           the chain rather than a screenshot of one. -->
+      <p class="hero-onchain">
+        On chain:
+        <a href="/map/?q=evotools.dash&amp;net=mainnet"><code>evotools.dash</code></a>
+        <span class="sep">·</span>
+        <a href="/explorer/?kind=identity&amp;q=FhFp6bjsAiU49jiwEtS3zh2DWCEHYw63yDdTs8EWSov6&amp;proof=1&amp;net=mainnet"><code>FhFp6bjsAiU49jiwEtS3zh2DWCEHYw63yDdTs8EWSov6</code></a>
+      </p>
     </div>
 
     <div class="section-label">Live</div>
