@@ -35,6 +35,27 @@ for (const [name, [title, sub]] of Object.entries(CARDS)) {
   console.log(`public/og/${name}.png  ${(png.length / 1024).toFixed(0)}KB`);
 }
 
+// The readme wordmark, the one place the brand has to survive without CSS.
+// GitHub strips style attributes out of markdown, so "evo" cannot be coloured as
+// text — it has to arrive as an image. Two of them: GitHub serves a light and a
+// dark theme, and "tools" is near-white on the site, which would disappear on
+// white. The readme picks between them with <picture media="prefers-color-scheme">.
+const wordmark = (toolsFill) => `<svg xmlns="http://www.w3.org/2000/svg" width="186" height="48" viewBox="0 0 186 48" font-family="Lato, 'Noto Sans', 'DejaVu Sans', sans-serif">
+  <g transform="translate(3,6)" fill="none" stroke="#008de4" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="7.8" y="7.8" width="21.9" height="21.9" rx="5.5" transform="rotate(45 18.7 18.7)"/>
+    <path d="M15.6 14.8 L20.3 18.7 L15.6 22.6"/>
+  </g>
+  <text x="50" y="36" font-size="34" font-weight="700"><tspan fill="#008de4">evo</tspan><tspan fill="${toolsFill}">tools</tspan></text>
+</svg>`;
+
+mkdirSync('.github', { recursive: true });
+for (const [variant, fill] of [['dark', '#e6e9ef'], ['light', '#1b2233']]) {
+  // Rendered at 3x and shown at 1x, so it stays sharp on a retina screen.
+  const png = new Resvg(wordmark(fill), { fitTo: { mode: 'width', value: 558 }, font: { loadSystemFonts: true } }).render().asPng();
+  writeFileSync(`.github/wordmark-${variant}.png`, png);
+  console.log(`.github/wordmark-${variant}.png  ${(png.length / 1024).toFixed(0)}KB`);
+}
+
 const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#0f1524"/><g fill="none" stroke="#008de4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6.7" y="6.7" width="18.6" height="18.6" rx="4.7" transform="rotate(45 16 16)"/><path d="M13.3 12.7 L17.3 16 L13.3 19.3"/></g></svg>`;
 const iconPng = new Resvg(icon, { fitTo: { mode: 'width', value: 180 } }).render().asPng();
 writeFileSync('public/apple-touch-icon.png', iconPng);

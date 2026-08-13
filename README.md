@@ -1,4 +1,9 @@
-<h1><img src=".github/mark.svg" alt="" width="30" height="30" align="absmiddle"> evotools</h1>
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/wordmark-dark.png">
+    <img src=".github/wordmark-light.png" alt="evotools" width="186" height="48">
+  </picture>
+</h1>
 
 **Tools that make building on the Dash Evolution chain approachable.**
 
