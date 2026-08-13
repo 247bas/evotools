@@ -13,6 +13,13 @@ rather than installable releases.
   "evo" in Dash blue — GitHub strips style out of markdown, so the only way to
   colour it is to render it, which `npm run og` now does in a light and a dark
   variant that `<picture>` switches between.
+- **The credit section names what the site actually runs on.** It thanked
+  PastaPastaPasta for "public testnet infrastructure" and listed the SDK, which
+  was both vague and incomplete: onboard links to the Dash Bridge rather than
+  building on it, and pshenmic's Platform Explorer API — which `/contests` and
+  `/map` genuinely depend on, because Platform can prove a named thing but
+  cannot list things — went unmentioned, as did the Insight API and the
+  masternodes answering every call. Each entry now says what it is used for.
 
 ## 2.1.0 — 2026-08-13
 

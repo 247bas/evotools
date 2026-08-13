@@ -112,9 +112,32 @@ build — always commit the lockfile with a dependency change.
 
 ## Credit
 
-Built on [PastaPastaPasta](https://github.com/PastaPastaPasta)'s public testnet
-infrastructure (the Dash Bridge). Uses
-[`@dashevo/evo-sdk`](https://www.npmjs.com/package/@dashevo/evo-sdk) v4.
+evotools is a thin layer over other people's work. What it leans on, and for
+what:
+
+- **[`@dashevo/evo-sdk`](https://www.npmjs.com/package/@dashevo/evo-sdk) v4** and
+  **[dashcore-lib](https://github.com/dashpay/dashcore-lib)**, by Dash Core
+  Group. The SDK is vendored into `public/shared/vendor/` and does every Platform
+  read and write; dashcore-lib builds and signs the layer-1 asset lock.
+- **The masternode network serving DAPI.** Every lookup, proof and broadcast in
+  these tools is answered by a masternode; the SDK's trusted mode picks one.
+- **The Dash Bridge** (`bridge.thepasta.org`), by
+  [PastaPastaPasta](https://github.com/PastaPastaPasta). Onboard opens it with
+  your testnet address already filled in — it is where testnet DASH comes from,
+  and without it the testnet path would stop at an empty address.
+- **[pshenmic](https://github.com/pshenmic)'s
+  [Platform Explorer](https://github.com/pshenmic/platform-explorer)**
+  (`platform-explorer.pshenmic.dev`). Platform can prove a thing you name but
+  cannot list things, so anything that needs an index needs an indexer:
+  `/contests` reads its API for the list of names being voted on, and `/map`
+  walks an identity's transactions through it to find the one that created it.
+- **The Insight API** (`insight.dash.org`,
+  `insight.testnet.networks.dash.org`), run by Dash Core Group — layer-1 UTXOs,
+  confirmations, and the raw transaction an asset lock is read out of.
+
+Everything above is public infrastructure this project uses as a guest, not a
+service it pays for or controls. If a tool here is unreachable, one of these
+usually is.
 
 ## License
 
