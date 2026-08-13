@@ -1,7 +1,11 @@
 // The map's screen side: paste something public, fill the boxes, and say what
 // was found — including the way back from an identity to the coins that paid it.
-import { resolve, fundingSource, dashFromCredits, dashFromDuffs } from './map.js';
-import { setNetwork, getNetwork } from './sdk.js';
+import {
+  resolve, fundingSource, dashFromCredits, dashFromDuffs,
+  SECRET_REFUSED, MAX_INPUT, EXAMPLES, linkFor,
+} from './map.js';
+import { setNetwork, getNetwork, NETWORKS } from './sdk.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -298,16 +302,81 @@ function render(state) {
   }
 }
 
+// ── examples ─────────────────────────────────────────────────────────────────
+function renderExamples() {
+  const p = $('examples');
+  const list = EXAMPLES[getNetwork()] ?? [];
+  p.replaceChildren();
+  if (!list.length) { p.hidden = true; return; }
+  p.hidden = false;
+  p.append(el('span', null, 'Try it: '));
+  list.forEach(({ q, note }, i) => {
+    if (i) p.append(el('span', null, ' · '));
+    const b = el('button', 'eg', q);
+    b.type = 'button';
+    b.addEventListener('click', () => { $('q').value = q; run(); });
+    p.append(b);
+    if (note) p.append(el('span', 'eg-note', ` — ${note}`));
+  });
+}
+
+// ── shareable URL ────────────────────────────────────────────────────────────
+// A filled-in map is worth sending to somebody, which means the query has to
+// survive in the link. Only input that has already passed the secret check gets
+// written here, so a key can never reach the address bar, the browser's history
+// or a link that gets forwarded.
+function syncUrl(q, net) {
+  history.replaceState(null, '', linkFor(q, net) || location.pathname);
+}
+
+// Everything arriving from the URL is treated as if a stranger typed it: the
+// network has to be one of the two known names, the query goes into the field as
+// text (never as markup — this page builds every node with textContent), and a
+// secret in a link is wiped from the address bar before anything else happens.
+function loadFromUrl() {
+  const p = new URLSearchParams(location.search);
+  const net = p.get('net');
+  if (NETWORKS.includes(net)) { setNetwork(net); $('netsel').value = net; }
+  renderExamples();
+  const q = (p.get('q') ?? '').trim();
+  if (!q) return;
+  if (looksLikeSecret(q)) {
+    syncUrl('', getNetwork());
+    showError(new Error(`${SECRET_REFUSED} The link you followed carried one, and it has been removed from the address bar.`));
+    return;
+  }
+  $('q').value = q.slice(0, MAX_INPUT);
+  run();
+}
+
 async function run() {
   const raw = $('q').value.trim();
   reset();
-  if (!raw) return;
+  if (!raw) { syncUrl('', getNetwork()); return; }
+  // Before the URL is touched. resolve() refuses a secret too, but by then it
+  // would already be in the address bar.
+  if (looksLikeSecret(raw)) {
+    $('q').value = '';
+    syncUrl('', getNetwork());
+    showError(new Error(SECRET_REFUSED));
+    return;
+  }
+  if (raw.length > MAX_INPUT) {
+    syncUrl('', getNetwork());
+    showError(new Error(`That is longer than any identifier this map takes (${MAX_INPUT} characters).`));
+    return;
+  }
+  syncUrl(raw, $('netsel').value);
   const btn = $('goBtn');
   const old = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Reading the chain…';
   try {
     render(await resolve(raw, { network: $('netsel').value }));
+    // An input that names its own network (a y… address, a tdash1… one) moves the
+    // toggle, so the link has to be re-stamped with the network actually used.
+    syncUrl(raw, getNetwork());
+    renderExamples();
   } catch (e) {
     showError(e);
   } finally {
@@ -319,5 +388,8 @@ async function run() {
 $('finder').addEventListener('submit', (e) => { e.preventDefault(); run(); });
 $('netsel').addEventListener('change', () => {
   setNetwork($('netsel').value);
-  if ($('q').value.trim()) run(); else reset();
+  renderExamples();
+  if ($('q').value.trim()) run(); else { reset(); syncUrl('', getNetwork()); }
 });
+
+loadFromUrl();

@@ -17,7 +17,7 @@ const P = new URL('../../', import.meta.url).pathname;
 const Evo = await import(P + 'shared/vendor/evo-sdk.module.js');
 await Evo.ensureInitialized?.();
 const A = await import(P + 'map/js/addresses.js');
-const { detect, resolve, traceFunding, fundingSource, dashFromCredits } = await import(P + 'map/js/map.js');
+const { detect, resolve, traceFunding, fundingSource, dashFromCredits, EXAMPLES, MAX_INPUT, linkFor } = await import(P + 'map/js/map.js');
 const { generateMnemonic, deriveAll } = await import(P + 'keygen/js/keys.js');
 
 const ok = (m) => console.log(`  ✅ ${m}`);
@@ -54,6 +54,36 @@ for (const [input, want] of Object.entries(kinds)) {
 let refused = '';
 try { await resolve('XKEWvCA1Fxu4MWWzQM9oGApNPpUpQMCH5kwKMfhQducphcd9HHgt'); } catch (e) { refused = e.message; }
 check(/never takes a recovery phrase or a private key/.test(refused), 'a secret is refused with a reason, not swallowed');
+
+// The link is the only thing on this page that writes what somebody typed back
+// into the page's own address, so every rule it has is pinned here.
+console.log('\n2b. The shareable link carries public identifiers and nothing else');
+check(linkFor('evotools.dash', 'mainnet') === '?q=evotools.dash&net=mainnet', 'a name and a network round-trip as they are');
+check(linkFor('XKEWvCA1Fxu4MWWzQM9oGApNPpUpQMCH5kwKMfhQducphcd9HHgt', 'mainnet') === '', 'a WIF is never written into the address bar');
+check(linkFor('abandon '.repeat(11) + 'about', 'mainnet') === '', 'nor is a recovery phrase');
+check(linkFor('z'.repeat(MAX_INPUT + 1), 'mainnet') === '', `nor is anything over ${MAX_INPUT} characters`);
+check(linkFor('  ', 'mainnet') === '' && linkFor(null, 'mainnet') === '', 'an empty query produces no link at all');
+// The network comes out of a fixed list, so a crafted link cannot point the page
+// at a host of somebody else's choosing.
+check(!linkFor('evotools.dash', 'https://evil.example/').includes('evil'), 'an unknown network is dropped, not carried');
+check(/&net=(mainnet|testnet)$/.test(linkFor('evotools.dash', 'https://evil.example/')), 'and replaced by a known one');
+// Everything else is percent-encoded, so no query character and no markup can
+// break out of the value it sits in.
+const nasty = linkFor('a&b=c#d <script>x</script>', 'mainnet');
+check(!/[&#<>]/.test(nasty.replace('&net=', '')), `metacharacters are encoded — ${nasty.slice(0, 46)}…`);
+check(new URLSearchParams(nasty).get('q') === 'a&b=c#d <script>x</script>', 'and decode back to exactly what was typed');
+
+// The page offers these as starting points, so a stale one is a broken promise
+// on the front page of the tool rather than a failing test somewhere quiet.
+console.log('\n2c. Every offered example still fills the map');
+for (const [network, list] of Object.entries(EXAMPLES)) {
+  for (const { q } of list) {
+    const r = await resolve(q, { network }).catch((e) => ({ error: e.message }));
+    const id = r.identities?.[0];
+    check(!!id?.id && r.trace?.kind, `${network}: ${q} → identity ${id?.id?.slice(0, 10)}…, ${
+      dashFromCredits(id?.credits ?? 0n)} credits, funded ${r.trace?.kind ?? r.error}`);
+  }
+}
 
 console.log('\n3. A name fills the whole map (mainnet, live)');
 const byName = await resolve('pizza247.dash', { network: 'mainnet' });
