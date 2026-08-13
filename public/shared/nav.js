@@ -62,7 +62,8 @@ footer.innerHTML = `
   <div>Tools for building on the Dash Evolution chain · by
   <a href="https://github.com/247bas" target="_blank" rel="noopener">247bas</a> ·
   <a href="/about/">about</a> ·
-  <a href="https://github.com/247bas/evotools" target="_blank" rel="noopener">source</a></div>`;
+  <a href="https://github.com/247bas/evotools" target="_blank" rel="noopener">source</a> ·
+  <a href="/about/#support">donate</a></div>`;
 
 document.body.prepend(nav);
 document.body.append(footer);
