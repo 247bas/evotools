@@ -19,7 +19,8 @@
     "test:assetlock": "node public/shared/test/assetlock.mjs",
     "test:dpns": "node public/shared/test/dpns-register.mjs",
     "test:credits": "node public/credits/test/smoke.mjs",
-    "test:about": "node public/about/test/smoke.mjs"
+    "test:about": "node public/about/test/smoke.mjs",
+    "test:shielded": "node public/shielded/test/smoke.mjs"
   },
   "devDependencies": {
     "@dashevo/dashcore-lib": "^0.25.0",

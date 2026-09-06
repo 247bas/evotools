@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shielded — the Orchard pool on Dash Platform · evotools</title>
+  <meta name="description" content="How much sits in Dash Platform's shielded pool, how it moves week by week, what the six shielded transitions do and cost, and whether an address is a shielded one. Mainnet and testnet, read live." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="evotools" />
+  <meta property="og:title" content="Shielded — the Orchard pool on Dash Platform" />
+  <meta property="og:description" content="What is in the shielded pool, how it moves, what the six shielded transitions cost, and whether an address is a shielded one. Both networks, read live." />
+  <meta property="og:url" content="https://evotools.dev/shielded/" />
+  <meta property="og:image" content="https://evotools.dev/og/shielded.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Shielded — the Orchard pool on Dash Platform" />
+  <meta name="twitter:description" content="What is in the shielded pool, how it moves, what the six shielded transitions cost, and whether an address is a shielded one." />
+  <meta name="twitter:image" content="https://evotools.dev/og/shielded.png" />
+  <link rel="stylesheet" href="/shared/theme.css" />
+  <link rel="stylesheet" href="css/shielded.css" />
+</head>
+<body>
+  <div class="wrap sh-wrap">
+    <p class="tagline">
+      Since July 2026 Platform has a shielded pool. Credits go in as Orchard
+      notes, and from then on the amount, who sent it and who holds it are
+      hidden. What stays public is the pool's total, its note count and its
+      anchors. This page reads the public part, on both networks.
+    </p>
+
+    <div class="error" id="error" hidden></div>
+
+    <section class="sh-section">
+      <h2>Two pools <span class="sh-count" id="asOf"></span></h2>
+      <div class="sh-pools" id="pools"></div>
+      <p class="sh-sub">
+        Balance, notes, anchors and protocol come from the chain through the SDK.
+        The transition counts come from pshenmic's index. In minus out on the
+        index runs a touch above the chain's balance: the fee of a pool-paid move
+        is carved out of the notes and never shows up as an out.
+      </p>
+    </section>
+
+    <section class="sh-section">
+      <div class="sh-heading">
+        <h2>In and out, week by week</h2>
+        <select id="netsel" class="sh-netsel" aria-label="Network">
+          <option value="mainnet">mainnet</option>
+          <option value="testnet">testnet</option>
+        </select>
+      </div>
+      <div id="chart" class="sh-chart" role="img" aria-label="Credits entering and leaving the shielded pool per week"></div>
+      <div class="sh-legend"><span><i class="in"></i> into the pool</span><span><i class="out"></i> out of the pool</span><span id="chartNote"></span></div>
+      <table class="sh-table" id="types">
+        <thead><tr><th>Move</th><th>Type</th><th class="num">Count</th><th class="num">Amount</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="sh-section">
+      <h2>The six moves</h2>
+      <p class="sh-sub">
+        Every shielded transition carries an Orchard bundle: at least two
+        actions, each a spend paired with an output; an anchor into the note
+        commitment tree; one Halo 2 proof; and a binding signature. What differs
+        between the six is which side, if any, is transparent.
+      </p>
+      <div class="sh-moves" id="moves"></div>
+      <p class="sh-fine" id="feeNote"></p>
+    </section>
+
+    <section class="sh-section sh-two">
+      <div>
+        <h2>Public</h2>
+        <ul>
+          <li>the pool's total balance</li>
+          <li>how many notes it holds, and each note's 216 encrypted bytes</li>
+          <li>the anchors: roots of the commitment tree, kept for 1,000 blocks</li>
+          <li>every nullifier once spent, so a note cannot be spent twice</li>
+          <li>on the way in and out: the transparent side, its amount and its address</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Hidden</h2>
+        <ul>
+          <li>who a note belongs to</li>
+          <li>what it holds</li>
+          <li>which note a spend consumes: a nullifier does not point back</li>
+          <li>the 36-byte memo, encrypted to the receiver</li>
+          <li>a shielded transfer as a whole: no identity, address or amount in it</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="sh-section">
+      <h2>Is this a shielded address?</h2>
+      <p class="sh-sub">
+        A shielded address starts with <code>dash1z</code> on mainnet and
+        <code>tdash1z</code> on testnet: 43 bytes, an 11-byte diversifier and a
+        32-byte key, behind a type byte and a bech32m checksum. The check runs
+        in this page and looks nothing up. There is nothing to look up: an
+        address never appears on chain. A note is encrypted to it, and only the
+        viewing key finds it back.
+      </p>
+      <div class="sh-check">
+        <input id="addr" type="text" spellcheck="false" autocomplete="off" placeholder="dash1z… or tdash1z…" aria-label="Address to check" />
+        <button class="btn primary sm" id="addrBtn">Check</button>
+      </div>
+      <div id="addrOut"></div>
+    </section>
+
+    <section class="sh-section">
+      <h2>An identity straight out of the pool</h2>
+      <p class="sh-sub" id="denomText"></p>
+      <div class="sh-denoms" id="denoms"></div>
+      <p class="sh-fine" id="denomCount"></p>
+    </section>
+
+    <section class="sh-section">
+      <h2>Using it today</h2>
+      <p>The pool is written to from Rust. These ship it:</p>
+      <ul class="sh-wallets">
+        <li><a href="https://github.com/dashpay/dash-evo-tool/releases" target="_blank" rel="noopener">Dash Evo Tool</a>, the weekly builds: shield from layer 1 or from a platform balance, transfer, unshield, withdraw.</li>
+        <li><a href="https://github.com/pshenmic/dash-desktop/releases" target="_blank" rel="noopener">Dash Desktop</a>, pshenmic's wallet, the one dash.org points at.</li>
+        <li>The <a href="https://github.com/dashpay/platform/tree/v4.1.1/packages/kotlin-sdk" target="_blank" rel="noopener">Android</a> and <a href="https://github.com/dashpay/platform/tree/v4.1.1/packages/swift-sdk" target="_blank" rel="noopener">iOS</a> example apps in the Platform repo.</li>
+        <li>DashPay: shielded support is announced as coming (<a href="https://www.dash.org/news/shielded-transactions-are-live-on-the-dash-evolution-mainnet/" target="_blank" rel="noopener">dash.org, 4 August 2026</a>).</li>
+      </ul>
+      <p>
+        Not here, yet. The JavaScript SDK reads the pool and nothing more:
+        creating a shielded transition needs the Orchard prover, and putting Halo
+        2 into the WASM bundle adds ten megabytes and a proving design of its
+        own, so the SDK team left it out on purpose
+        (<a href="https://github.com/dashpay/platform/pull/3235" target="_blank" rel="noopener">dashpay/platform#3235</a>).
+        Every number on this page is a read. The
+        <a href="/explorer/#shielded">explorer</a> has the same reads with
+        proofs on, and a nullifier check.
+      </p>
+      <div id="snippetBox"></div>
+    </section>
+
+    <p class="sh-source" id="source"></p>
+  </div>
+
+  <script type="module" src="/shared/nav.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

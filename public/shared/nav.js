@@ -17,6 +17,7 @@ const TOOLS = [
   { href: '/name/', label: 'Names' },
   { href: '/contests/', label: 'Contests' },
   { href: '/credits/', label: 'Credits' },
+  { href: '/shielded/', label: 'Shielded' },
   { href: '/about/', label: 'About' },
 ];
 

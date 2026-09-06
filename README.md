@@ -28,6 +28,7 @@ Live at **[evotools.dev](https://evotools.dev)** · `evotools.dash` on Platform.
 | [Explorer](public/explorer/) | Identities, DPNS names, contracts, tokens, documents and the shielded pool, with proofs | Live |
 | [dash-name](public/name/) | Check and claim a `.dash` username for your identity | Live |
 | [Contests](public/contests/) | Every `.dash` name masternodes are voting on, and every one they decided | Live |
+| [Shielded](public/shielded/) | The Orchard pool: what is in it, how it moves week by week, what the six shielded moves cost, and whether an address is a shielded one | Live |
 | [Cookbook](https://github.com/247bas/evo-cookbook) | Verified, runnable `@dashevo/evo-sdk` v4 recipes | Live (own repo) |
 | [create-evo-app](https://github.com/247bas/create-evo-app) | Scaffold a Dash Platform app: `npm create evo-app` | Live (own repo) |
 
@@ -59,6 +60,7 @@ evotools/
 │  ├─ explorer/          → /explorer
 │  ├─ name/              → /name   (dash-name)
 │  ├─ contests/          → /contests
+│  ├─ shielded/          → /shielded
 │  └─ about/             → /about
 ├─ wrangler.jsonc        assets.directory = "public"
 └─ package.json
