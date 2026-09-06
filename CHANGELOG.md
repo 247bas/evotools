@@ -5,6 +5,27 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A page for the shielded pool.** `/shielded` reads the Orchard pool on both
+  networks: balance, notes, anchors and protocol from the chain through the SDK,
+  and from pshenmic's index the count and amount per transition type and a
+  week-by-week series of credits in and out, drawn as bars. It lays out the six
+  shielded transitions with the minimum each costs, computed from the constants
+  Platform runs on (proof check, per-action fee, storage per action, the 0.2
+  DASH cap), says what is public and what is not, and checks whether a pasted
+  address is a shielded one (`dash1z…`, type byte `0x10`, 43 bytes) without
+  looking anything up, since a shielded address never appears on chain. The
+  bech32m lives in `js/address.js` in forty lines rather than the 10 MB SDK, and
+  the smoke test pins it to the SDK's own encoder through the donation address.
+  Two things learned building it: the index's history endpoint drops its last
+  bucket when the range does not divide evenly by the bucket count, silently
+  losing a third of the credits on a "since launch" chart, so the series ends on
+  a whole week; and in minus out on the index runs a shade above the chain's
+  balance because pool-paid fees are carved from the notes and never counted as
+  an out. `npm run test:shielded` reads the live protocol version and fails the
+  moment it is no longer 13, which is when the fee constants need re-reading.
+  The map's legend stopped claiming that no software ships shielded moves;
+  Dash Evo Tool and Dash Desktop do.
+
 - **A donation address, and an about page that had stopped being true.** The
   page listed three tools and filed a scaffolder, an explorer and a username
   claim under "next up" — all shipped months ago — and credited none of the

@@ -26,6 +26,7 @@ const CARDS = {
   onboard: ['Onboard', 'From nothing to a funded testnet identity + a .dash name'],
   playground: ['Playground', 'Run the evo-cookbook recipes live in your browser'],
   explorer: ['Explorer', 'Browse identities, names, contracts & tokens on Dash Platform'],
+  shielded: ['Shielded', 'The Orchard pool on Dash Platform: what is in it, how it moves, what it costs'],
 };
 
 mkdirSync('public/og', { recursive: true });

@@ -1,0 +1,114 @@
+/* shielded — the Orchard pool: what is in it, how it moves, what it costs */
+.sh-wrap { max-width: 860px; }
+.tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 18px; }
+
+.sh-section { margin-top: 34px; }
+.sh-section h2 { font-size: 1.05rem; margin-bottom: 8px; }
+.sh-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.sh-heading h2 { margin: 0; }
+.sh-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 14px; }
+.sh-fine { color: var(--muted); font-size: 0.78rem; margin-top: 12px; opacity: 0.85; }
+.sh-count { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+.sh-section p { font-size: 0.92rem; margin-bottom: 12px; }
+.sh-section ul { padding-left: 20px; font-size: 0.9rem; }
+.sh-section li { margin: 5px 0; }
+.sh-section li a { overflow-wrap: anywhere; }
+
+/* The Orchard colour the map already uses for the pool */
+:root { --orchard: #9b7dea; }
+
+.sh-netsel {
+  background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.82rem; font-family: var(--mono); padding: 7px 10px; cursor: pointer;
+}
+.sh-netsel:focus { outline: none; border-color: var(--blue); }
+
+/* ── the two pools ──────────────────────────────────────────────────────── */
+.sh-pools { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 10px; }
+.sh-pool { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: rgba(155, 125, 234, 0.05); border-color: rgba(155, 125, 234, 0.35); }
+.sh-pool-net { color: var(--muted); font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.sh-pool-amount { font-size: 1.6rem; font-weight: 600; margin-top: 4px; line-height: 1.2; }
+.sh-pool-amount small { font-size: 0.85rem; font-weight: 500; color: var(--muted); margin-left: 4px; }
+.sh-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 8px; }
+.sh-stat { flex: 1; min-width: 0; background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 8px 10px; }
+.sh-stat-k { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.sh-stat-v { font-family: var(--mono); margin-top: 3px; font-size: 0.9rem; }
+.sh-pool-index { font-size: 0.8rem; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+.sh-pool-index b { color: var(--text); font-weight: 600; font-family: var(--mono); }
+.sh-pool .sh-loading { color: var(--muted); font-size: 0.82rem; }
+.sh-pool .error { margin: 8px 0 0; font-size: 0.8rem; }
+
+/* ── the chart ──────────────────────────────────────────────────────────── */
+.sh-chart { margin: 8px 0 6px; }
+.sh-chart svg { max-width: 100%; height: auto; display: block; }
+.sh-chart .axis { stroke: rgba(255, 255, 255, 0.12); stroke-width: 1; }
+.sh-chart .tick { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
+.sh-chart .bar.in { fill: var(--orchard); }
+.sh-chart .bar.out { fill: var(--blue); }
+.sh-chart .bar:hover { opacity: 0.8; }
+.sh-chart .empty { fill: var(--muted); font-size: 13px; }
+.sh-legend { display: flex; gap: 18px; font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+.sh-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.sh-legend i.in { background: var(--orchard); }
+.sh-legend i.out { background: var(--blue); }
+
+/* ── tables ─────────────────────────────────────────────────────────────── */
+.sh-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.sh-table th { text-align: left; color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.sh-table td { padding: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); vertical-align: top; }
+.sh-table .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.sh-table .type { color: var(--muted); font-family: var(--mono); font-size: 0.78rem; }
+.sh-table .dir { color: var(--muted); font-size: 0.78rem; }
+.sh-table .in .dir { color: var(--orchard); }
+.sh-table .out .dir { color: var(--blue); }
+
+/* ── the six moves ──────────────────────────────────────────────────────── */
+.sh-moves { display: flex; flex-direction: column; gap: 8px; }
+.sh-move { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: rgba(0, 0, 0, 0.18); }
+.sh-move-name { font-weight: 600; font-size: 0.92rem; }
+.sh-move-name .type { color: var(--muted); font-family: var(--mono); font-size: 0.75rem; font-weight: 400; margin-left: 6px; }
+.sh-move-path { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.sh-move-path .pool { color: var(--orchard); }
+.sh-move-fee { font-family: var(--mono); font-size: 0.8rem; text-align: right; white-space: nowrap; }
+.sh-move-fee small { display: block; color: var(--muted); font-family: inherit; font-size: 0.7rem; }
+
+/* ── public / hidden ────────────────────────────────────────────────────── */
+.sh-two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.sh-two h2 { margin-bottom: 6px; }
+.sh-two ul { padding-left: 18px; }
+
+/* ── the address checker ────────────────────────────────────────────────── */
+.sh-check { display: flex; gap: 8px; margin: 10px 0 12px; }
+.sh-check input {
+  flex: 1; min-width: 0; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.85rem; padding: 9px 11px;
+}
+.sh-check input:focus { outline: none; border-color: var(--orchard); }
+.sh-addr { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 0.88rem; background: rgba(0, 0, 0, 0.18); }
+.sh-addr.shielded { border-color: rgba(155, 125, 234, 0.5); background: rgba(155, 125, 234, 0.08); }
+.sh-addr .kind { font-weight: 600; margin-bottom: 6px; }
+.sh-addr.shielded .kind { color: var(--orchard); }
+.sh-addr .part { display: flex; gap: 10px; font-size: 0.78rem; margin-top: 6px; align-items: baseline; }
+.sh-addr .part span:first-child { color: var(--muted); min-width: 92px; }
+.sh-addr .part code { font-size: 0.74rem; }
+.sh-addr .then { margin-top: 8px; font-size: 0.82rem; color: var(--muted); }
+
+/* ── denominations ──────────────────────────────────────────────────────── */
+.sh-denoms { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.sh-denom { border: 1px solid rgba(155, 125, 234, 0.5); border-radius: 999px; padding: 5px 13px; font-family: var(--mono); font-size: 0.85rem; color: var(--orchard); }
+
+/* ── wallets, snippet, source ──────────────────────────────────────────── */
+.sh-wallets { margin-bottom: 14px; }
+.sh-raw { margin: 12px 0; }
+.sh-raw summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; padding: 6px 0; }
+.sh-raw pre { margin-top: 8px; overflow: auto; white-space: pre; font-size: 0.78rem; line-height: 1.5; }
+.sh-raw .btn { margin-top: 8px; }
+.sh-source { margin-top: 30px; font-size: 0.75rem; color: var(--muted); opacity: 0.8; }
+
+@media (max-width: 620px) {
+  .sh-pools, .sh-two { grid-template-columns: 1fr; }
+  .sh-two { gap: 8px; }
+  .sh-move { grid-template-columns: 1fr; gap: 4px; }
+  .sh-move-fee { text-align: left; white-space: normal; }
+  .sh-check { flex-direction: column; }
+}
