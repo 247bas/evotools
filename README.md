@@ -85,6 +85,11 @@ That lives in `public/shared/token-holders.js` and both `/tokens` and
 `/explorer` call it. It only works for a token that keeps history; when one does
 not, the tools say so rather than presenting a short list as the whole truth.
 
+The reverse question — which tokens does *this identity* hold — has no such
+route. Every index on the history contract starts with the token, so "every
+document naming this identity" is not a query it can serve, and that one list
+comes from the indexer instead. The balances next to it do not.
+
 ## Keys never leave the browser
 
 Every tool that signs does so client-side, and every box that takes an

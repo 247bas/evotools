@@ -6,8 +6,9 @@
 import { randomBytes } from 'node:crypto';
 import {
   lookupIdentity, tokenInfo, toBaseUnits, buildTokenContract, createToken,
-  sendToken, mintToken, holdersOf, formatAmount,
+  sendToken, mintToken, holdersOf, tokensHeldBy, formatAmount,
 } from '../js/tokens.js';
+import { tokensOfIdentity, setApiNetwork, apiHost } from '../js/api.js';
 import { tokenHolders, TOKEN_HISTORY_CONTRACT } from '../../shared/token-holders.js';
 import { setNetwork, loadEvo, getSdk } from '../js/sdk.js';
 
@@ -147,6 +148,31 @@ const { EvoSDK } = Evo;
 const main = EvoSDK.mainnetTrusted();
 await main.connect();
 check(Boolean(await main.contracts.fetch(TOKEN_HISTORY_CONTRACT)), 'and the same ID on mainnet');
+
+console.log('\n8. What an identity holds');
+// The one thing here that leans on an indexer: Platform cannot list the tokens
+// an identity has, and the history route does not reverse (every index on the
+// history contract starts with tokenId). Balances still come off the chain.
+setApiNetwork('testnet');
+const listed = await tokensOfIdentity(ISSUER);
+check(listed.some((t) => t.tokenId === held.tokenId), `${apiHost().replace('https://', '')} lists ${listed.length} token(s) for the issuer`);
+const mine = await tokensHeldBy(ISSUER);
+const nekot = mine.find((t) => t.tokenId === held.tokenId);
+check(Boolean(nekot), `tokensHeldBy finds it: ${nekot && formatAmount(nekot.balance, nekot.decimals)} ${nekot?.plural}`);
+check(nekot?.isIssuer === true, 'and marks the issuer as the issuer');
+check(typeof nekot?.balance === 'bigint' && nekot.balance > 0n, 'the balance is a bigint read from the chain, not from the API');
+check(nekot?.contractId === CONTRACT, 'the contract id matches the one we published');
+
+// alice holds it and did not issue it — the two must not be confused, since
+// only the issuer can mint.
+const hers = await tokensHeldBy('FKZZFDTfGdSWUmL2g7H9e46pMJMPQp9DHQcvjrsS6884');
+const alicesNekot = hers.find((t) => t.tokenId === held.tokenId);
+check(Boolean(alicesNekot), `alice holds ${alicesNekot && formatAmount(alicesNekot.balance, alicesNekot.decimals)} of it`);
+check(alicesNekot?.isIssuer === false, 'and is not marked as the issuer');
+
+// An identity with nothing gets an empty list, not an error.
+const nobody = await tokensHeldBy('11111111111111111111111111111111111111111111'.slice(0, 44));
+check(Array.isArray(nobody), 'an identity with no tokens gives an empty list rather than throwing');
 
 console.log(failed ? `\n${failed} failed\n` : '\nAll good\n');
 process.exit(failed ? 1 : 0);

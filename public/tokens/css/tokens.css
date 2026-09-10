@@ -43,3 +43,24 @@
 .tk-holders td.share { text-align: right; color: var(--muted); white-space: nowrap; }
 .tk-holders td.who { font-family: var(--mono); overflow-wrap: anywhere; }
 .tk-holders .tag { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-size: 0.65rem; border: 1px solid var(--border); color: var(--muted); }
+
+/* What an identity holds. A row is a token: what it is on the left, how much in
+   the middle, what you can do with it on the right — so the eye can run down any
+   one of the three without reading the other two. */
+.tk-held-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin: 18px 0 8px; font-size: 0.8rem; color: var(--muted);
+}
+.tk-held-source { font-size: 0.72rem; }
+.tk-held { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.tk-held-row {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 13px 15px; background: rgba(0, 0, 0, 0.22);
+}
+.tk-held-row + .tk-held-row { border-top: 1px solid var(--border); }
+.tk-held-what { flex: 1 1 240px; min-width: 0; }
+.tk-held-name { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.tk-held-sub { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); overflow-wrap: anywhere; margin-top: 3px; }
+.tk-held-amount { font-family: var(--mono); font-size: 0.95rem; white-space: nowrap; }
+.tk-held-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.tk-held .tag { padding: 1px 7px; border-radius: 99px; font-size: 0.62rem; border: 1px solid var(--border); color: var(--muted); }

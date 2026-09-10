@@ -44,6 +44,7 @@
       </div>
       <button class="btn primary" id="lookupBtn">Look up</button>
       <div id="identityOut"></div>
+      <div id="heldOut"></div>
     </section>
 
     <section class="panel" id="actions" hidden>
@@ -184,7 +185,8 @@
         and nothing walks it. So this reads the token's history instead — every
         mint, transfer, burn and purchase — collects everyone who ever touched
         it, and looks up what each one has now. No key, and it works on any
-        token, not only your own.
+        token, not only your own. Looking an identity up above fills this in for
+        every token it holds — the box is for one it does not.
       </p>
       <div class="row sm-gap">
         <div class="field">

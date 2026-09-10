@@ -2,7 +2,7 @@
 // stored or sent anywhere.
 import {
   lookupIdentity, tokenInfo, createToken, mintToken, sendToken, holdersOf,
-  formatAmount,
+  tokensHeldBy, formatAmount, apiHost,
 } from './tokens.js';
 import { shareOf } from '../../shared/token-holders.js';
 import { setNetwork, getNetwork } from './sdk.js';
@@ -83,7 +83,76 @@ $('lookupBtn').addEventListener('click', withBusy($('lookupBtn'), 'Looking…', 
   clearError();
   current = await lookupIdentity($('idInput').value);
   renderIdentity(current);
+  await renderHeld(current.identityId);
 }));
+
+// What this identity holds. The list comes from the indexer because Platform
+// cannot answer it; the balances next to it are read from the chain.
+async function renderHeld(identityId) {
+  const out = $('heldOut');
+  out.replaceChildren(el('div', 'note info', 'Looking for tokens…'));
+  let held;
+  try {
+    held = await tokensHeldBy(identityId);
+  } catch (e) {
+    // The indexer being down should cost the list and nothing else.
+    out.replaceChildren(el('div', 'note warn', e?.message || String(e)));
+    return;
+  }
+
+  if (!held.length) {
+    out.replaceChildren(el('div', 'note info', 'This identity holds no tokens.'));
+    return;
+  }
+
+  const list = el('div', 'tk-held');
+  for (const t of held) {
+    const row = el('div', 'tk-held-row');
+
+    const left = el('div', 'tk-held-what');
+    const title = el('div', 'tk-held-name', t.name);
+    if (t.isIssuer) title.append(el('span', 'tag', 'you issued it'));
+    left.append(title);
+    left.append(el('div', 'tk-held-sub',
+      t.isIssuer
+        ? `${t.contractId}`
+        : `${t.contractId} · issued by ${t.ownerName || t.ownerId}`));
+    row.append(left);
+
+    row.append(el('div', 'tk-held-amount', `${formatAmount(t.balance, t.decimals)} ${t.plural || t.name}`));
+
+    const actions = el('div', 'tk-held-actions');
+
+    const holders = el('button', 'btn ghost sm', 'Who holds it');
+    holders.addEventListener('click', () => {
+      $('hdContract').value = t.contractId;
+      $('hdPosition').value = String(t.position);
+      $('hdBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      $('hdBtn').click();
+    });
+    actions.append(holders);
+
+    const send = el('button', 'btn ghost sm', 'Send');
+    send.addEventListener('click', () => {
+      $('sdContract').value = t.contractId;
+      $('sdPosition').value = String(t.position);
+      // The Send block is collapsed until someone wants it.
+      $('sdContract').closest('details').open = true;
+      $('sdAmount').focus();
+      $('sdContract').closest('details').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    actions.append(send);
+
+    row.append(actions);
+    list.append(row);
+  }
+
+  const head = el('div', 'tk-held-head');
+  head.append(el('span', null, `Holds ${held.length} token${held.length === 1 ? '' : 's'}`));
+  head.append(el('span', 'tk-held-source', `list from ${apiHost().replace('https://', '')}, balances from the chain`));
+
+  out.replaceChildren(head, list);
+}
 
 $('idInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('lookupBtn').click(); });
 

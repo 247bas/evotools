@@ -5,6 +5,26 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The hub is three across.** Twelve tools fell into six rows of two, which put
+  the last four below the fold on most screens. Three columns makes that four
+  rows at a page width of 1100 — still inside a 13-inch laptop, where four
+  across would have needed 1400, wider than a MacBook Air shows, and squeezed
+  the cards to 318 px where the Live badge starts crowding the title. Cards land
+  at 345 px. The steps down are by card width rather than by device: two columns
+  below 980, one below 620.
+
+- **/tokens shows what an identity holds.** Looking an identity up now lists its
+  tokens with the balance beside each, and every row can send that token or work
+  out who else has it without a contract id being typed anywhere. Which tokens
+  exist comes from pshenmic's indexer, because the chain cannot answer it and
+  the history route does not reverse — every index on the history contract
+  starts with the token, so "every document naming this identity" is not a query
+  it can serve. The balances are read from the chain in one `identityBalances`
+  call, so the indexer is trusted to name things and never to say how much; when
+  it is unreachable the list is what breaks and the contract-id field still
+  drives everything. A token the indexer still lists but that has since been
+  sent away in full is dropped rather than shown at zero.
+
 - **A page for tokens, and a way to ask who holds one.** `/tokens` publishes a
   token, mints it and sends it by `.dash` name, signed in the browser with a key
   pasted per action the way `/credits` does it. Four things cost time to find

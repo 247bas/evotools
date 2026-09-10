@@ -11,10 +11,11 @@
 // requireKey below.
 
 import { getSdk, loadEvo, getNetwork } from './sdk.js';
+import { tokensOfIdentity, setApiNetwork, apiHost } from './api.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
 import { tokenHolders, nameHolders, formatAmount } from '../../shared/token-holders.js';
 
-export { tokenHolders, nameHolders, formatAmount };
+export { tokenHolders, nameHolders, formatAmount, apiHost };
 
 const str = (v) => (v == null ? '' : String(v));
 
@@ -378,6 +379,33 @@ export async function sendToken({ identityId, wif, contractId, position = 0, amo
     signer,
   });
   return { keyId, recipientId, tokenId: info.tokenId, sent: value, decimals: info.decimals };
+}
+
+/* ------------------------------------------------------------------ *
+ * What an identity holds
+ * ------------------------------------------------------------------ */
+
+/**
+ * Every token this identity has, with the balance read from the chain.
+ *
+ * Which tokens exist comes from the indexer, because Platform cannot list them.
+ * The numbers do not: one `identityBalances` call covers the whole list, so the
+ * indexer is only ever trusted to name things, never to say how much.
+ */
+export async function tokensHeldBy(identityId) {
+  setApiNetwork(getNetwork());
+  const found = await tokensOfIdentity(identityId);
+  if (!found.length) return [];
+
+  const sdk = await getSdk();
+  const balances = await sdk.tokens.identityBalances(identityId, found.map((t) => t.tokenId));
+
+  return found
+    .map((t) => ({ ...t, balance: balances.get(t.tokenId) ?? 0n }))
+    // A token the indexer still lists but that has since been sent away in full
+    // would otherwise sit in the list at zero and read like a bug.
+    .filter((t) => t.balance > 0n)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
 /* ------------------------------------------------------------------ *
