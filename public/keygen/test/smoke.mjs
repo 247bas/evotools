@@ -315,7 +315,6 @@ check(boundCode.includes('contactRequest'), 'with the DashPay case it exists for
   check(Boolean(added5), `key #5 is on ${ID.slice(0, 12)}… — added by this page and accepted`);
   check(added5?.purpose === 'AUTHENTICATION' && added5?.securityLevel === 'HIGH',
     `and it is the ${added5?.purpose}/${added5?.securityLevel} key that was asked for`);
-  check(!added5?.disabledAt, 'and it is live, not disabled');
   const identityNow = await sdk.identities.fetch(ID);
   check((identityNow.revision ?? 0n) >= 2n, `the identity is at revision ${identityNow.revision}, so an update really landed`);
 
@@ -373,6 +372,21 @@ console.log('\n9c. Switching a key off');
   await refusesTo(() => buildDisableKeyTransition({
     network: 'testnet', identityId: ID, revision: 4, nonce: 7, disableKeyIds: [5],
   }), 'recovery phrase or the private key', 'no phrase and no master key');
+
+  // Both keys this file adds above were switched off again on testnet on
+  // 10 September 2026, two minutes apart: #6 at 11:25:20 UTC and #5 at
+  // 11:27:24. Two changes in a row is the case that used to fail — the second
+  // was signed with the revision and nonce the first had already spent — so the
+  // pair of stamps is the proof that the page reads the identity back in
+  // between. The keys stay on the identity either way; only the stamp is new.
+  const { setNetwork: setNet, getSdk: getS } = await import('../../tokens/js/sdk.js');
+  setNet('testnet');
+  const sdk = await getS();
+  const live = await sdk.identities.getKeys({ identityId: ID, request: { type: 'all' } });
+  const off5 = live.find((k) => k.keyId === 5)?.disabledAt;
+  const off6 = live.find((k) => k.keyId === 6)?.disabledAt;
+  check(Boolean(off5) && Boolean(off6), 'keys #5 and #6 are switched off on chain, not removed from it');
+  check(Number(off5) > Number(off6), 'in that order, and both landed — the second one is the whole point');
 }
 
 console.log('\n8. The SDK snippet in the dropdown actually runs');

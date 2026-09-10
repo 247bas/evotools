@@ -5,6 +5,23 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Two changes to one identity in a row.** Switching a second key off failed,
+  and the message came from the node and talked about a revision. Every change
+  to an identity spends its revision and its nonce, and both sat in the form
+  where the lookup had put them minutes earlier, so the second transition was
+  signed with a pair the first had already used. The page reads the identity
+  back itself now, right after a broadcast: the key list, the revision, the
+  nonce and the master key id are what the identity is at, not what it was.
+  Straight after a broadcast a node can still be serving the previous block, so
+  the read-back waits for the revision it just paid for rather than handing the
+  spent numbers out again; if it never arrives the two fields are emptied and it
+  says to look up again, because an empty field is worse than a stale one:
+  `BigInt('')` is 0n and signs without complaining. Both fields are checked
+  before signing for that reason. The signed hex disappears once it is spent,
+  and nothing else does: on the add-key route that panel holds the only copy of
+  a new private key. Proven on testnet the same way as the rest: keys #6 and #5
+  of `GLFyDxwzoKBC…` carry `disabledAt` stamps two minutes apart.
+
 - **The add-key panel is in the order you need it.** The Switch off buttons sat
   above the field that says how the change gets signed, so the first click
   landed on "give either a recovery phrase or the private key" — about a box

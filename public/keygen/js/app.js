@@ -379,11 +379,20 @@ async function resolveIdentityInput(sdk, raw) {
   return { identityId: String(owner), name: `${label}.dash` };
 }
 
-$('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking…', async () => {
+// A lookup fills in everything the two transitions below need: the revision,
+// the nonce, which key is the master, and the keys the identity has now. It is
+// also what runs after a broadcast, because by then all four have moved on.
+// `minRevision` is the revision the change just made — see the wait below.
+let identityLabel = { id: '', name: '' };
+async function lookupIdentity({ minRevision } = {}) {
   clearError();
   const sdk = await connected();
   const resolved = await resolveIdentityInput(sdk, $('akIdentity').value);
   const identityId = resolved.identityId;
+  // A refresh gets the id back, not the name that was typed the first time, and
+  // dropping the name from the summary reads like it stopped resolving.
+  if (resolved.name) identityLabel = { id: identityId, name: resolved.name };
+  else if (identityLabel.id !== identityId) identityLabel = { id: identityId, name: '' };
   // Put the id in the box: everything below works from it, and it is what you
   // want on screen once the name has done its job.
   $('akIdentity').value = identityId;
@@ -401,6 +410,24 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
     throw new Error(`No identity with that id on ${net}. `
       + `The network selector sits at the top of this page and beside this field, and it is on ${net} now.`);
   }
+  // Straight after a broadcast the node can still be serving the identity as it
+  // was a block ago. Reading those numbers back would fill the form with a
+  // revision and a nonce that are already spent — exactly the failure this
+  // refresh exists to prevent — so wait for it rather than hand them out again.
+  const behind = () => minRevision != null && (identity.revision ?? 0n) < BigInt(minRevision);
+  for (let tries = 0; behind() && tries < 5; tries++) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    identity = await sdk.identities.fetch(identityId);
+  }
+  if (behind()) {
+    $('akRevision').value = '';
+    $('akNonce').value = '';
+    $('akKeys').replaceChildren();
+    throw new Error('The change went through, but this node is still reading the identity as it was before it. '
+      + 'Press "Look it up" again in a moment. The revision and nonce are empty until then, '
+      + 'so the spent ones cannot be signed with by accident.');
+  }
+
   const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
   const nonce = (await sdk.identities.nonce(identityId)) ?? 0n;
 
@@ -440,7 +467,7 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
   }
   const live = shaped.filter((k) => !k.disabled).length;
   const summary = el('div', missing.length ? 'note warn' : 'note ok',
-    (resolved.name ? `${resolved.name} is ${identityId}. ` : '')
+    (identityLabel.name ? `${identityLabel.name} is ${identityId}. ` : '')
     + `${live} key${live === 1 ? '' : 's'} in use. `
     + (missing.length
       ? `Missing: ${missing.map((m) => `${m.purpose}/${m.securityLevel}`).join(', ')}.`
@@ -459,7 +486,20 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
   if (!master) {
     throw new Error('This identity has no master key, so nothing can be added to it. That is permanent.');
   }
-}));
+}
+$('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking…', () => lookupIdentity()));
+
+// Both numbers are one-shot: every change to an identity spends the pair, and a
+// transition signed with a spent pair is refused by the node. Empty is worse
+// than stale, because `BigInt('')` is 0n and signs without complaining.
+function chainNumber(id, what) {
+  const value = $(id).value.trim();
+  if (!/^[0-9]+$/.test(value)) {
+    throw new Error(`No ${what} to sign with. Press "Look it up" to read it off the identity, `
+      + 'or type it in from the explorer.');
+  }
+  return value;
+}
 
 // Switching a key off is the same transition as adding one, signed by the same
 // master key, so it reuses the form that is already filled in — revision, nonce
@@ -480,8 +520,8 @@ async function disableKey(key, identityId) {
       masterWif: usingWif ? $('akMasterWif').value : undefined,
       network: $('netsel').value,
       identityId,
-      revision: $('akRevision').value.trim(),
-      nonce: $('akNonce').value.trim(),
+      revision: chainNumber('akRevision', 'revision'),
+      nonce: chainNumber('akNonce', 'identity nonce'),
       masterKeyId: Number($('akMasterId').value.trim() || '0'),
       disableKeyIds: [key.keyId],
     });
@@ -494,7 +534,7 @@ async function disableKey(key, identityId) {
     const out = $('akOut');
     out.replaceChildren(el('div', 'note ok',
       `Signed. Switches off key #${key.keyId} — ${key.purpose} / ${key.securityLevel}.`));
-    const field = el('div', 'field');
+    const field = el('div', 'field kg-spent');
     const head = el('div', 'field-head');
     head.append(el('label', null, 'Signed transition (hex)'));
     const copy = el('button', 'btn ghost sm kg-noprint', 'Copy');
@@ -543,8 +583,8 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
     newKeyWif: usingWif ? ($('akNewWif').value.trim() || undefined) : undefined,
     network: $('netsel').value,
     identityId: $('akIdentity').value.trim(),
-    revision: $('akRevision').value.trim(),
-    nonce: $('akNonce').value.trim(),
+    revision: chainNumber('akRevision', 'revision'),
+    nonce: chainNumber('akNonce', 'identity nonce'),
     masterKeyId: Number($('akMasterId').value.trim() || '0'),
     newKeyId: Number($('akNewId').value.trim()),
     purpose,
@@ -580,7 +620,7 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
     built.added.wif],
     ['Signed transition (hex)', built.hex],
   ]) {
-    const field = el('div', 'field');
+    const field = el('div', value === built.hex ? 'field kg-spent' : 'field');
     const head = el('div', 'field-head');
     head.append(el('label', null, label));
     const copy = el('button', 'btn ghost sm kg-noprint', 'Copy');
@@ -610,9 +650,29 @@ $('akBroadcastBtn').addEventListener('click', withBusy($('akBroadcastBtn'), 'Bro
   // Handing it the string gets "expected instance of StateTransition", which
   // names the type and not the mistake.
   const { StateTransition } = await loadEvo();
+  // What the identity's revision must be once this lands, so the read-back below
+  // can tell a node that has caught up from one that has not. Only if the field
+  // still holds a number: it can be edited after the signing, and BigInt throws
+  // on anything else.
+  const revisionField = $('akRevision').value.trim();
+  const spent = /^[0-9]+$/.test(revisionField) ? revisionField : null;
   await sdk.stateTransitions.broadcastAndWait(StateTransition.fromHex(hex));
-  $('akOut').append(el('div', 'note ok', 'Accepted. Look the identity up again to see the key on it.'));
+
+  // The transition is spent and so are the revision and nonce that were in the
+  // form. Leaving them there is what made a second change in a row fail: the
+  // signing succeeds, the node refuses it, and the message is about a revision
+  // rather than about having to look the identity up again. So read it back.
   $('akBroadcastBtn').hidden = true;
+  delete $('akBroadcastBtn').dataset.hex;
+  // The hex is the one thing on screen that is now misleading, so it goes and
+  // the rest stays: on the add-key route this panel holds the new private key,
+  // and a broadcast is no reason to take that off the screen.
+  for (const field of $('akOut').querySelectorAll('.kg-spent')) field.remove();
+  $('akOut').append(el('div', 'note ok',
+    'Accepted. Reading the identity back, so the key list above and the numbers '
+    + 'for the next change are what it is now.'));
+  await lookupIdentity({ minRevision: spent });
+  $('akOut').append(el('div', 'fineprint', 'Up to date. Another key can be switched off or added straight away.'));
 }));
 
 // The offline copy cannot look anything up or broadcast, so it says what to do
