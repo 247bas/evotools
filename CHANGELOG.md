@@ -37,6 +37,13 @@ rather than installable releases.
   test walks every real import in the two rewritten sources and fails on any
   that is not on the list, rather than naming the three it already knew.
 
+  Broadcasting takes the transition, not the hex it serialises to. Handing it
+  the string comes back "expected instance of StateTransition", which names the
+  type rather than the mistake, and it only appears at the last step — after
+  the key has been generated and written down. The test pins both sides: the
+  hex is refused on type, and the parsed transition gets far enough to be
+  judged on its signature.
+
   The panel carries an SDK snippet like the one above it, following the form as
   you change it, and the smoke test runs it: the path it prints has to derive
   the key the button actually adds.

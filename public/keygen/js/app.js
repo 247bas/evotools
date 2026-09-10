@@ -526,7 +526,11 @@ $('akBroadcastBtn').addEventListener('click', withBusy($('akBroadcastBtn'), 'Bro
   const hex = $('akBroadcastBtn').dataset.hex;
   if (!hex) throw new Error('Build the transition first.');
   const sdk = await connected();
-  await sdk.stateTransitions.broadcastAndWait(hex);
+  // broadcastAndWait takes a StateTransition, not the hex it serialises to.
+  // Handing it the string gets "expected instance of StateTransition", which
+  // names the type and not the mistake.
+  const { StateTransition } = await loadEvo();
+  await sdk.stateTransitions.broadcastAndWait(StateTransition.fromHex(hex));
   $('akOut').append(el('div', 'note ok', 'Accepted. Look the identity up again to see the key on it.'));
   $('akBroadcastBtn').hidden = true;
 }));

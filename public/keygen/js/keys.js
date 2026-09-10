@@ -283,7 +283,7 @@ export function addKeySnippet(network, { purpose = 'AUTHENTICATION', securityLev
   const coin = network === 'mainnet' ? '5' : '1';
   return `import {
   wallet, PrivateKey, IdentityPublicKey, IdentityPublicKeyInCreation,
-  IdentityUpdateTransition, KeyType${bound ? ', ContractBounds' : ''},
+  IdentityUpdateTransition, StateTransition, KeyType${bound ? ', ContractBounds' : ''},
 } from '@dashevo/evo-sdk';
 
 // Three numbers come from the chain and nothing else here does, which is why
@@ -338,6 +338,11 @@ transition.sign(PrivateKey.fromWIF(master.privateKeyWif), new IdentityPublicKey(
   readOnly: false,
 }));
 
-// Everything above is offline. Only this line needs a node.
-await sdk.stateTransitions.broadcastAndWait(transition.toHex());`;
+// Everything above is offline. Only this needs a node, and it takes the
+// transition itself — not the hex it serialises to, which comes back as
+// "expected instance of StateTransition".
+await sdk.stateTransitions.broadcastAndWait(transition);
+
+// Carried over from an offline machine as a hex string? Parse it back first:
+// await sdk.stateTransitions.broadcastAndWait(StateTransition.fromHex(theHex));`;
 }

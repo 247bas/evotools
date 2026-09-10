@@ -271,6 +271,41 @@ check(boundCode.includes('contactRequest'), 'with the DashPay case it exists for
     'the path the snippet prints derives the key the tool actually adds');
 }
 
+// The type the broadcast takes. Handing it the hex is the mistake this pins:
+// "expected instance of StateTransition" names the type and not the error, and
+// it only shows up at the last step, after the key has already been generated.
+{
+  const { setNetwork: setNet, getSdk: getS } = await import('../../tokens/js/sdk.js');
+  setNet('testnet');
+  const sdk = await getS();
+  const Evo = await import('../../shared/vendor/evo-sdk.module.js');
+  const { buildAddKeyTransition } = await import('../js/keys.js');
+  const PHRASE = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const built = await buildAddKeyTransition({
+    mnemonic: PHRASE, network: 'testnet',
+    identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 5,
+  });
+
+  let hexError = '';
+  try { await sdk.stateTransitions.broadcastAndWait(built.hex); }
+  catch (e) { hexError = e?.message || String(e); }
+  check(/expected instance of StateTransition/i.test(hexError),
+    `the hex on its own is refused by the SDK: ${hexError.slice(0, 60)}`);
+
+  let objectError = '';
+  try { await sdk.stateTransitions.broadcastAndWait(Evo.StateTransition.fromHex(built.hex)); }
+  catch (e) { objectError = e?.message || String(e); }
+  // This one is expected to fail too — the revision and nonce are made up — but
+  // it has to get past the type and reach the chain to say so.
+  check(objectError && !/expected instance of StateTransition/i.test(objectError),
+    `parsed back it reaches the network instead: ${objectError.slice(0, 70)}`);
+
+  const snippetCode = addKeySnippet('testnet');
+  check(snippetCode.includes('broadcastAndWait(transition)'),
+    'and the snippet broadcasts the transition, not its hex');
+}
+
 console.log('\n8. The SDK snippet in the dropdown actually runs');
 // Take the code we show developers, point the import at the vendored SDK, feed
 // it the phrase from step 1, and check it lands on the same address.
