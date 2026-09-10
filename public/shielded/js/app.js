@@ -300,6 +300,7 @@ function renderPoolPrice(box, rows, unit) {
 
 function renderWorth(a, chainBalance, priceRow) {
   const balance = chainBalance != null ? Number(chainBalance) / Number(CREDITS_PER_DASH) : a.balance;
+  const shown = chainBalance != null ? dash(chainBalance, 2) : dashN(balance, 2);
   const w = (k, v, n) => {
     const b = el('div', 'w');
     b.append(el('div', 'w-k', k), el('div', 'w-v', v));
@@ -307,7 +308,10 @@ function renderWorth(a, chainBalance, priceRow) {
     return b;
   };
   $('worth').replaceChildren(
-    w('In the pool', `${num(Math.round(balance))} DASH`, chainBalance != null ? 'from the chain' : 'from the index'),
+    // Formatted by dash() off the credits, exactly as the card at the top of the
+    // page does it, so the same balance cannot appear twice in two spellings.
+    // It read 11,170 here against 11,169.64 up there.
+    w('In the pool', `${shown} DASH`, chainBalance != null ? 'from the chain' : 'from the index'),
     w('DASH', `$${priceRow.usd.toFixed(2)}`, `close of ${priceRow.day}`),
     w('The pool is worth', money(balance * priceRow.usd), 'balance × price, nothing more'),
   );

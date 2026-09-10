@@ -3,7 +3,12 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
-## Unreleased
+## 2.2.0 — 2026-09-10
+
+- **One balance, one spelling.** The pool's balance appeared twice on
+  /shielded, as 11,169.64 in the card at the top and 11,170 in the tile further
+  down, because the tile rounded to whole DASH. Both come off the credits
+  through the same `dash()` now. Spotted by Bas.
 
 - **Said out loud that the reads are proof-verified.** /shielded's source line
   now explains what the SDK actually does, because the naming invites the
