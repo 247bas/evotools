@@ -304,6 +304,20 @@ check(boundCode.includes('contactRequest'), 'with the DashPay case it exists for
   const snippetCode = addKeySnippet('testnet');
   check(snippetCode.includes('broadcastAndWait(transition)'),
     'and the snippet broadcasts the transition, not its hex');
+
+  // The whole path, proven once on testnet on 10 September 2026: key #5 was
+  // added to this identity by this page — built and signed in the browser,
+  // broadcast, accepted. Revision went 1 -> 2 and it cost 17,405,780 credits,
+  // about 0.00017 DASH. Read with a proof, so this is the chain's own word.
+  const ID = 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7';
+  const onChain = await sdk.identities.getKeys({ identityId: ID, request: { type: 'all' } });
+  const added5 = onChain.find((k) => k.keyId === 5);
+  check(Boolean(added5), `key #5 is on ${ID.slice(0, 12)}… — added by this page and accepted`);
+  check(added5?.purpose === 'AUTHENTICATION' && added5?.securityLevel === 'HIGH',
+    `and it is the ${added5?.purpose}/${added5?.securityLevel} key that was asked for`);
+  check(!added5?.disabledAt, 'and it is live, not disabled');
+  const identityNow = await sdk.identities.fetch(ID);
+  check((identityNow.revision ?? 0n) >= 2n, `the identity is at revision ${identityNow.revision}, so an update really landed`);
 }
 
 console.log('\n8. The SDK snippet in the dropdown actually runs');

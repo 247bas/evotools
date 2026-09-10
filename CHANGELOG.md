@@ -84,10 +84,12 @@ rather than installable releases.
   to, and it can never be unbound. The list of keys to add carries a DECRYPTION
   option that the standard five do not, since a contact request needs one.
 
-  **Untested against a live chain:** no update has been broadcast. Everything
-  that can be checked without one is — both signatures are 65 bytes and survive
-  a round trip through the hex, and the transition decodes back to what went in
-  — but whether a node accepts it is unproven, and one testnet run settles it.
+  **Proven on testnet, 10 September 2026.** Key #5, AUTHENTICATION/HIGH, added
+  to `GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7` — built and signed in the
+  browser, broadcast, accepted. The identity went from revision 1 to 2 and it
+  cost 17,405,780 credits, about 0.00017 DASH, which is a number the SDK does
+  not publish anywhere. The smoke test reads that key back with a proof, so the
+  path stays proven rather than remembered.
 
 - **The security level is the chain's call, not the page's.** /tokens refused to
   sign unless the identity had an AUTHENTICATION key at CRITICAL, which is what

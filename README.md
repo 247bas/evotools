@@ -112,7 +112,7 @@ npm run test:name      # dash-name check/register + the secret guards
 npm run test:credits   # the credits guards and live reads
 npm run test:tokens    # the token guards, contract building and the holder walk
 npm run test:contests  # the contests list and its indexer quirks
-npm run test:keygen    # offline key derivation + builds the offline copy
+npm run test:keygen    # offline key derivation, the offline copy, and adding a key
 npm run test:assetlock # builds a real signed asset lock
 npm run test:dpns      # salt derivation for resumable registration
 
