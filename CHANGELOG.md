@@ -88,8 +88,14 @@ rather than installable releases.
   to `GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7` — built and signed in the
   browser, broadcast, accepted. The identity went from revision 1 to 2 and it
   cost 17,405,780 credits, about 0.00017 DASH, which is a number the SDK does
-  not publish anywhere. The smoke test reads that key back with a proof, so the
-  path stays proven rather than remembered.
+  not publish anywhere. The bound variant went the same day: key #6, an
+  ENCRYPTION key tied to DashPay's `contactRequest`, accepted with its bounds
+  intact for 34,222,960 credits — about twice the plain one, since the bound is
+  more bytes to store. That settled the two things only a broadcast could: that
+  a node takes `contractBounds` at all, and that the proof of possession still
+  validates with the bound inside the bytes it is signed over. The smoke test
+  reads both keys back off the chain, so the path stays proven rather than
+  remembered.
 
 - **The security level is the chain's call, not the page's.** /tokens refused to
   sign unless the identity had an AUTHENTICATION key at CRITICAL, which is what

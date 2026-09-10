@@ -318,6 +318,18 @@ check(boundCode.includes('contactRequest'), 'with the DashPay case it exists for
   check(!added5?.disabledAt, 'and it is live, not disabled');
   const identityNow = await sdk.identities.fetch(ID);
   check((identityNow.revision ?? 0n) >= 2n, `the identity is at revision ${identityNow.revision}, so an update really landed`);
+
+  // And the bound variant, added the same day: an ENCRYPTION key tied to
+  // DashPay's contactRequest, which is the case bounds exist for. Two things
+  // only a broadcast could settle — that a node accepts contractBounds at all,
+  // and that the proof of possession still validates with the bound inside the
+  // bytes it is signed over, since the bound changes them.
+  const added6 = onChain.find((k) => k.keyId === 6);
+  check(Boolean(added6?.contractBounds), 'key #6 carries contract bounds on chain, not just through the hex');
+  const bounds6 = added6?.contractBounds?.toJSON?.();
+  check(bounds6?.id === 'Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7', 'bound to the DashPay contract');
+  check(bounds6?.documentTypeName === 'contactRequest', 'and to contactRequest, the type that requires it');
+  check(added6?.purpose === 'ENCRYPTION', 'as an ENCRYPTION key, which is what a contact request needs');
 }
 
 console.log('\n8. The SDK snippet in the dropdown actually runs');
