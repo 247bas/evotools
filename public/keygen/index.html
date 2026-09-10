@@ -183,8 +183,8 @@
 
       <div class="row sm-gap">
         <div class="field">
-          <label for="akIdentity">Identity id</label>
-          <input id="akIdentity" type="text" placeholder="base58 identity id" autocomplete="off" spellcheck="false" />
+          <label for="akIdentity">Identity — id or <code>.dash</code> name</label>
+          <input id="akIdentity" type="text" placeholder="bas.dash or a base58 identity id" autocomplete="off" spellcheck="false" />
         </div>
         <div class="field" id="akNetField">
           <label for="akNet">Network</label>
@@ -299,6 +299,8 @@
         longer line up. That is bookkeeping, not a problem: what counts on chain
         is the key id.
       </p>
+
+      <div id="akSnippet"></div>
 
       <button class="btn primary" id="akBuildBtn">Build the transition</button>
       <button class="btn primary kg-noprint" id="akBroadcastBtn" hidden>Broadcast it</button>

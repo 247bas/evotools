@@ -26,6 +26,21 @@ rather than installable releases.
   wrong wallet or a phrase from a different identity is caught here rather than
   by a node.
 
+  The identity box takes a `.dash` name as well as an id, and fills the id in
+  once the name has done its job. It refuses a pasted key the way every other
+  identifier field in the suite does — it sits a few fields above two that want
+  private keys, and a WIF in the wrong box would otherwise become a DPNS lookup
+  at a node. Adding that import nearly broke the offline copy, whose bootstrap
+  rewrites a fixed list of module specifiers to blob URLs: a new one is simply
+  not looked at, and a relative path cannot resolve inside a blob, so the page
+  would have stopped before rendering. secrets.js is inlined now, and the smoke
+  test walks every real import in the two rewritten sources and fails on any
+  that is not on the list, rather than naming the three it already knew.
+
+  The panel carries an SDK snippet like the one above it, following the form as
+  you change it, and the smoke test runs it: the path it prints has to derive
+  the key the button actually adds.
+
   It works in the offline copy, which is the point: building and signing the
   transition needs no network, so the phrase stays on the machine that holds it
   and only a signed hex string travels. What the chain has to supply — revision,

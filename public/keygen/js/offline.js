@@ -20,6 +20,7 @@ export const CSP = [
 export const SDK_SPECIFIER = "'../../shared/vendor/evo-sdk.module.js'";
 export const KEYS_SPECIFIER = "'./keys.js'";
 export const QR_SPECIFIER = "'../../shared/qr.js'";
+export const SECRETS_SPECIFIER = "'../../shared/secrets.js'";
 
 export const BOOTSTRAP = `
 document.documentElement.dataset.offline = '1';
@@ -27,23 +28,31 @@ const src = (id) => document.getElementById(id).textContent;
 const blob = (s) => URL.createObjectURL(new Blob([s], { type: 'text/javascript' }));
 const sdkUrl = blob(src('src-sdk'));
 const qrUrl = blob(src('src-qr'));
+const secretsUrl = blob(src('src-secrets'));
 const keysUrl = blob(src('src-keys').replace(${JSON.stringify(SDK_SPECIFIER)}, JSON.stringify(sdkUrl)));
 const appUrl = blob(src('src-app')
   .replace(${JSON.stringify(KEYS_SPECIFIER)}, JSON.stringify(keysUrl))
-  .replace(${JSON.stringify(QR_SPECIFIER)}, JSON.stringify(qrUrl)));
+  .replace(${JSON.stringify(QR_SPECIFIER)}, JSON.stringify(qrUrl))
+  .replace(${JSON.stringify(SECRETS_SPECIFIER)}, JSON.stringify(secretsUrl)));
 await import(appUrl);
 `;
 
 // Take the markup from the pristine page source, never from the live DOM — the
 // live one holds the keys that were just generated.
+// Every import specifier the copy must rewrite. Adding an import to app.js or
+// keys.js without adding it here leaves a relative URL inside a blob, which
+// cannot resolve and stops the page dead before anything renders. The smoke
+// test walks the built file and fails on any specifier that is not a blob.
+export const REWRITTEN_SPECIFIERS = [SDK_SPECIFIER, KEYS_SPECIFIER, QR_SPECIFIER, SECRETS_SPECIFIER];
+
 export function extractMarkup(pageHtml) {
   const match = pageHtml.match(/<div class="wrap" id="kgWrap">[\s\S]*?<\/div>\s*(?=<script)/);
   if (!match) throw new Error('Could not find the page markup to copy.');
   return match[0].trimEnd();
 }
 
-export function buildOfflineHtml({ page, theme, css, appJs, keysJs, qrJs, sdk }) {
-  for (const [name, source] of Object.entries({ appJs, keysJs, qrJs, sdk })) {
+export function buildOfflineHtml({ page, theme, css, appJs, keysJs, qrJs, secretsJs, sdk }) {
+  for (const [name, source] of Object.entries({ appJs, keysJs, qrJs, secretsJs, sdk })) {
     // An inert block ends at the first closing script tag, so a source that
     // contained one would silently truncate the file.
     if (source.includes('</script')) throw new Error(`${name} contains a closing script tag and cannot be inlined.`);
@@ -63,6 +72,7 @@ export function buildOfflineHtml({ page, theme, css, appJs, keysJs, qrJs, sdk })
 ${extractMarkup(page)}
 ${inert('src-sdk', sdk)}
 ${inert('src-qr', qrJs)}
+${inert('src-secrets', secretsJs)}
 ${inert('src-keys', keysJs)}
 ${inert('src-app', appJs)}
 <script type="module">${BOOTSTRAP}</script>

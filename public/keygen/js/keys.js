@@ -272,3 +272,72 @@ export function missingRoles(existingKeys) {
     // A slot another key already sits in cannot be reused, whatever its purpose.
     .map((role) => ({ ...role, slotTaken: taken.has(role.keyId) }));
 }
+
+/**
+ * The SDK calls behind the add-key panel, as copy-paste code. Lives here rather
+ * than in the UI so the smoke test can run it and prove the snippet is not
+ * fiction — the same rule the derivation snippet follows.
+ */
+export function addKeySnippet(network, { purpose = 'AUTHENTICATION', securityLevel = 'CRITICAL', bound = false } = {}) {
+  const suffix = network === 'mainnet' ? 'Mainnet' : 'Testnet';
+  const coin = network === 'mainnet' ? '5' : '1';
+  return `import {
+  wallet, PrivateKey, IdentityPublicKey, IdentityPublicKeyInCreation,
+  IdentityUpdateTransition, KeyType${bound ? ', ContractBounds' : ''},
+} from '@dashevo/evo-sdk';
+
+// Three numbers come from the chain and nothing else here does, which is why
+// this can run on a machine with no network at all:
+//   revision  identity.revision + 1n
+//   nonce     await sdk.identities.nonce(identityId) + 1n
+//   masterKeyId  the key with securityLevel MASTER
+const identityId = '…';
+const revision = 2n, nonce = 5n, masterKeyId = 0, newKeyId = 5;
+
+// The two keys. From a phrase — DIP-13 m/9'/${coin}'/5'/0'/0'/0'/{keyId} —
+// or pasted, because an identity's keys need not come from a phrase.
+const base = await wallet.derivationPathDip13${suffix}(5);
+const at = async (keyId) => wallet.deriveKeyFromSeedWithPath({
+  mnemonic, path: \`\${base.path}/0'/0'/0'/\${keyId}'\`, network: '${network}',
+});
+const master = await (await at(masterKeyId)).toObject();
+const fresh = await (await at(newKeyId)).toObject();
+// Or: const master = await wallet.keyPairFromWif(masterWif);
+//     const fresh  = await wallet.generateKeyPair('${network}');
+
+const hex = (h) => Uint8Array.from(h.match(/../g).map((b) => parseInt(b, 16)));
+const added = new IdentityPublicKeyInCreation({
+  keyId: newKeyId,
+  purpose: '${purpose}',
+  securityLevel: '${securityLevel}',
+  keyType: KeyType.ECDSA_SECP256K1,
+  data: hex(fresh.publicKey),${bound ? `
+  // Bound keys work with one contract and nowhere else. DashPay's
+  // contactRequest requires them; its profile does not.
+  contractBounds: ContractBounds.SingleContractDocumentType(dashpayId, 'contactRequest'),` : ''}
+});
+
+// Proof of possession: the key being added signs the transition, over the
+// transition with the key signatures still empty. It has to be set on the key
+// BEFORE the transition is built — publicKeyIdsToAdd hands back copies, so
+// writing to those is lost at serialisation and the signature comes out empty.
+const shape = { identityId, revision, nonce, addPublicKeys: [added], disablePublicKeys: [] };
+const probe = new IdentityUpdateTransition(shape).toStateTransition();
+probe.signByPrivateKey(PrivateKey.fromWIF(fresh.privateKeyWif), newKeyId, KeyType.ECDSA_SECP256K1);
+added.signature = probe.signature;
+
+// Then the master key signs the whole thing. An identity update takes no other:
+// transition.getKeyLevelRequirement('AUTHENTICATION') === ['MASTER'].
+const transition = new IdentityUpdateTransition(shape).toStateTransition();
+transition.sign(PrivateKey.fromWIF(master.privateKeyWif), new IdentityPublicKey({
+  keyId: masterKeyId,
+  purpose: 'AUTHENTICATION',
+  securityLevel: 'MASTER',
+  keyType: KeyType.ECDSA_SECP256K1,
+  data: hex(master.publicKey),
+  readOnly: false,
+}));
+
+// Everything above is offline. Only this line needs a node.
+await sdk.stateTransitions.broadcastAndWait(transition.toHex());`;
+}

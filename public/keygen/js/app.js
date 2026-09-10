@@ -1,10 +1,11 @@
 // keygen — UI wiring. Nothing here touches the network except the explicit
 // "download offline copy" action, which reads this page's own assets.
 import {
-  generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet,
+  generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet, addKeySnippet,
   buildAddKeyTransition, missingRoles, loadEvo, KEY_ROLES,
 } from './keys.js';
 import { qrSvg } from '../../shared/qr.js';
+import { looksLikeSecret } from '../../shared/secrets.js';
 // offline.js is imported on demand: the offline copy hides the download button
 // and has no files to resolve a relative import against.
 
@@ -176,16 +177,17 @@ const fetchText = async (path) => {
 
 async function buildOfflineCopy() {
   const { buildOfflineHtml } = await import('./offline.js');
-  const [page, theme, css, appJs, keysJs, qrJs, sdk] = await Promise.all([
+  const [page, theme, css, appJs, keysJs, qrJs, secretsJs, sdk] = await Promise.all([
     fetchText('/keygen/index.html'),
     fetchText('/shared/theme.css'),
     fetchText('/keygen/css/keygen.css'),
     fetchText('/keygen/js/app.js'),
     fetchText('/keygen/js/keys.js'),
     fetchText('/shared/qr.js'),
+    fetchText('/shared/secrets.js'),
     fetchText('/shared/vendor/evo-sdk.module.js'),
   ]);
-  const html = buildOfflineHtml({ page, theme, css, appJs, keysJs, qrJs, sdk });
+  const html = buildOfflineHtml({ page, theme, css, appJs, keysJs, qrJs, secretsJs, sdk });
 
   const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
   const a = document.createElement('a');
@@ -238,7 +240,10 @@ const netMirrors = () => [$('netsel'), $('akNet')];
 function syncNetwork(from) {
   for (const select of netMirrors()) if (select !== from) select.value = from.value;
 }
-for (const select of netMirrors()) select.addEventListener('change', () => syncNetwork(select));
+for (const select of netMirrors()) select.addEventListener('change', () => {
+  syncNetwork(select);
+  renderAddKeySnippet();
+});
 
 // MASTER is not offered. An identity update is the only way to add a key and
 // it can only be signed by a master key, so an identity without one can never
@@ -332,14 +337,54 @@ function fillRoles(missing) {
 function describeRole() {
   const option = $('akRole').selectedOptions[0];
   $('akRoleUse').textContent = option ? option.dataset.use ?? '' : '';
+  renderAddKeySnippet();
 }
 $('akRole').addEventListener('change', describeRole);
 
+// The same promise the page above makes: what is written here is what runs.
+// It follows the form as you change it, so the code matches the key you are
+// about to add rather than a generic example.
+function renderAddKeySnippet() {
+  const host = $('akSnippet');
+  const wasOpen = host.querySelector('details')?.open ?? false;
+  const [purpose, securityLevel] = ($('akRole').value || 'AUTHENTICATION|CRITICAL|2').split('|');
+  host.replaceChildren(snippet(
+    addKeySnippet($('netsel').value, {
+      purpose,
+      securityLevel,
+      bound: Boolean($('akBoundContract').value.trim()),
+    }),
+    wasOpen,
+  ));
+}
+$('akBoundContract').addEventListener('input', renderAddKeySnippet);
+
+// An id or a .dash name. The name is the thing people actually know, and this
+// box sits a few fields above two that want private keys — so a key pasted in
+// the wrong one must not become a DPNS lookup, which is a request to a node.
+async function resolveIdentityInput(sdk, raw) {
+  const input = (raw || '').trim();
+  if (!input) throw new Error('Give the identity id or its .dash name.');
+  if (looksLikeSecret(input)) {
+    throw new Error('That looks like a private key or a recovery phrase, not an identity id or a name. '
+      + 'Nothing was sent. The key fields are further down.');
+  }
+  if (/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(input)) return { identityId: input, name: '' };
+
+  const label = input.replace(/\.dash$/i, '').toLowerCase();
+  const owner = await sdk.dpns.resolveName(label);
+  if (!owner) throw new Error(`No identity owns the name "${input}" on ${$('netsel').value}.`);
+  return { identityId: String(owner), name: `${label}.dash` };
+}
+
 $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking…', async () => {
   clearError();
-  const identityId = $('akIdentity').value.trim();
-  if (!identityId) throw new Error('Paste the identity id first.');
   const sdk = await connected();
+  const resolved = await resolveIdentityInput(sdk, $('akIdentity').value);
+  const identityId = resolved.identityId;
+  // Put the id in the box: everything below works from it, and it is what you
+  // want on screen once the name has done its job.
+  $('akIdentity').value = identityId;
 
   const net = $('netsel').value;
   let identity;
@@ -372,9 +417,10 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
     .map((k) => `#${k.keyId}  ${k.purpose} / ${k.securityLevel}${k.disabled ? '  (disabled)' : ''}`)
     .join('\n');
   const summary = el('div', missing.length ? 'note warn' : 'note ok',
-    missing.length
+    (resolved.name ? `${resolved.name} is ${identityId}. ` : '')
+    + (missing.length
       ? `Missing: ${missing.map((m) => `${m.purpose}/${m.securityLevel}`).join(', ')}.`
-      : 'This identity has all five standard keys.');
+      : 'This identity has all five standard keys.'));
   $('akKeys').replaceChildren(box, summary);
 
   // The next free slot, which is what a new key has to use — the role's own
@@ -403,7 +449,12 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
   if (usingWif && !$('akMasterWif').value.trim()) {
     throw new Error('Paste the master key of this identity, or switch back to deriving from a phrase.');
   }
-  if (!(await isValidMnemonic(mnemonic))) throw new Error('That phrase is not valid.');
+  // Only when the phrase is the thing being used. Left unconditional, this
+  // rejected an empty phrase on the pasted-key route, where there is no phrase
+  // by design and the message pointed at a field that was not even on screen.
+  if (!usingWif && !(await isValidMnemonic(mnemonic))) {
+    throw new Error('That phrase is not a valid mnemonic — check for typos or a missing word.');
+  }
 
   const [purpose, securityLevel] = ($('akRole').value || 'AUTHENTICATION|CRITICAL|2').split('|');
   const built = await buildAddKeyTransition({
@@ -490,3 +541,4 @@ if (isOffline()) {
 fillRoles();
 renderPhraseState();
 renderSource();
+renderAddKeySnippet();

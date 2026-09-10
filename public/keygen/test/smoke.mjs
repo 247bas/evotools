@@ -2,10 +2,11 @@
 // the address, and the result matches what onboard derives from the same phrase.
 // Run: node public/keygen/test/smoke.mjs
 import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
-import { generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet } from '../js/keys.js';
+import { generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet, addKeySnippet } from '../js/keys.js';
 import { qrMatrix } from '../../shared/qr.js';
 import {
   buildOfflineHtml, extractMarkup, SDK_SPECIFIER, KEYS_SPECIFIER, QR_SPECIFIER,
+  SECRETS_SPECIFIER, REWRITTEN_SPECIFIERS,
 } from '../js/offline.js';
 import { deriveFundingAddress, deriveIdentityKeys } from '../../onboard/js/wallet.js';
 import { setNetwork } from '../../onboard/js/sdk.js';
@@ -67,13 +68,14 @@ const sources = {
   appJs: read('../js/app.js'),
   keysJs: read('../js/keys.js'),
   qrJs: read('../../shared/qr.js'),
+  secretsJs: read('../../shared/secrets.js'),
   sdk: read('../../shared/vendor/evo-sdk.module.js'),
 };
 // The page fetches those same sources by URL to build the copy in the browser,
 // and this test reads them from disk — so a file that moves passes here while
 // the download 404s in production. Check the URLs the page actually asks for.
 const fetched = [...sources.appJs.matchAll(/fetchText\('([^']+)'\)/g)].map((m) => m[1]);
-check(fetched.length === 7, `the offline build fetches ${fetched.length} sources`);
+check(fetched.length === 8, `the offline build fetches ${fetched.length} sources`);
 for (const url of fetched) {
   // The site is served from public/, which is two levels up from this test.
   check(existsSync(new URL(`../..${url}`, import.meta.url)), `${url} exists where the page asks for it`);
@@ -84,10 +86,30 @@ for (const url of fetched) {
 check(sources.keysJs.includes(SDK_SPECIFIER), `keys.js still imports ${SDK_SPECIFIER}`);
 check(sources.appJs.includes(KEYS_SPECIFIER), `app.js still imports ${KEYS_SPECIFIER}`);
 check(sources.appJs.includes(QR_SPECIFIER), `app.js still imports ${QR_SPECIFIER}`);
+check(sources.appJs.includes(SECRETS_SPECIFIER), `app.js still imports ${SECRETS_SPECIFIER}`);
 
 const html = buildOfflineHtml(sources);
 check(html.includes("connect-src 'none'"), 'the copy forbids every network request');
-check(['src-sdk', 'src-qr', 'src-keys', 'src-app'].every((id) => html.includes(`id="${id}"`)), 'all four sources are inlined');
+check(['src-sdk', 'src-qr', 'src-secrets', 'src-keys', 'src-app'].every((id) => html.includes(`id="${id}"`)), 'all five sources are inlined');
+
+// The gap that let an import slip through: the checks above name the
+// specifiers they know about, so a new one is simply not looked at. Inside the
+// copy every module lives at a blob URL, and a relative path cannot resolve
+// from there — it stops the page before anything renders. So walk the two
+// sources that get rewritten and insist every import they make is on the list.
+// Anchored to the start of a line, so it sees real import statements and not
+// the SDK snippet these files carry as text — that one imports
+// '@dashevo/evo-sdk' for a reader to copy, and is never executed here.
+const importsIn = (src) =>
+  [...src.matchAll(/^import\s[\s\S]*?from\s+(['"])([^'"]+)\1/gm)].map((m) => `'${m[2]}'`);
+const rewritten = new Set(REWRITTEN_SPECIFIERS);
+for (const [name, src] of [['app.js', sources.appJs], ['keys.js', sources.keysJs]]) {
+  const strays = importsIn(src).filter((spec) => !rewritten.has(spec));
+  check(strays.length === 0,
+    strays.length
+      ? `${name} imports ${strays.join(', ')}, which the offline copy cannot resolve — add it to REWRITTEN_SPECIFIERS`
+      : `every import in ${name} is one the offline copy rewrites`);
+}
 check(!html.includes('src="/shared/nav.js"') && !html.includes('src="js/app.js"'), 'no external script tags survive');
 check(html.includes('id="genBtn"') && html.includes('id="downloadBtn"'), 'the markup came along');
 check(!html.includes(mnemonic), 'no generated phrase leaked into the copy');
@@ -213,6 +235,40 @@ console.log('\n9. Adding a key to an identity that already exists');
     mnemonic: PHRASE, network: 'testnet', identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
     revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 0,
   }), 'master key', 'adding a key into the master key\'s own slot');
+}
+
+console.log('\n9b. The add-key snippet is the code that actually runs');
+for (const net of ['mainnet', 'testnet']) {
+  const code = addKeySnippet(net, { purpose: 'AUTHENTICATION', securityLevel: 'CRITICAL' });
+  const coin = net === 'mainnet' ? '5' : '1';
+  check(code.includes(`m/9'/${coin}'/5'/0'/0'/0'/{keyId}`), `${net}: the snippet names the DIP-13 path this page uses`);
+  check(code.includes('added.signature = probe.signature'),
+    `${net}: it shows the proof of possession being set before the transition is built`);
+  check(code.includes("getKeyLevelRequirement('AUTHENTICATION') === ['MASTER']"),
+    `${net}: and says which key an identity update takes`);
+  check(!code.includes('ContractBounds'), `${net}: no bounds unless one is asked for`);
+}
+const boundCode = addKeySnippet('mainnet', { bound: true });
+check(boundCode.includes('ContractBounds.SingleContractDocumentType'), 'asking for a bound puts it in the snippet');
+check(boundCode.includes('contactRequest'), 'with the DashPay case it exists for');
+
+// The snippet's own derivation has to land on the same keys as the tool, or it
+// is a plausible-looking lie. Same phrase, same path, compared key for key.
+{
+  const PHRASE = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const Evo = await import('../../shared/vendor/evo-sdk.module.js');
+  const base = await Evo.wallet.derivationPathDip13Testnet(5);
+  const fromSnippetPath = await Evo.wallet.deriveKeyFromSeedWithPath({
+    mnemonic: PHRASE, path: `${base.path}/0'/0'/0'/5'`, network: 'testnet',
+  });
+  const { buildAddKeyTransition } = await import('../js/keys.js');
+  const built = await buildAddKeyTransition({
+    mnemonic: PHRASE, network: 'testnet',
+    identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 5,
+  });
+  check(built.added.publicKeyHex === fromSnippetPath.toObject().publicKey,
+    'the path the snippet prints derives the key the tool actually adds');
 }
 
 console.log('\n8. The SDK snippet in the dropdown actually runs');
