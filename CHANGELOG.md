@@ -15,6 +15,17 @@ rather than installable releases.
   contract takes CRITICAL *or* HIGH, and only moving a token is strict about
   CRITICAL, so /tokens no longer says otherwise.
 
+  The keys can come from a recovery phrase or from a master key you paste. The
+  phrase route reproduces both keys forever and is the tidy one; the pasted
+  route exists because an identity's keys need not come from a phrase at all —
+  that is this page's habit, not a rule, and Dash Evo Tool hands out keys one at
+  a time. With a pasted master and no key given, a fresh one is generated, and
+  the page says plainly that what it shows is the only copy that will ever
+  exist. When the identity has been looked up, the key given is checked against
+  the master key actually on it before anything is broadcast, so a WIF from the
+  wrong wallet or a phrase from a different identity is caught here rather than
+  by a node.
+
   It works in the offline copy, which is the point: building and signing the
   transition needs no network, so the phrase stays on the machine that holds it
   and only a signed hex string travels. What the chain has to supply — revision,

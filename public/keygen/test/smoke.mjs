@@ -177,6 +177,38 @@ console.log('\n9. Adding a key to an identity that already exists');
     .fromStateTransition(Evo.StateTransition.fromHex(built.hex)).publicKeyIdsToAdd[0];
   check(!unbound.contractBounds, 'and a key asked for without a bound has none, rather than an empty one');
 
+  // A pasted master key is the route for an identity that never came from a
+  // phrase — Dash Evo Tool hands out keys, not phrases. Both routes have to
+  // reach the same key, or the check against the identity is meaningless.
+  const masterKey = await Evo.wallet.deriveKeyFromSeedWithPath({
+    mnemonic: PHRASE, path: "m/9'/1'/5'/0'/0'/0'/0'", network: 'testnet',
+  });
+  const common = {
+    network: 'testnet', identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 5,
+  };
+  const viaPhrase = await buildAddKeyTransition({ ...common, mnemonic: PHRASE });
+  const viaWif = await buildAddKeyTransition({ ...common, masterWif: masterKey.privateKeyWif });
+  check(viaWif.masterKeyHash === viaPhrase.masterKeyHash,
+    'a pasted master key reaches the same key as deriving it from the phrase');
+  check(viaWif.generated === true && viaPhrase.generated === false,
+    'with no phrase and no key given, one is generated; with a phrase it is derived');
+  check(/^[59KLc]/.test(viaWif.added.wif), 'and the generated key comes back as a WIF, the only copy of it');
+
+  const supplied = await Evo.wallet.generateKeyPair('testnet');
+  const viaBoth = await buildAddKeyTransition({
+    ...common, masterWif: masterKey.privateKeyWif, newKeyWif: supplied.privateKeyWif,
+  });
+  check(viaBoth.added.wif === supplied.privateKeyWif, 'a key you already hold can be added as it is');
+  check(viaBoth.generated === false, 'and is not reported as generated');
+
+  await refusesTo(() => buildAddKeyTransition({ ...common }),
+    'recovery phrase or the private key', 'neither a phrase nor a master key');
+  await refusesTo(() => buildAddKeyTransition({ ...common, masterWif: 'not-a-wif' }),
+    'master key is not a valid WIF', 'a master key that is not a WIF');
+  await refusesTo(() => buildAddKeyTransition({ ...common, masterWif: masterKey.privateKeyWif, newKeyWif: 'not-a-wif' }),
+    'new key is not a valid WIF', 'a new key that is not a WIF');
+
   await refusesTo(() => buildAddKeyTransition({
     mnemonic: PHRASE, network: 'testnet', identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
     revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 0,

@@ -142,6 +142,7 @@ export async function buildAddKeyTransition({
   mnemonic, network, identityId, revision, nonce,
   masterKeyId = 0, newKeyId, purpose = 'AUTHENTICATION', securityLevel = 'CRITICAL',
   boundContractId, boundDocumentType,
+  masterWif, newKeyWif,
 }) {
   const Evo = await loadEvo();
   const {
@@ -152,15 +153,45 @@ export async function buildAddKeyTransition({
   if (!Number.isInteger(newKeyId) || newKeyId < 0) throw new Error('The new key needs a key id.');
   if (newKeyId === masterKeyId) throw new Error('That slot is the master key.');
 
-  const base = await identityBase(network);
+  // Where the two keys come from. A phrase is the tidy route, because both keys
+  // are reproducible from it forever. But an identity's keys need not come from
+  // a phrase at all — that is this tool's assumption, not the protocol's — and
+  // anyone whose identity was made in Dash Evo Tool holds a WIF and no phrase.
+  // So a pasted master key is an equal route, and the key being added can be a
+  // WIF you already have or one generated here.
+  if (!mnemonic && !masterWif) {
+    throw new Error('Give either a recovery phrase or the private key of this identity\'s master key.');
+  }
+
+  const fromWif = async (wif, label) => {
+    let pair;
+    try { pair = await wallet.keyPairFromWif(wif.trim()); }
+    catch { throw new Error(`The ${label} is not a valid WIF private key.`); }
+    return { path: 'pasted', privateKeyWif: pair.privateKeyWif, publicKey: pair.publicKey };
+  };
+
   const at = async (keyId) => {
+    const base = await identityBase(network);
     const path = `${base.path}/0'/0'/0'/${keyId}'`;
     const k = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path, network });
     return { path, ...k.toObject() };
   };
 
-  const master = await at(masterKeyId);
-  const fresh = await at(newKeyId);
+  const master = masterWif ? await fromWif(masterWif, 'master key') : await at(masterKeyId);
+
+  let fresh;
+  let generated = false;
+  if (newKeyWif) {
+    fresh = await fromWif(newKeyWif, 'new key');
+  } else if (mnemonic) {
+    fresh = await at(newKeyId);
+  } else {
+    // No phrase to derive from and none supplied, so make one. This is the only
+    // copy that will ever exist of it, which the caller has to say out loud.
+    const pair = await wallet.generateKeyPair(network);
+    fresh = { path: 'generated', privateKeyWif: pair.privateKeyWif, publicKey: pair.publicKey };
+    generated = true;
+  }
 
   // Contract bounds tie a key to one contract, or to one document type inside
   // it. A contract can demand that: DashPay's `contactRequest` sets
@@ -215,6 +246,7 @@ export async function buildAddKeyTransition({
   return {
     hex: transition.toHex(),
     masterKeyHash: masterPublicKey.getPublicKeyHash(),
+    generated,
     added: {
       keyId: newKeyId,
       purpose,

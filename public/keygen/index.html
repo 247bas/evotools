@@ -259,7 +259,37 @@
         </div>
       </details>
 
+      <div class="field">
+        <label for="akSource">Where the keys come from</label>
+        <select id="akSource">
+          <option value="phrase">My recovery phrase — both keys derived from it</option>
+          <option value="wif">I'll paste my master key</option>
+        </select>
+      </div>
+
       <div id="akPhraseState"></div>
+
+      <div id="akWifBlock" hidden>
+        <p class="fineprint">
+          An identity's keys need not come from a phrase — that is this page's
+          habit, not a rule. Dash Evo Tool hands you keys one at a time, so a
+          master key on its own is a normal thing to have. Nothing typed here
+          leaves the browser.
+        </p>
+        <div class="field">
+          <label for="akMasterWif">Master key of this identity (WIF)</label>
+          <input id="akMasterWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="akNewWif">The key to add (WIF), optional</label>
+          <input id="akNewWif" type="password" placeholder="leave empty and one is generated for you" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="note warn">
+          Leave the second field empty and a fresh key is made here and now. What
+          comes out below is the only copy that will ever exist of it — there is
+          no phrase to derive it from again. Write it down before you broadcast.
+        </div>
+      </div>
 
       <p class="fineprint">
         The phrase above is what the new key is derived from, so generate or

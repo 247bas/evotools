@@ -292,6 +292,21 @@ function renderPhraseState() {
 
 $('mnemonicInput').addEventListener('input', renderPhraseState);
 
+// Two routes to the same transition. The phrase one reproduces both keys
+// forever; the pasted one works for an identity that never came from a phrase.
+function renderSource() {
+  const wif = $('akSource').value === 'wif';
+  $('akWifBlock').hidden = !wif;
+  $('akPhraseState').hidden = wif;
+  // The key id drives the derivation path, which a pasted key does not have.
+  $('akNewId').closest('.field').hidden = false;
+}
+$('akSource').addEventListener('change', renderSource);
+
+// What the lookup found, so a pasted master key can be checked against the
+// identity before anything is broadcast.
+let identityMasterHash = null;
+
 const DASHPAY_CONTRACT = 'Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7';
 $('akDashpayBtn').addEventListener('click', () => {
   $('akBoundContract').value = DASHPAY_CONTRACT;
@@ -346,6 +361,7 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
   $('akNonce').value = String(nonce + 1n);
   const master = keys.find((k) => k.securityLevel === 'MASTER' && !k.disabledAt);
   if (master) $('akMasterId').value = String(master.keyId);
+  identityMasterHash = master ? master.getPublicKeyHash() : null;
 
   const shaped = keys.map((k) => ({ keyId: k.keyId, purpose: k.purpose, securityLevel: k.securityLevel, disabled: Boolean(k.disabledAt) }));
   const missing = missingRoles(shaped);
@@ -376,17 +392,24 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
 
 $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…', async () => {
   clearError();
+  const usingWif = $('akSource').value === 'wif';
   const mnemonic = loadedPhrase();
-  if (!mnemonic) {
+  if (!usingWif && !mnemonic) {
     openPhraseBlock();
     throw new Error('The new key is derived from your recovery phrase, and none is loaded yet. '
-      + 'The field is open now, in the section above — paste the phrase of this identity there and try again.');
+      + 'The field is open now, in the section above — paste the phrase of this identity there and try again. '
+      + 'No phrase? Switch "Where the keys come from" to pasting your master key.');
+  }
+  if (usingWif && !$('akMasterWif').value.trim()) {
+    throw new Error('Paste the master key of this identity, or switch back to deriving from a phrase.');
   }
   if (!(await isValidMnemonic(mnemonic))) throw new Error('That phrase is not valid.');
 
   const [purpose, securityLevel] = ($('akRole').value || 'AUTHENTICATION|CRITICAL|2').split('|');
   const built = await buildAddKeyTransition({
-    mnemonic,
+    mnemonic: usingWif ? undefined : mnemonic,
+    masterWif: usingWif ? $('akMasterWif').value : undefined,
+    newKeyWif: usingWif ? ($('akNewWif').value.trim() || undefined) : undefined,
     network: $('netsel').value,
     identityId: $('akIdentity').value.trim(),
     revision: $('akRevision').value.trim(),
@@ -399,6 +422,17 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
     boundDocumentType: $('akBoundType').value.trim() || undefined,
   });
 
+  // The signature is made by whatever key was given; whether that key is on the
+  // identity is a different question, and the lookup already knows the answer.
+  // Catching it here costs nothing and saves a broadcast that could only fail.
+  if (identityMasterHash && built.masterKeyHash !== identityMasterHash) {
+    throw new Error(
+      'That is not the master key of this identity. The key given hashes to '
+      + `${built.masterKeyHash}, and the identity's master key is ${identityMasterHash}. `
+      + (usingWif ? 'Check the WIF.' : 'This phrase is probably from a different identity.'),
+    );
+  }
+
   const out = $('akOut');
   out.replaceChildren();
 
@@ -409,7 +443,10 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
 
   for (const [label, value] of [
     ['New key, public', built.added.publicKeyHex],
-    ['New key, private (WIF) — write this down', built.added.wif],
+    [built.generated
+      ? 'New key, private (WIF) — the only copy there is, write it down now'
+      : 'New key, private (WIF) — write this down',
+    built.added.wif],
     ['Signed transition (hex)', built.hex],
   ]) {
     const field = el('div', 'field');
@@ -452,3 +489,4 @@ if (isOffline()) {
 }
 fillRoles();
 renderPhraseState();
+renderSource();

@@ -140,7 +140,8 @@
    network select, so the values below are the ones /credits and /tokens use,
    to keep one look across the suite. */
 #addKeyPanel .field > label { display: block; margin-bottom: 7px; }
-#addKeyPanel input[type="text"] {
+#addKeyPanel input[type="text"],
+#addKeyPanel input[type="password"] {
   width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
   background: rgba(0, 0, 0, 0.35); color: var(--text);
   font-family: var(--mono, ui-monospace, monospace); font-size: 0.85rem;
