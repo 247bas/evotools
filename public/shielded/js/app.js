@@ -231,6 +231,9 @@ const compactUsd = (v) => {
   if (abs >= 1000) return `$${Math.round(v / 1000)}k`;
   return `$${Math.round(v)}`;
 };
+// Shield sizes span 0.00001 DASH to five thousand, so a fixed number of
+// decimals prints the small end as zero.
+const smallAmt = (v) => (v >= 1 ? Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v >= 0.001 ? v.toFixed(3) : v.toPrecision(2));
 const signed = (r) => (Number.isFinite(r) ? `${r >= 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}` : '—');
 const pText = (p) => (!Number.isFinite(p) ? '—' : p < 0.001 ? '<0.001' : p.toFixed(3));
 // In a sentence the operator has to read right: "p < 0.001", not "p = <0.001".
@@ -242,6 +245,11 @@ let datasetPromise = null;
 const dataset = () => (datasetPromise ??= loadDataset());
 
 let priceState = null;      // { chartRows, a }, kept so the unit toggle and a resize can redraw
+// DASH or moves. The two answer different questions and disagree, which is the
+// point of being able to switch: weighted by DASH one large actor carries the
+// table, counted as moves everyone gets one vote and a 0.003 DASH test weighs
+// the same as a 5,199 DASH shield.
+let responseUnit = 'dash';
 let priceUnit = 'dash';
 
 function poolAt(row, unit) { return unit === 'usd' ? row.balance * row.usd : row.balance; }
@@ -441,17 +449,23 @@ const responseNote = (msg) => {
 const dashN = (v, d = 0) => `${Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
 
 function renderResponse(data) {
-  const study = eventStudy(data.events, data.hours, { isIn, isOut, window: 6 });
+  const counting = responseUnit === 'count';
+  // One vote each: the same events with every amount set to one.
+  const events = counting ? data.events.map((e) => ({ ...e, dash: 1 })) : data.events;
+  const amount = (v) => (counting ? v.toFixed(2) : dashN(v, 1));
+  const study = eventStudy(events, data.hours, { isIn, isOut, window: 6 });
   const tb = $('response').querySelector('tbody');
   tb.replaceChildren();
+  $('colIn').textContent = counting ? 'moves in' : 'DASH in';
+  $('colOut').textContent = counting ? 'moves out' : 'DASH out';
   if (!study) { responseNote('Not enough hours yet.'); return; }
 
   const row = (label, cls, n, r) => {
     const tr = el('tr', cls);
     tr.append(el('td', null, label));
     tr.append(el('td', 'num', n == null ? '—' : num(n)));
-    tr.append(el('td', 'num', dashN(r.in, 1)));
-    tr.append(el('td', 'num', dashN(r.out, 1)));
+    tr.append(el('td', 'num', amount(r.in)));
+    tr.append(el('td', 'num', amount(r.out)));
     tr.append(el('td', 'num', r.out > 0 ? `${(r.in / r.out).toFixed(2)}` : '—'));
     tr.append(el('td', 'num', r.p == null ? '' : pText(r.p)));
     tb.append(tr);
@@ -465,26 +479,53 @@ function renderResponse(data) {
   const up = study.rows.filter((r) => r.threshold > 0).sort((x, y) => y.threshold - x.threshold)[0];
   const down = study.rows.filter((r) => r.threshold < 0).sort((x, y) => x.threshold - y.threshold)[0];
   const base = study.baseline.out > 0 ? study.baseline.in / study.baseline.out : NaN;
+  const unitWord = counting ? 'moves' : 'DASH';
   const parts = [];
   if (up) {
     parts.push(up.p < 0.05
-      ? `A rise pulls credits in: after an hour up ${Math.abs(up.threshold * 100).toFixed(0)}% or more, ${dashN(up.in, 0)} DASH went into the pool over the next six hours against ${dashN(study.baseline.in, 0)} for an ordinary hour, and where an ordinary hour is followed by ${base.toFixed(1)} times as much going in as coming out, this one is followed by ${(up.in / up.out).toFixed(1)} times. That holds up against six-hour windows drawn at random (${pPhrase(up.p)}).`
+      ? `A rise pulls ${counting ? 'people' : 'credits'} in: after an hour up ${Math.abs(up.threshold * 100).toFixed(0)}% or more, ${amount(up.in)} ${unitWord} went into the pool over the next six hours against ${amount(study.baseline.in)} for an ordinary hour, and where an ordinary hour is followed by ${base.toFixed(1)} times as much going in as coming out, this one is followed by ${(up.in / up.out).toFixed(1)} times. That holds up against six-hour windows drawn at random (${pPhrase(up.p)}).`
       : `After a rise the pool is busier, but not beyond what a randomly chosen six hours does (${pPhrase(up.p)}).`);
   }
   if (down) {
     parts.push(down.p < 0.05
-      ? `A fall pushes them out: the same window after an hour down ${Math.abs(down.threshold * 100).toFixed(0)}% or more nets ${dashN(down.net, 0)} DASH (${pPhrase(down.p)}).`
-      : `A fall makes both directions busy at once and the pool roughly breaks even: ${dashN(down.in, 0)} in against ${dashN(down.out, 0)} out, a net the random windows match easily (${pPhrase(down.p)}). Money leaving on a drop is what the daily figure was hiding, because it arrives alongside money coming in and a day-sized bucket adds the two to nothing.`);
+      ? `A fall pushes them out: the same window after an hour down ${Math.abs(down.threshold * 100).toFixed(0)}% or more nets ${amount(down.net)} ${unitWord} (${pPhrase(down.p)}).`
+      : `A fall sets both directions going at once without tilting the pool either way: ${amount(down.in)} in against ${amount(down.out)} out, which the random windows match easily (${pPhrase(down.p)}). What leaves on a drop is what the daily figure was hiding, because it goes out alongside what is coming in, and a day-sized bucket adds the two to nothing.`);
   }
-  // With a sample this size one large transition lands in a handful of windows
-  // and moves every average in the table. Say how heavy the heaviest one is,
-  // because the reader cannot see it in a mean.
+
+  // The two views answer different questions, and the gap between them is the
+  // finding. Measured here rather than asserted, so it stays true as the pool
+  // grows: the other unit's ratios, without the permutation it does not need.
+  const otherEvents = counting ? data.events : data.events.map((e) => ({ ...e, dash: 1 }));
+  const other = eventStudy(otherEvents, data.hours, { isIn, isOut, window: 6, draws: 0 });
+  const pick = (s, sign) => s?.rows.filter((r) => (sign > 0 ? r.threshold > 0 : r.threshold < 0))
+    .sort((x, y) => (sign > 0 ? y.threshold - x.threshold : x.threshold - y.threshold))[0];
+  const oUp = pick(other, 1); const oDown = pick(other, -1);
+  if (up && down && oUp && oDown) {
+    const swing = (u, d) => (u.out > 0 && d.out > 0 ? (u.in / u.out) / (d.in / d.out) : NaN);
+    const here = swing(up, down); const there = swing(oUp, oDown);
+    if (Number.isFinite(here) && Number.isFinite(there)) {
+      const sizes = data.events.filter((e) => isIn(e.type)).map((e) => e.dash).sort((x, y) => x - y);
+      const small = sizes[0] ?? 0; const large = sizes[sizes.length - 1] ?? 0;
+      parts.push(counting
+        ? `Counted this way a rise tilts the pool inwards ${here.toFixed(1)}× as hard as a fall does; by DASH the same six hours tilt ${there.toFixed(1)}×. Everyone gets one vote here, so the smallest shield on record (${smallAmt(small)} DASH) weighs what the largest one does (${dashN(large, 0)}), and the gap between those two numbers is the size of what a few large actors are doing.`
+        : `Weighted this way a rise tilts the pool inwards ${here.toFixed(1)}× as hard as a fall does; counted as moves, where everyone gets one vote, the same six hours tilt ${there.toFixed(1)}×. The gap between those two is what a handful of large actors are doing, because a crowd would move both numbers together.`);
+    }
+  }
+
   const inflow = data.events.filter((e) => isIn(e.type));
-  const biggest = inflow.reduce((a, e) => (e.dash > (a?.dash ?? 0) ? e : a), null);
-  const total = inflow.reduce((a, e) => a + e.dash, 0);
-  const share = biggest && total ? biggest.dash / total : 0;
-  if (share > 0.1) {
-    parts.push(`One transition carries ${Math.round(share * 100)}% of everything that has ever gone in (${dashN(biggest.dash, 0)} DASH on ${new Date(biggest.ts).toISOString().slice(0, 10)}), and it sits inside a handful of these windows, so it moves every average in the table by itself.`);
+  if (counting) {
+    const sizes = inflow.map((e) => e.dash).sort((x, y) => x - y);
+    const median = sizes[Math.floor(sizes.length / 2)] ?? 0;
+    parts.push(`Half of the ${num(inflow.length)} shields on record are under ${smallAmt(median)} DASH, so this column counts intent, not money.`);
+  } else {
+    // One large transition lands in a handful of windows and moves every
+    // average here. Say how heavy the heaviest is, since a mean will not.
+    const biggest = inflow.reduce((a, e) => (e.dash > (a?.dash ?? 0) ? e : a), null);
+    const total = inflow.reduce((a, e) => a + e.dash, 0);
+    const share = biggest && total ? biggest.dash / total : 0;
+    if (share > 0.1) {
+      parts.push(`One transition carries ${Math.round(share * 100)}% of everything that has ever gone in (${dashN(biggest.dash, 0)} DASH on ${new Date(biggest.ts).toISOString().slice(0, 10)}), and it sits inside a handful of these windows, so it moves every average in the table by itself.`);
+    }
   }
   parts.push('Six hours and these thresholds were fixed before looking, and the same run measures every threshold, so no one line is a discovery on its own.');
   $('responseVerdict').textContent = parts.join(' ');
@@ -499,11 +540,13 @@ function renderResponse(data) {
 function renderBuckets(data) {
   const box = $('priceBuckets');
   box.replaceChildren();
-  const buckets = byPrice(data.events, { isIn, isOut, bucket: 5 });
+  const counting = responseUnit === 'count';
+  const buckets = byPrice(data.events, { isIn, isOut, bucket: 5 })
+    .map((b) => ({ ...b, shownIn: counting ? b.nIn : b.in, shownOut: counting ? b.nOut : b.out }));
   if (!buckets.length) return;
-  const max = Math.max(...buckets.map((b) => Math.max(b.in, b.out)));
+  const max = Math.max(...buckets.map((b) => Math.max(b.shownIn, b.shownOut)));
   const head = el('div', 'head');
-  head.append(el('span', null, ''), el('span', 'l', 'out of the pool'), el('span', 'r', 'into the pool'));
+  head.append(el('span', null, ''), el('span', 'l', `out of the pool${counting ? ', moves' : ', DASH'}`), el('span', 'r', `into the pool${counting ? ', moves' : ', DASH'}`));
   box.append(head);
   // Mark the band DASH is trading in right now, off the newest candle rather
   // than the newest transition: the pool can be quiet for a day.
@@ -519,7 +562,7 @@ function renderBuckets(data) {
       d.append(el('span', null, value >= 1 ? dashN(value, 0) : value > 0 ? value.toFixed(1) : ''));
       return d;
     };
-    rowEl.append(side('l', b.out), side('r', b.in));
+    rowEl.append(side('l', b.shownOut), side('r', b.shownIn));
     const title = `$${b.from}–${b.to}: ${dashN(b.in, 1)} DASH in over ${b.nIn} moves, ${dashN(b.out, 1)} out over ${b.nOut}`;
     rowEl.title = title;
     box.append(rowEl);
@@ -649,6 +692,14 @@ $('netsel').addEventListener('change', () => {
   history.replaceState(null, '', url);
   loadFlows(currentNet());
   loadPriceView(currentNet());
+});
+
+$('responseToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-unit]');
+  if (!btn || btn.dataset.unit === responseUnit) return;
+  responseUnit = btn.dataset.unit;
+  for (const b of $('responseToggle').querySelectorAll('button')) b.classList.toggle('on', b.dataset.unit === responseUnit);
+  if (priceState?.data) renderResponse(priceState.data);
 });
 
 $('unitToggle').addEventListener('click', (e) => {

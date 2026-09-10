@@ -92,7 +92,13 @@
     </section>
 
     <section class="sh-section" id="responseSection">
-      <h2>What a price move does to the pool</h2>
+      <div class="sh-heading">
+        <h2>What a price move does to the pool</h2>
+        <div class="sh-toggle" id="responseToggle" role="group" aria-label="Measure the flow in">
+          <button type="button" data-unit="dash" class="on">DASH</button>
+          <button type="button" data-unit="count">moves</button>
+        </div>
+      </div>
       <p class="sh-sub">
         The day-to-day figure above finds nothing once volume is out, and that
         is an artefact of the bucket: one day holds both a rise and the selling
@@ -104,7 +110,7 @@
         against the same six hours measured from hours picked at random.
       </p>
       <table class="sh-table sh-response" id="response">
-        <thead><tr><th>After an hour that moved</th><th class="num">times</th><th class="num">in</th><th class="num">out</th><th class="num">in : out</th><th class="num">p</th></tr></thead>
+        <thead><tr><th>After an hour that moved</th><th class="num">times</th><th class="num" id="colIn">in</th><th class="num" id="colOut">out</th><th class="num">in : out</th><th class="num">p</th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="sh-verdict" id="responseVerdict"></p>
@@ -112,7 +118,7 @@
       <h3 class="sh-h3">Where the price stood when credits moved</h3>
       <p class="sh-sub">
         Every transition sorted into a five-dollar band by the price at its
-        block. Read it as a description, not a trigger: over ten weeks DASH
+        block, counted the same way as the table above. Read it as a description, not a trigger: over ten weeks DASH
         visits a level once, so a band and a date are the same fact here. It
         takes a price that comes back to tell them apart, and the file keeps
         growing.

@@ -3,6 +3,21 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
+## Unreleased
+
+- **DASH or moves, on the same six hours.** The event study on /shielded can be
+  read two ways now, and they disagree on purpose. Weighted by DASH, a rise
+  tilts the pool inwards about twice as hard as a fall does; counted as moves,
+  where every transition gets one vote, that difference all but vanishes. Both
+  are true: a price move makes the pool busier in both directions whoever you
+  are, while the money that goes in after a rise comes from a handful of large
+  actors. The gap between the two figures is the size of what those actors are
+  doing, and the page states it rather than leaving the reader to trust one
+  number. The band chart follows the same switch. Each view carries the caveat
+  that fits it: by DASH, that one transition is 31% of everything ever shielded;
+  by moves, that half the shields on record are under a quarter of a DASH, so
+  the column counts intent and not money.
+
 ## 2.2.0 — 2026-09-10
 
 - **One balance, one spelling.** The pool's balance appeared twice on

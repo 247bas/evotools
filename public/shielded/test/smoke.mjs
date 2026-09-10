@@ -322,6 +322,18 @@ check(study.baseline.in > 0 && study.baseline.out > 0, `an ordinary six hours: $
 for (const r of study.rows) {
   check(r.n >= 8 && r.p > 0 && r.p <= 1, `${r.threshold > 0 ? '+' : '−'}${Math.abs(r.threshold * 100).toFixed(0)}% (${r.n}×): ${r.in.toFixed(1)} in, ${r.out.toFixed(1)} out, p = ${r.p.toFixed(3)}`);
 }
+// The page offers the same six hours two ways. Weighted by DASH one large actor
+// can carry the table; counted as moves everyone gets one vote. They are meant
+// to disagree — the gap between them is what the section is about — so both
+// have to compute, and the cheap path used for the comparison must skip the
+// permutation rather than fake a p-value.
+const counted = eventStudy(ev.map((e) => ({ ...e, dash: 1 })), hours, { isIn, isOut, window: 6 });
+check(counted && counted.rows.length === study.rows.length, `counted as moves: an ordinary six hours brings ${counted?.baseline.in.toFixed(2)} in and ${counted?.baseline.out.toFixed(2)} out`);
+check(counted.baseline.in < study.baseline.in, 'a count is not a sum, so the two views do not print the same numbers');
+const cheap = eventStudy(ev.map((e) => ({ ...e, dash: 1 })), hours, { isIn, isOut, window: 6, draws: 0 });
+check(cheap.rows.every((r) => r.p === null) && cheap.rows.every((r, i) => r.in === counted.rows[i].in),
+  'and with no draws asked for it returns the same flows with no p-value rather than a made-up one');
+
 // Seeded on purpose: a p-value that wanders between reloads is not a p-value.
 const again = eventStudy(ev, hours, { isIn, isOut, window: 6 });
 check(study.rows.every((r, i) => r.p === again.rows[i].p), 'the permutation test is seeded, so it answers the same twice');

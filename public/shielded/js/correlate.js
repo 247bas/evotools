@@ -263,6 +263,7 @@ export function eventStudy(events, hours, { isIn, isOut, window = 6, thresholds 
     const idx = rets.filter((r) => (th > 0 ? r.ret >= th : r.ret <= th)).map((r) => r.i);
     if (idx.length < minEvents) continue;
     const obs = measure(idx);
+    if (draws <= 0) { rows.push({ threshold: th, n: idx.length, ...obs, p: null }); continue; }
     let hits = 0;
     for (let d = 0; d < draws; d++) {
       const pick = [];
