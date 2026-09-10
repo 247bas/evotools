@@ -332,6 +332,49 @@ check(boundCode.includes('contactRequest'), 'with the DashPay case it exists for
   check(added6?.purpose === 'ENCRYPTION', 'as an ENCRYPTION key, which is what a contact request needs');
 }
 
+console.log('\n9c. Switching a key off');
+{
+  const { buildDisableKeyTransition, canDisable, whyNotDisable } = await import('../js/keys.js');
+  const Evo = await import('../../shared/vendor/evo-sdk.module.js');
+  const PHRASE = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const ID = 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7';
+
+  // A key is never removed, only switched off — it stays on the identity with a
+  // disabledAt stamp. Three kinds cannot even be switched off, so the powerful
+  // keys are the permanent ones.
+  const cases = [
+    [{ keyId: 0, purpose: 'AUTHENTICATION', securityLevel: 'MASTER' }, false],
+    [{ keyId: 1, purpose: 'AUTHENTICATION', securityLevel: 'HIGH' }, true],
+    [{ keyId: 2, purpose: 'AUTHENTICATION', securityLevel: 'CRITICAL' }, false],
+    [{ keyId: 3, purpose: 'TRANSFER', securityLevel: 'CRITICAL' }, false],
+    [{ keyId: 4, purpose: 'ENCRYPTION', securityLevel: 'MEDIUM' }, true],
+  ];
+  for (const [key, expected] of cases) {
+    check(canDisable(key) === expected,
+      `#${key.keyId} ${key.purpose}/${key.securityLevel}: ${expected ? 'can be switched off' : `permanent — ${whyNotDisable(key)}`}`);
+  }
+
+  const built = await buildDisableKeyTransition({
+    mnemonic: PHRASE, network: 'testnet', identityId: ID,
+    revision: 4, nonce: 7, masterKeyId: 0, disableKeyIds: [5, 6],
+  });
+  const back = Evo.IdentityUpdateTransition.fromStateTransition(Evo.StateTransition.fromHex(built.hex)).toObject();
+  check(JSON.stringify(back.disablePublicKeys) === '[5,6]', 'the key ids to switch off survive the hex');
+  check(back.addPublicKeys.length === 0, 'and nothing is added along the way');
+  check(back.signature?.length === 65 && back.signaturePublicKeyId === 0,
+    'signed by the master key, the same as adding one');
+
+  await refusesTo(() => buildDisableKeyTransition({
+    mnemonic: PHRASE, network: 'testnet', identityId: ID, revision: 4, nonce: 7, disableKeyIds: [],
+  }), 'which key', 'switching nothing off');
+  await refusesTo(() => buildDisableKeyTransition({
+    mnemonic: PHRASE, network: 'testnet', identityId: ID, revision: 4, nonce: 7, disableKeyIds: [0],
+  }), 'master key cannot be switched off', 'switching off the key that signs it');
+  await refusesTo(() => buildDisableKeyTransition({
+    network: 'testnet', identityId: ID, revision: 4, nonce: 7, disableKeyIds: [5],
+  }), 'recovery phrase or the private key', 'no phrase and no master key');
+}
+
 console.log('\n8. The SDK snippet in the dropdown actually runs');
 // Take the code we show developers, point the import at the vendored SDK, feed
 // it the phrase from step 1, and check it lands on the same address.

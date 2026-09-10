@@ -2,7 +2,8 @@
 // "download offline copy" action, which reads this page's own assets.
 import {
   generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet, addKeySnippet,
-  buildAddKeyTransition, missingRoles, loadEvo, KEY_ROLES,
+  buildAddKeyTransition, buildDisableKeyTransition, canDisable, whyNotDisable,
+  missingRoles, loadEvo, KEY_ROLES,
 } from './keys.js';
 import { qrSvg } from '../../shared/qr.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
@@ -427,11 +428,31 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Lookingâ€
   const shaped = keys.map((k) => ({ keyId: k.keyId, purpose: k.purpose, securityLevel: k.securityLevel, disabled: Boolean(k.disabledAt) }));
   const missing = missingRoles(shaped);
 
-  const box = el('div', 'box small mono');
-  box.style.whiteSpace = 'pre-line';
-  box.textContent = shaped
-    .map((k) => `#${k.keyId}  ${k.purpose} / ${k.securityLevel}${k.disabled ? '  (disabled)' : ''}`)
-    .join('\n');
+  // Each key is a row you can act on, not a line of text. Which ones can be
+  // switched off is a rule worth showing rather than explaining: the powerful
+  // three are permanent, and seeing that beside them is the clearest way to say
+  // it before somebody adds a fourth.
+  const box = el('div', 'kg-keylist');
+  for (const k of shaped) {
+    const row = el('div', 'kg-keyrow');
+    row.append(el('span', 'kg-keyid mono', `#${k.keyId}`));
+    row.append(el('span', 'kg-keywhat mono', `${k.purpose} / ${k.securityLevel}`));
+
+    if (k.disabled) {
+      row.append(el('span', 'kg-keynote', 'switched off'));
+    } else if (canDisable(k)) {
+      const off = el('button', 'btn ghost sm kg-noprint', 'Switch off');
+      off.addEventListener('click', () => disableKey(k, identityId));
+      row.append(off);
+    } else {
+      // Just the word. Which three are permanent and why is in the box above,
+      // and repeating it on every row wrapped the line and said it three times.
+      const tag = el('span', 'kg-keynote', 'permanent');
+      tag.title = whyNotDisable(k);
+      row.append(tag);
+    }
+    box.append(row);
+  }
   const summary = el('div', missing.length ? 'note warn' : 'note ok',
     (resolved.name ? `${resolved.name} is ${identityId}. ` : '')
     + (missing.length
@@ -451,6 +472,59 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Lookingâ€
     throw new Error('This identity has no master key, so nothing can be added to it. That is permanent.');
   }
 }));
+
+// Switching a key off is the same transition as adding one, signed by the same
+// master key, so it reuses the form that is already filled in â€” revision, nonce
+// and where the master key comes from.
+async function disableKey(key, identityId) {
+  clearError();
+  const usingWif = $('akSource').value === 'wif';
+  const agreed = confirm(
+    `Switch off key #${key.keyId}, ${key.purpose} / ${key.securityLevel}?\n\n`
+    + 'It stays on the identity marked as switched off, and anything it signed before now still stands. '
+    + 'It cannot sign again afterwards, and it cannot be switched back on.',
+  );
+  if (!agreed) return;
+
+  try {
+    const built = await buildDisableKeyTransition({
+      mnemonic: usingWif ? undefined : loadedPhrase(),
+      masterWif: usingWif ? $('akMasterWif').value : undefined,
+      network: $('netsel').value,
+      identityId,
+      revision: $('akRevision').value.trim(),
+      nonce: $('akNonce').value.trim(),
+      masterKeyId: Number($('akMasterId').value.trim() || '0'),
+      disableKeyIds: [key.keyId],
+    });
+
+    if (identityMasterHash && built.masterKeyHash !== identityMasterHash) {
+      throw new Error('That is not the master key of this identity, so this would be refused. '
+        + `The key given hashes to ${built.masterKeyHash}, the identity's master key to ${identityMasterHash}.`);
+    }
+
+    const out = $('akOut');
+    out.replaceChildren(el('div', 'note ok',
+      `Signed. Switches off key #${key.keyId} â€” ${key.purpose} / ${key.securityLevel}.`));
+    const field = el('div', 'field');
+    const head = el('div', 'field-head');
+    head.append(el('label', null, 'Signed transition (hex)'));
+    const copy = el('button', 'btn ghost sm kg-noprint', 'Copy');
+    copy.addEventListener('click', () => copyToButton(copy, built.hex));
+    head.append(copy);
+    field.append(head, el('div', 'mono box small', built.hex));
+    out.append(field);
+    out.append(el('div', 'fineprint', isOffline()
+      ? 'Carry the hex to a machine with a network and broadcast it there.'
+      : 'Broadcast it below, or paste the hex into the explorer\'s developer tools.'));
+
+    $('akBroadcastBtn').hidden = isOffline();
+    $('akBroadcastBtn').dataset.hex = built.hex;
+    $('akBroadcastBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (e) {
+    showError(e);
+  }
+}
 
 $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Buildingâ€¦', async () => {
   clearError();

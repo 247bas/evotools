@@ -197,3 +197,14 @@
   font-family: var(--mono, ui-monospace, monospace); font-size: 0.86rem; resize: vertical;
 }
 #addKeyPanel textarea:focus { outline: none; border-color: var(--blue); }
+
+/* The key list is where you act on a key, so it is rows and not a text block. */
+.kg-keylist { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.kg-keyrow {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 14px; background: rgba(0, 0, 0, 0.28); font-size: 0.85rem;
+}
+.kg-keyrow + .kg-keyrow { border-top: 1px solid var(--border); }
+.kg-keyid { color: var(--muted); flex: 0 0 34px; }
+.kg-keywhat { flex: 1 1 220px; }
+.kg-keynote { color: var(--muted); font-size: 0.78rem; }

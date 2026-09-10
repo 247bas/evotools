@@ -5,6 +5,18 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A key can be switched off, never removed.** The key list from a lookup is
+  rows now rather than a printout, and each one either carries a Switch off
+  button or the word permanent. That is the rule made visible instead of
+  explained: a key is never deleted, it stays on the identity with a
+  `disabledAt` stamp and anything it signed before that still stands — and the
+  master key, an AUTHENTICATION key at CRITICAL and the TRANSFER key cannot even
+  be switched off. So the powerful keys are the permanent ones, which is the
+  reason to think before adding a fourth. It is the same `IdentityUpdate` and
+  the same master signature as adding one, with `disablePublicKeys` instead of a
+  key to add and no proof of possession to make, so it reuses the form that is
+  already filled in.
+
 - **Keygen asks which job you came for.** The page had grown two things that
   share only a subject — making keys for an identity that does not exist yet,
   and adding one to an identity that does — stacked so the second read as a

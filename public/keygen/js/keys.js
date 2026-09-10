@@ -132,6 +132,83 @@ export async function deriveAll(mnemonic, network) {
 const hexToBytes = (hex) => Uint8Array.from(hex.match(/../g).map((b) => parseInt(b, 16)));
 
 /**
+ * A key can never be removed from an identity, only switched off — it stays on
+ * the identity with a `disabledAt` stamp, and anything it signed before that
+ * stands. Three kinds cannot even be switched off, per the SDK: the master key,
+ * an AUTHENTICATION key at CRITICAL, and the TRANSFER key. So the powerful keys
+ * are the permanent ones, which is the reason to think before adding one.
+ */
+export const canDisable = (key) => Boolean(key)
+  && key.securityLevel !== 'MASTER'
+  && !(key.purpose === 'AUTHENTICATION' && key.securityLevel === 'CRITICAL')
+  && key.purpose !== 'TRANSFER';
+
+export const whyNotDisable = (key) => {
+  if (!key) return '';
+  if (key.securityLevel === 'MASTER') return 'the master key is what signs this change in the first place';
+  if (key.purpose === 'AUTHENTICATION' && key.securityLevel === 'CRITICAL') return 'a CRITICAL authentication key is permanent';
+  if (key.purpose === 'TRANSFER') return 'the transfer key is permanent';
+  return '';
+};
+
+// The master key, from a phrase or pasted, and the IdentityPublicKey that
+// `sign` wants beside it. Shared by both transitions this file builds.
+async function masterFor({ Evo, mnemonic, masterWif, network, masterKeyId }) {
+  const { wallet, IdentityPublicKey, KeyType } = Evo;
+  if (!mnemonic && !masterWif) {
+    throw new Error('Give either a recovery phrase or the private key of this identity\'s master key.');
+  }
+  let key;
+  if (masterWif) {
+    try { key = await wallet.keyPairFromWif(masterWif.trim()); }
+    catch { throw new Error('The master key is not a valid WIF private key.'); }
+  } else {
+    const base = await identityBase(network);
+    const derived = await wallet.deriveKeyFromSeedWithPath({
+      mnemonic, path: `${base.path}/0'/0'/0'/${masterKeyId}'`, network,
+    });
+    key = derived.toObject();
+  }
+  const publicKey = new IdentityPublicKey({
+    keyId: masterKeyId,
+    purpose: 'AUTHENTICATION',
+    securityLevel: 'MASTER',
+    keyType: KeyType.ECDSA_SECP256K1,
+    data: hexToBytes(key.publicKey),
+    readOnly: false,
+  });
+  return { wif: key.privateKeyWif, publicKey };
+}
+
+/**
+ * Switch keys off. Same transition as adding one and the same master signature;
+ * only the payload differs, and there is no proof of possession to make because
+ * nothing is being added.
+ */
+export async function buildDisableKeyTransition({
+  mnemonic, masterWif, network, identityId, revision, nonce,
+  masterKeyId = 0, disableKeyIds,
+}) {
+  const Evo = await loadEvo();
+  const { PrivateKey, IdentityUpdateTransition } = Evo;
+
+  const ids = (disableKeyIds ?? []).map(Number).filter((n) => Number.isInteger(n) && n >= 0);
+  if (!ids.length) throw new Error('Say which key to switch off.');
+  if (ids.includes(Number(masterKeyId))) {
+    throw new Error('The master key cannot be switched off — it is what signs this change.');
+  }
+
+  const master = await masterFor({ Evo, mnemonic, masterWif, network, masterKeyId });
+  const transition = new IdentityUpdateTransition({
+    identityId, revision: BigInt(revision), nonce: BigInt(nonce),
+    addPublicKeys: [], disablePublicKeys: ids,
+  }).toStateTransition();
+  transition.sign(PrivateKey.fromWIF(master.wif), master.publicKey);
+
+  return { hex: transition.toHex(), masterKeyHash: master.publicKey.getPublicKeyHash(), disabled: ids };
+}
+
+/**
  * Build and sign an IdentityUpdate that adds one key. No network, no SDK
  * connection — the same guarantee the rest of this file makes.
  *
