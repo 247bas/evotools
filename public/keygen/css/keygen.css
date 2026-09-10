@@ -133,3 +133,35 @@
   .kg-table { min-width: 0; }
   a { color: #000; }
 }
+
+/* Add-a-key. theme.css gives a label its colour and weight but not its own
+   line, and it styles no inputs at all — every tool brings those. Keygen never
+   had a text field before this section, only the phrase textarea and the
+   network select, so the values below are the ones /credits and /tokens use,
+   to keep one look across the suite. */
+#addKeyPanel .field > label { display: block; margin-bottom: 7px; }
+#addKeyPanel input[type="text"] {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text);
+  font-family: var(--mono, ui-monospace, monospace); font-size: 0.85rem;
+}
+#addKeyPanel select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-size: 0.9rem;
+}
+#addKeyPanel input:focus, #addKeyPanel select:focus { outline: none; border-color: var(--blue); }
+
+/* .field carries an 18px margin for a field standing on its own; inside a row
+   that doubles the gap and pushes the labels off the baseline. Aligned to the
+   top, not the bottom: the role select carries a line of explanation under it,
+   and bottom alignment would drop the field beside it by that line's height. */
+#addKeyPanel .row { align-items: flex-start; }
+#addKeyPanel .row > .field { flex: 1 1 150px; margin: 0 0 14px; }
+#addKeyPanel .row > .field:first-child { flex: 2 1 240px; }
+
+#addKeyPanel h2 { margin-bottom: 10px; }
+#addKeyPanel .btn + .btn { margin-left: 8px; }
+#addKeyPanel #akKeys { margin: 14px 0; }
+#addKeyPanel #akOut .box { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+#addKeyPanel #akRoleUse { margin: 7px 0 0; }

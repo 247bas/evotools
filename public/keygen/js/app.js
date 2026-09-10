@@ -223,17 +223,32 @@ async function connected() {
   return _sdk;
 }
 
+// MASTER is not offered. An identity update is the only way to add a key and
+// it can only be signed by a master key, so an identity without one can never
+// be changed at all, and one with a master key does not need a second.
+const addable = (roles) => roles.filter((r) => r.securityLevel !== 'MASTER');
+
 function fillRoles(missing) {
   const select = $('akRole');
+  const roles = addable(missing?.length ? missing : KEY_ROLES);
   select.replaceChildren();
-  const roles = missing?.length ? missing : KEY_ROLES;
   for (const role of roles) {
-    const option = el('option', null, `${role.purpose} / ${role.securityLevel} — ${role.use}`);
+    // Short label: the whole sentence truncates inside a select, and what the
+    // key is for belongs under it where it can be read.
+    const option = el('option', null, `${role.purpose} / ${role.securityLevel}`);
     option.value = `${role.purpose}|${role.securityLevel}|${role.keyId}`;
+    option.dataset.use = role.use;
     select.append(option);
   }
+  describeRole();
   if (!$('akNewId').value.trim() && roles[0]) $('akNewId').value = String(roles[0].keyId);
 }
+
+function describeRole() {
+  const option = $('akRole').selectedOptions[0];
+  $('akRoleUse').textContent = option ? option.dataset.use ?? '' : '';
+}
+$('akRole').addEventListener('change', describeRole);
 
 $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking…', async () => {
   clearError();
