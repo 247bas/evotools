@@ -145,6 +145,38 @@ console.log('\n9. Adding a key to an identity that already exists');
   check(missing[0].slotTaken === true, 'and its usual slot #2 is taken, so a new key needs a free one');
   check(missingRoles([]).length === 5, 'an empty identity is missing all five');
 
+  // Contract bounds. A key bound to a contract works only there, which is what
+  // DashPay's contact requests demand — and what makes the key useless if it
+  // leaks. Both shapes have to survive the hex, the same way the signatures do.
+  const DASHPAY = 'Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7';
+  const bound = await buildAddKeyTransition({
+    mnemonic: PHRASE, network: 'mainnet',
+    identityId: 'BC6nzq4iDzknwaUQEei3HSNfVQ9FQgFRDGvUPRCyGEfA',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 4,
+    purpose: 'ENCRYPTION', securityLevel: 'MEDIUM',
+    boundContractId: DASHPAY, boundDocumentType: 'contactRequest',
+  });
+  const boundBack = Evo.IdentityUpdateTransition
+    .fromStateTransition(Evo.StateTransition.fromHex(bound.hex)).publicKeyIdsToAdd[0];
+  check(String(boundBack.contractBounds?.identifier) === DASHPAY, 'a bound key carries its contract through the hex');
+  check(boundBack.contractBounds?.documentTypeName === 'contactRequest', 'and the document type it is bound to');
+  check(boundBack.contractBounds?.contractBoundsType === 'documentType', 'as a documentType bound, not a whole-contract one');
+  check(boundBack.purpose === 'ENCRYPTION', 'with the purpose it was asked for');
+  check(boundBack.signature?.length === 65, 'and still its proof of possession, which the bound changes the bytes of');
+
+  const wholeContract = await buildAddKeyTransition({
+    mnemonic: PHRASE, network: 'mainnet',
+    identityId: 'BC6nzq4iDzknwaUQEei3HSNfVQ9FQgFRDGvUPRCyGEfA',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 4, boundContractId: DASHPAY,
+  });
+  const wholeBack = Evo.IdentityUpdateTransition
+    .fromStateTransition(Evo.StateTransition.fromHex(wholeContract.hex)).publicKeyIdsToAdd[0];
+  check(wholeBack.contractBounds?.contractBoundsType === 'singleContract', 'no document type gives a whole-contract bound');
+
+  const unbound = Evo.IdentityUpdateTransition
+    .fromStateTransition(Evo.StateTransition.fromHex(built.hex)).publicKeyIdsToAdd[0];
+  check(!unbound.contractBounds, 'and a key asked for without a bound has none, rather than an empty one');
+
   await refusesTo(() => buildAddKeyTransition({
     mnemonic: PHRASE, network: 'testnet', identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
     revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 0,

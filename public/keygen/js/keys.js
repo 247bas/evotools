@@ -141,11 +141,12 @@ const hexToBytes = (hex) => Uint8Array.from(hex.match(/../g).map((b) => parseInt
 export async function buildAddKeyTransition({
   mnemonic, network, identityId, revision, nonce,
   masterKeyId = 0, newKeyId, purpose = 'AUTHENTICATION', securityLevel = 'CRITICAL',
+  boundContractId, boundDocumentType,
 }) {
   const Evo = await loadEvo();
   const {
     wallet, PrivateKey, IdentityPublicKey, IdentityPublicKeyInCreation,
-    IdentityUpdateTransition, KeyType,
+    IdentityUpdateTransition, KeyType, ContractBounds,
   } = Evo;
 
   if (!Number.isInteger(newKeyId) || newKeyId < 0) throw new Error('The new key needs a key id.');
@@ -161,12 +162,26 @@ export async function buildAddKeyTransition({
   const master = await at(masterKeyId);
   const fresh = await at(newKeyId);
 
+  // Contract bounds tie a key to one contract, or to one document type inside
+  // it. A contract can demand that: DashPay's `contactRequest` sets
+  // requiresIdentityEncryptionBoundedKey and …DecryptionBoundedKey, so the keys
+  // that encrypt a contact request have to be bound to DashPay and are useless
+  // anywhere else. That is the point — a bound key cannot be replayed against
+  // another contract. Most keys want none, and an unnecessary bound is not
+  // harmless: it makes the key unusable for everything it is not bound to.
+  const bounds = boundContractId
+    ? (boundDocumentType
+      ? ContractBounds.SingleContractDocumentType(boundContractId, boundDocumentType)
+      : ContractBounds.SingleContract(boundContractId))
+    : undefined;
+
   const added = new IdentityPublicKeyInCreation({
     keyId: newKeyId,
     purpose,
     securityLevel,
     keyType: KeyType.ECDSA_SECP256K1,
     data: hexToBytes(fresh.publicKey),
+    ...(bounds ? { contractBounds: bounds } : {}),
   });
 
   // Proof of possession: the key being added signs the transition, proving
@@ -207,6 +222,9 @@ export async function buildAddKeyTransition({
       path: fresh.path,
       publicKeyHex: fresh.publicKey,
       wif: fresh.privateKeyWif,
+      boundTo: boundContractId
+        ? `${boundContractId}${boundDocumentType ? ` · ${boundDocumentType}` : ''}`
+        : '',
     },
   };
 }

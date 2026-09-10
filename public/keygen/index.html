@@ -220,6 +220,36 @@
         </div>
       </div>
 
+      <details class="keys" id="akBoundsBlock">
+        <summary>Bind this key to one contract</summary>
+        <p class="fineprint">
+          A key normally works with every contract. Binding it to one means it
+          works only there, and some contracts insist on that: DashPay's contact
+          requests set <code>requiresIdentityEncryptionBoundedKey</code> and
+          <code>requiresIdentityDecryptionBoundedKey</code>, so the keys that
+          encrypt a contact request have to be bound to DashPay. A key that
+          cannot be used anywhere else also cannot be replayed anywhere else,
+          which is the reason to want it.
+        </p>
+        <p class="fineprint">
+          Most keys want no bound at all — a DashPay <em>profile</em> needs none,
+          and neither does anything to do with tokens. If you are unsure, leave
+          this closed: a bound key is useless for everything it is not bound to,
+          and it can never be unbound.
+        </p>
+        <div class="field">
+          <div class="field-head">
+            <label for="akBoundContract">Contract id</label>
+            <button class="btn ghost sm kg-noprint" id="akDashpayBtn">Use DashPay's</button>
+          </div>
+          <input id="akBoundContract" type="text" placeholder="leave empty for no bound" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="akBoundType">Document type, optional</label>
+          <input id="akBoundType" type="text" placeholder="the whole contract if left empty — e.g. contactRequest" autocomplete="off" spellcheck="false" />
+        </div>
+      </details>
+
       <p class="fineprint">
         The phrase above is what the new key is derived from, so generate or
         restore it first. The key id is the identity's own numbering — the next

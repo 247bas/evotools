@@ -30,6 +30,17 @@ rather than installable releases.
   One way only. The SDK's own note on `disablePublicKeys`: "Cannot disable
   master, critical auth, or transfer keys." The page says so before the button.
 
+  A key can also be bound to a single contract, or to one document type inside
+  it, and some contracts insist: DashPay's `contactRequest` sets
+  `requiresIdentityEncryptionBoundedKey` and `…DecryptionBoundedKey`, so the
+  keys that encrypt a contact request have to be bound to DashPay — a key that
+  works nowhere else cannot be replayed anywhere else. Its `profile` needs no
+  bound at all, which is worth saying because the two arrive in the same DET
+  dialog and the checkbox is the part people stop at. Bounds are off by default
+  and the panel says why: a bound key is useless for everything it is not bound
+  to, and it can never be unbound. The list of keys to add carries a DECRYPTION
+  option that the standard five do not, since a contact request needs one.
+
   **Untested against a live chain:** no update has been broadcast. Everything
   that can be checked without one is — both signatures are 65 bytes and survive
   a round trip through the hex, and the transition decodes back to what went in

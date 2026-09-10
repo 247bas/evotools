@@ -226,7 +226,26 @@ async function connected() {
 // MASTER is not offered. An identity update is the only way to add a key and
 // it can only be signed by a master key, so an identity without one can never
 // be changed at all, and one with a master key does not need a second.
-const addable = (roles) => roles.filter((r) => r.securityLevel !== 'MASTER');
+const addable = (roles) => {
+  const list = roles.filter((r) => r.securityLevel !== 'MASTER');
+  // The five standard roles carry an ENCRYPTION key but no DECRYPTION one, and
+  // a DashPay contact request needs both. Offered here rather than added to
+  // KEY_ROLES, which describes what keygen creates, not everything that can be
+  // added later.
+  if (!list.some((r) => r.purpose === 'DECRYPTION')) {
+    list.push({
+      keyId: 5, purpose: 'DECRYPTION', securityLevel: 'MEDIUM',
+      label: 'Decryption', use: 'decrypts messages — DashPay needs one, bound to its contract',
+    });
+  }
+  return list;
+};
+
+const DASHPAY_CONTRACT = 'Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7';
+$('akDashpayBtn').addEventListener('click', () => {
+  $('akBoundContract').value = DASHPAY_CONTRACT;
+  if (!$('akBoundType').value.trim()) $('akBoundType').value = 'contactRequest';
+});
 
 function fillRoles(missing) {
   const select = $('akRole');
@@ -310,15 +329,17 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
     newKeyId: Number($('akNewId').value.trim()),
     purpose,
     securityLevel,
+    boundContractId: $('akBoundContract').value.trim() || undefined,
+    boundDocumentType: $('akBoundType').value.trim() || undefined,
   });
 
   const out = $('akOut');
   out.replaceChildren();
 
-  const added = el('div', 'note ok',
+  out.append(el('div', 'note ok',
     `Signed. Adds key #${built.added.keyId} — ${built.added.purpose} / ${built.added.securityLevel}, `
-    + `derived at ${built.added.path}.`);
-  out.append(added);
+    + `derived at ${built.added.path}.`
+    + (built.added.boundTo ? ` Bound to ${built.added.boundTo}, and usable nowhere else.` : '')));
 
   for (const [label, value] of [
     ['New key, public', built.added.publicKeyHex],
