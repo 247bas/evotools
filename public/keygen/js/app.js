@@ -97,6 +97,9 @@ function render(result) {
 
   $('result').hidden = false;
   $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // The add-key section derives from whatever phrase is loaded, so it has to
+  // hear about this one. Defined below; this runs long after load.
+  renderPhraseState();
 }
 
 // ── actions ──────────────────────────────────────────────────────────────────
@@ -255,6 +258,40 @@ const addable = (roles) => {
   return list;
 };
 
+// The phrase lives in a collapsed block in the section above this one, so from
+// down here there is no field to see and nothing to fill in. Rather than an
+// error that says "restore a phrase first" and leaves you hunting, this shows
+// whether one is loaded and opens the block for you.
+function openPhraseBlock() {
+  $('restoreBlock').hidden = false;
+  $('mnemonicInput').focus();
+  $('restoreBlock').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// A generated phrase never lands in the restore box — it goes to `current` and
+// is rendered into the result panel. Reading only the box would refuse to build
+// while the phrase is sitting on screen a section above.
+const loadedPhrase = () =>
+  (current?.mnemonic || $('mnemonicInput').value || '').trim().replace(/\s+/g, ' ');
+
+function renderPhraseState() {
+  const loaded = Boolean(loadedPhrase());
+  const host = $('akPhraseState');
+  if (loaded) {
+    host.replaceChildren(el('div', 'note ok',
+      `A phrase is loaded${current ? ' — the one showing above' : ''}. The new key is derived from it.`));
+    return;
+  }
+  const note = el('div', 'note warn');
+  note.append(el('span', null, 'No phrase loaded yet — the new key has to come from one. '));
+  const open = el('button', 'btn ghost sm kg-noprint', 'Enter the phrase');
+  open.addEventListener('click', openPhraseBlock);
+  note.append(open);
+  host.replaceChildren(note);
+}
+
+$('mnemonicInput').addEventListener('input', renderPhraseState);
+
 const DASHPAY_CONTRACT = 'Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7';
 $('akDashpayBtn').addEventListener('click', () => {
   $('akBoundContract').value = DASHPAY_CONTRACT;
@@ -339,8 +376,12 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
 
 $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…', async () => {
   clearError();
-  const mnemonic = ($('mnemonicInput').value || '').trim();
-  if (!mnemonic) throw new Error('Generate or restore a phrase first — the new key comes from it.');
+  const mnemonic = loadedPhrase();
+  if (!mnemonic) {
+    openPhraseBlock();
+    throw new Error('The new key is derived from your recovery phrase, and none is loaded yet. '
+      + 'The field is open now, in the section above — paste the phrase of this identity there and try again.');
+  }
   if (!(await isValidMnemonic(mnemonic))) throw new Error('That phrase is not valid.');
 
   const [purpose, securityLevel] = ($('akRole').value || 'AUTHENTICATION|CRITICAL|2').split('|');
@@ -410,3 +451,4 @@ if (isOffline()) {
   $('akOfflineHint').hidden = false;
 }
 fillRoles();
+renderPhraseState();
