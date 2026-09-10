@@ -50,6 +50,12 @@ export async function tokensOfIdentity(identityId, { limit = 100 } = {}) {
   return (data.resultSet ?? []).map((t) => {
     const loc = t.localizations?.en ?? {};
     const ownerId = t.owner?.identifier ?? '';
+    // `owner.aliases` is deliberately not read. On mainnet the indexer lists
+    // thedesertlynx.dash against 3sL6q6e…, the identity that owns the DUSD and
+    // SANS contracts, while the chain says that name belongs to BC6nzq4i… and
+    // that 3sL6q6e… has no name at all. Repeating that here would put a name
+    // on a token's issuer that DPNS does not agree with. The owner's ID is a
+    // fact; its name is looked up from the chain by the caller.
     return {
       tokenId: t.identifier,
       contractId: t.dataContractIdentifier,
@@ -60,7 +66,6 @@ export async function tokensOfIdentity(identityId, { limit = 100 } = {}) {
       description: t.description ?? '',
       totalSupply: t.totalSupply,
       ownerId,
-      ownerName: t.owner?.aliases?.find((a) => a.status === 'ok')?.alias ?? '',
       isIssuer: ownerId === identityId,
       mintable: Boolean(t.mintable),
     };

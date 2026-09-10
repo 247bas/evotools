@@ -5,6 +5,30 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The security level is the chain's call, not the page's.** /tokens refused to
+  sign unless the identity had an AUTHENTICATION key at CRITICAL, which is what
+  a token transfer is proven to need — a HIGH key comes back "Invalid public key
+  security level HIGH. The state transition requires one of CRITICAL". Applying
+  that to everything was a guess, and it blocked an identity whose only
+  authentication key is HIGH; mainnet's thedesertlynx.dash is exactly that.
+  Refusing locally now covers only what cannot work — a key off another
+  identity, a disabled one, a TRANSFER or ENCRYPTION key, the MASTER key — and
+  anything else is sent. When the chain then refuses on level, its own message
+  is passed through with the identity's authentication keys next to it, so
+  "wrong level" arrives as "use #2".
+
+  The same lookup no longer paints a red box on an identity that cannot sign.
+  Looking somebody up is not an attempt to act as them.
+
+- **The issuer's name comes from DPNS, not from the indexer.** The token list
+  showed DUSD and SANS as "issued by thedesertlynx.dash", which the chain does
+  not support: those contracts belong to 3sL6q6e…, an identity DPNS gives no
+  name at all, while thedesertlynx.dash is BC6nzq4i… — the identity that holds
+  the tokens and issued neither. The indexer files the alias against the owner
+  anyway. Its `owner.aliases` is now ignored and the issuer's name is looked up
+  from the chain, one call per distinct issuer. The owner's ID was never in
+  doubt and is what shows when there is no name.
+
 - **The hub is three across.** Twelve tools fell into six rows of two, which put
   the last four below the fold on most screens. Three columns makes that four
   rows at a page width of 1100 — still inside a 13-inch laptop, where four

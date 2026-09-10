@@ -66,16 +66,16 @@ function renderIdentity(info) {
   );
   $('identityOut').replaceChildren(grid);
 
-  // Everything on this page needs the same key, so say now whether it exists
-  // rather than after a form has been filled in.
-  if (!info.signingKeys.length) {
-    $('identityOut').append(el('div', 'note bad',
-      'This identity has no AUTHENTICATION key at CRITICAL, so it cannot make or move tokens. '
-      + 'That is key #2 on a standard identity.'));
-  } else {
-    $('identityOut').append(el('div', 'note info',
-      `Tokens are signed with key #${info.signingKeys.join(' or #')} — AUTHENTICATION at CRITICAL.`));
-  }
+  // What can sign here, stated as a fact about this identity. Not a warning:
+  // looking somebody up is not an attempt to act as them, and a red box on a
+  // plain lookup reads as a broken page.
+  const note = info.criticalKeys.length
+    ? `Tokens are signed with key #${info.criticalKeys.join(' or #')} — AUTHENTICATION at CRITICAL.`
+    : info.signingKeys.length
+      ? `This identity's authentication keys are ${info.signingKeys.map((k) => `#${k.keyId} (${k.securityLevel})`).join(', ')}. `
+        + 'A token transfer is known to need CRITICAL, so the chain may refuse these — it decides, not this page.'
+      : 'This identity has no authentication key other than MASTER, so it cannot sign token transitions.';
+  $('identityOut').append(el('div', 'note info', note));
   $('actions').hidden = false;
 }
 
@@ -116,7 +116,7 @@ async function renderHeld(identityId) {
     left.append(el('div', 'tk-held-sub',
       t.isIssuer
         ? `${t.contractId}`
-        : `${t.contractId} · issued by ${t.ownerName || t.ownerId}`));
+        : `${t.contractId} · issued by ${t.ownerNames?.[0] || t.ownerId}`));
     row.append(left);
 
     row.append(el('div', 'tk-held-amount', `${formatAmount(t.balance, t.decimals)} ${t.plural || t.name}`));

@@ -52,20 +52,34 @@ export async function lookupIdentity(idOrName) {
     name,
     balance: identity.balance ?? 0n,
     keys: keys.map((k) => ({ keyId: k.keyId, purpose: k.purpose, securityLevel: k.securityLevel, disabled: Boolean(k.disabledAt) })),
-    // Everything on this page needs this one key, so say up front whether it exists.
+    // Which keys could sign here at all, and which ones the chain is known to
+    // accept. Kept apart because they are different claims: the first is what
+    // this identity has, the second is what tokens have been proven to need.
     signingKeys: keys
+      .filter((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel !== 'MASTER' && !k.disabledAt)
+      .map((k) => ({ keyId: k.keyId, securityLevel: k.securityLevel })),
+    criticalKeys: keys
       .filter((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL' && !k.disabledAt)
       .map((k) => k.keyId),
   };
 }
 
-// Publishing a contract and every token transition need the same thing: an
-// AUTHENTICATION key at CRITICAL. Not HIGH — testnet refuses that outright with
-// "Invalid public key security level HIGH. The state transition requires one of
-// CRITICAL", which is worth knowing because document transitions do accept HIGH
-// and the two read as the same kind of operation. And not the TRANSFER key,
-// which is also CRITICAL and moves credits and nothing else: purpose and
-// security level are separate things.
+// Which key may sign is the chain's call, not this file's.
+//
+// What is proven: a token transfer signed with an AUTHENTICATION key at HIGH
+// comes back "Invalid public key security level HIGH. The state transition
+// requires one of CRITICAL", and the same identity's CRITICAL key goes through.
+// What is not proven is whether every other transition here draws the line in
+// the same place, and guessing it wrong in this direction blocks something that
+// would have worked — an identity with only a HIGH authentication key is
+// unusual but real.
+//
+// So this refuses only what cannot possibly work: a key that is not on this
+// identity, one that is disabled, or one whose purpose is something else. A
+// TRANSFER key at CRITICAL reads as powerful and moves credits and nothing
+// else; MASTER only changes the identity itself. Everything past that is sent,
+// and if the chain refuses on level, `explainRefusal` puts the identity's own
+// keys next to the complaint.
 async function requireKey(identityId, wif) {
   const { PrivateKey, IdentitySigner } = await loadEvo();
   const sdk = await getSdk();
@@ -84,13 +98,17 @@ async function requireKey(identityId, wif) {
 
   if (!matched) throw new Error('That key does not belong to this identity.');
   if (matched.disabledAt) throw new Error(`Key #${matched.keyId} is disabled and cannot sign.`);
-  if (matched.purpose !== 'AUTHENTICATION' || matched.securityLevel !== 'CRITICAL') {
-    const critical = keys.filter((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL' && !k.disabledAt);
+  if (matched.purpose !== 'AUTHENTICATION') {
     throw new Error(
-      `That is key #${matched.keyId}, ${matched.purpose}/${matched.securityLevel}. Tokens need an AUTHENTICATION key at CRITICAL — `
-      + (critical.length
-        ? `on this identity that is key #${critical.map((k) => k.keyId).join(' or #')}.`
-        : 'this identity has none, so it cannot make or move tokens.'),
+      `That is key #${matched.keyId}, ${matched.purpose}/${matched.securityLevel}. `
+      + `A ${matched.purpose} key cannot sign this — tokens need an AUTHENTICATION key. `
+      + describeAuthKeys(keys),
+    );
+  }
+  if (matched.securityLevel === 'MASTER') {
+    throw new Error(
+      `Key #${matched.keyId} is the MASTER key, which only changes the identity itself. `
+      + describeAuthKeys(keys),
     );
   }
 
@@ -98,7 +116,22 @@ async function requireKey(identityId, wif) {
   const identityKey = identity.getPublicKeyById(matched.keyId);
   const signer = new IdentitySigner();
   signer.addKeyFromWif(wif.trim());
-  return { identity, identityKey, signer, keyId: matched.keyId };
+  return { identity, identityKey, signer, keyId: matched.keyId, keys, securityLevel: matched.securityLevel };
+}
+
+const describeAuthKeys = (keys) => {
+  const usable = keys.filter((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel !== 'MASTER' && !k.disabledAt);
+  return usable.length
+    ? `This identity's authentication keys are ${usable.map((k) => `#${k.keyId} (${k.securityLevel})`).join(', ')}.`
+    : 'This identity has no authentication key other than MASTER, so it cannot sign token transitions at all.';
+};
+
+// The chain's own refusal is accurate and says nothing about what you do have.
+// Adding that turns "wrong level" into "use #2".
+function explainRefusal(err, keys, keyId) {
+  const message = err?.message || String(err);
+  if (!/security level/i.test(message)) throw err;
+  throw new Error(`${message}\n\nKey #${keyId} was used. ${describeAuthKeys(keys)}`);
 }
 
 /* ------------------------------------------------------------------ *
@@ -305,11 +338,13 @@ export async function createToken({ identityId, wif, ...form }) {
   const Evo = await loadEvo();
   const sdk = await getSdk();
   // The key first: a wrong one should come back before a round trip, not after.
-  const { identityKey, signer, keyId } = await requireKey(identityId, wif);
+  const { identityKey, signer, keyId, keys } = await requireKey(identityId, wif);
 
   const nonce = (await sdk.identities.nonce(identityId)) ?? 0n;
   const dataContract = await buildTokenContract(Evo, form, identityId, nonce + 1n);
-  const published = await sdk.contracts.publish({ dataContract, identityKey, signer });
+  const published = await sdk.contracts
+    .publish({ dataContract, identityKey, signer })
+    .catch((e) => explainRefusal(e, keys, keyId));
 
   const contractId = str(published.id);
   return { contractId, position: 0, tokenId: await sdk.tokens.calculateId(contractId, 0), keyId };
@@ -338,7 +373,7 @@ export async function mintToken({ identityId, wif, contractId, position = 0, amo
   const info = await tokenInfo(contractId, position, identityId);
   if (!info.canMint) throw new Error(info.mintBlockedBy);
 
-  const { identityKey, signer, keyId } = await requireKey(identityId, wif);
+  const { identityKey, signer, keyId, keys } = await requireKey(identityId, wif);
   const recipientId = recipient ? await resolveRecipient(recipient) : undefined;
 
   await sdk.tokens.mint({
@@ -349,7 +384,7 @@ export async function mintToken({ identityId, wif, contractId, position = 0, amo
     recipientId,
     identityKey,
     signer,
-  });
+  }).catch((e) => explainRefusal(e, keys, keyId));
   return { keyId, recipientId: recipientId ?? identityId, tokenId: info.tokenId };
 }
 
@@ -367,7 +402,7 @@ export async function sendToken({ identityId, wif, contractId, position = 0, amo
     throw new Error(`This identity holds ${formatAmount(info.balance, info.decimals)} ${info.name}, which is less than that.`);
   }
 
-  const { identityKey, signer, keyId } = await requireKey(identityId, wif);
+  const { identityKey, signer, keyId, keys } = await requireKey(identityId, wif);
   await sdk.tokens.transfer({
     dataContractId: info.contractId,
     tokenPosition: info.position,
@@ -377,7 +412,7 @@ export async function sendToken({ identityId, wif, contractId, position = 0, amo
     publicNote: (note || '').trim() || undefined,
     identityKey,
     signer,
-  });
+  }).catch((e) => explainRefusal(e, keys, keyId));
   return { keyId, recipientId, tokenId: info.tokenId, sent: value, decimals: info.decimals };
 }
 
@@ -400,8 +435,21 @@ export async function tokensHeldBy(identityId) {
   const sdk = await getSdk();
   const balances = await sdk.tokens.identityBalances(identityId, found.map((t) => t.tokenId));
 
+  // Issuer names come from DPNS, not from the indexer's alias list — those two
+  // disagree in the wild. One lookup per distinct issuer, which on any real
+  // list is a handful.
+  const issuerNames = new Map();
+  for (const ownerId of new Set(found.map((t) => t.ownerId).filter(Boolean))) {
+    const names = await sdk.dpns.usernames({ identityId: ownerId }).catch(() => []);
+    issuerNames.set(ownerId, names.map((n) => (String(n).endsWith('.dash') ? String(n) : `${n}.dash`)));
+  }
+
   return found
-    .map((t) => ({ ...t, balance: balances.get(t.tokenId) ?? 0n }))
+    .map((t) => ({
+      ...t,
+      balance: balances.get(t.tokenId) ?? 0n,
+      ownerNames: issuerNames.get(t.ownerId) ?? [],
+    }))
     // A token the indexer still lists but that has since been sent away in full
     // would otherwise sit in the list at zero and read like a bug.
     .filter((t) => t.balance > 0n)

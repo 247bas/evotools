@@ -34,7 +34,8 @@ console.log('\n1. Looking an identity up');
 const issuer = await lookupIdentity(ISSUER);
 check(issuer.identityId === ISSUER, `id -> ${issuer.identityId.slice(0, 12)}…`);
 check(typeof issuer.balance === 'bigint', `balance is a bigint (${issuer.balance})`);
-check(issuer.signingKeys.length > 0, `signing keys (AUTHENTICATION/CRITICAL): #${issuer.signingKeys.join(', #')}`);
+check(issuer.criticalKeys.length > 0, `AUTHENTICATION/CRITICAL: #${issuer.criticalKeys.join(', #')}`);
+check(issuer.signingKeys.length > 0, `could sign at all: ${issuer.signingKeys.map((k) => `#${k.keyId} (${k.securityLevel})`).join(', ')}`);
 const byName = await lookupIdentity('247bas.dash');
 check(byName.identityId === ISSUER, '247bas.dash gives the same identity as the id');
 await refuses(() => lookupIdentity('this-name-does-not-exist-9273'), 'No identity found', 'an unknown name');
@@ -96,9 +97,10 @@ await refuses(() => buildTokenContract(Evo, { ...shapes[0][1], name: '' }, ISSUE
 await refuses(() => buildTokenContract(Evo, { ...shapes[0][1], decimals: 99 }, ISSUER, 1n), '0 to 16', '99 decimals');
 
 console.log('\n5. Guards, before anything is signed');
-// Tokens need an AUTHENTICATION key at CRITICAL. Not HIGH, which the chain
-// refuses outright, and not the TRANSFER key, which is CRITICAL but only moves
-// credits — purpose and security level are separate things.
+// What is refused here is what cannot work: a key off another identity, or one
+// whose purpose is something else. The security level is the chain's call —
+// guessing it wrong locally would block an identity whose only authentication
+// key is HIGH, which is unusual but real (mainnet: thedesertlynx.dash).
 await refuses(
   () => createToken({ identityId: ISSUER, wif: stranger, ...shapes[0][1] }),
   'does not belong to this identity', 'publishing with a key that is not this identity\'s',
@@ -148,6 +150,29 @@ const { EvoSDK } = Evo;
 const main = EvoSDK.mainnetTrusted();
 await main.connect();
 check(Boolean(await main.contracts.fetch(TOKEN_HISTORY_CONTRACT)), 'and the same ID on mainnet');
+
+console.log('\n7b. An identity whose keys do not fit the usual shape');
+// mainnet thedesertlynx.dash has master + high authentication and a transfer
+// key, and no AUTHENTICATION/CRITICAL. It holds DUSD and SANS but issued
+// neither: the contracts belong to 3sL6q6e…, which does have a CRITICAL key and
+// no DPNS name. The indexer files that identity under thedesertlynx.dash
+// anyway, so the issuer's name has to come from the chain.
+{
+  const { EvoSDK } = Evo;
+  const mainnet = EvoSDK.mainnetTrusted();
+  await mainnet.connect();
+  const LYNX = 'BC6nzq4iDzknwaUQEei3HSNfVQ9FQgFRDGvUPRCyGEfA';
+  const OWNER = '3sL6q6eVCR6y8Ld6Gr14cedhJWNBPmBp3S5VtRcckxzE';
+  check(String(await mainnet.dpns.resolveName('thedesertlynx')) === LYNX, 'thedesertlynx.dash resolves to the identity holding the tokens');
+  const lynxKeys = await mainnet.identities.getKeys({ identityId: LYNX, request: { type: 'all' } });
+  check(!lynxKeys.some((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL'),
+    'it has no AUTHENTICATION/CRITICAL key, which is what made this look like a bug');
+  const ownerKeys = await mainnet.identities.getKeys({ identityId: OWNER, request: { type: 'all' } });
+  check(ownerKeys.some((k) => k.purpose === 'AUTHENTICATION' && k.securityLevel === 'CRITICAL'),
+    'the identity that actually owns those contracts does have one');
+  const ownerNames = await mainnet.dpns.usernames({ identityId: OWNER }).catch(() => []);
+  check(ownerNames.length === 0, 'and DPNS gives it no name, whatever the indexer says');
+}
 
 console.log('\n8. What an identity holds');
 // The one thing here that leans on an indexer: Platform cannot list the tokens
