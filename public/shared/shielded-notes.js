@@ -3,45 +3,45 @@
 // There is no endpoint that counts them, so counting means fetching them, and
 // the fetch has a ceiling. Two rules, both learned the hard way:
 //
-//   1. A node returns at most so many notes per request, whatever you ask for.
-//      Mainnet stops at 2,048; testnet goes past that, so it is a node setting
-//      and not a constant to hard-code. Ask for more than a node will give and
-//      it hands back the ceiling, which reads exactly like a complete answer —
-//      that is how evotools published "2,048 notes" while the pool held 2,301,
-//      on both /shielded and the explorer's pool panel.
-//   2. `startIndex` must be a multiple of the count asked for, or the request
-//      is refused: "start_index is not chunk-aligned; must be a multiple of
-//      max_elements". So paging works, in chunks of one size.
+//   1. A node returns at most so many notes per request, whatever you ask for,
+//      and hands that ceiling back looking exactly like a complete answer.
+//      Mainnet stops at 2,048; testnet returns more. It is a node setting, so
+//      it must be discovered, never assumed — evotools published "2,048 notes"
+//      on /shielded and in the explorer while the pool held 2,301, because the
+//      guard asked whether the answer had reached a number we had picked.
+//   2. `startIndex` must be a multiple of 2048: "start_index N is not
+//      chunk-aligned; must be a multiple of 2048". Not a multiple of the count
+//      asked for — of that constant. Resuming at 2048 works whether you ask for
+//      2,048 notes or 65,536.
 //
-// Hence: take a chunk. Short chunk, that is the lot. Full chunk, ask for the
-// next one. Where paging is refused, ask once for twice as much and see whether
-// the answer grows; an answer shorter than the request is everything, an answer
-// that did not grow is the ceiling again. If neither settles it, say so instead
-// of printing a ceiling as a total — `exact: false` is what the pages render as
-// a trailing "+".
-export const NOTE_CHUNK = 2048;
+// Which gives the count away without knowing any node's ceiling. Ask for far
+// more than the pool could hold; whatever comes back, a ceiling can only be a
+// whole number of chunks, because a node that stopped mid-chunk could not be
+// resumed at all. So an answer that is not a multiple of 2048 is the end of the
+// pool, and an answer that is one might be a ceiling — resume at it and ask
+// again. Mainnet settles in two calls, testnet in one.
+export const CHUNK = 2048;          // the alignment the node enforces
+const ASK = 1 << 20;                // more than any pool will hold, so the answer is the node's own limit
 
-export async function countNotes(sdk, { chunk = NOTE_CHUNK, maxChunks = 16 } = {}) {
-  const first = await sdk.shielded.encryptedNotes(0n, chunk);
-  if (first.length < chunk) return { count: first.length, exact: true, sample: first[0] };
-
-  let total = first.length;
-  for (let i = 1; i < maxChunks; i++) {
-    let page;
+export async function countNotes(sdk, { ask = ASK, maxPages = 64 } = {}) {
+  let total = 0;
+  let first;
+  for (let page = 0; page < maxPages; page++) {
+    let batch;
     try {
-      page = await sdk.shielded.encryptedNotes(BigInt(i * chunk), chunk);
-    } catch {
-      const wider = chunk * 2;
-      try {
-        const big = await sdk.shielded.encryptedNotes(0n, wider);
-        if (big.length > total && big.length < wider) return { count: big.length, exact: true, sample: big[0] };
-        return { count: Math.max(total, big.length), exact: false, sample: big[0] ?? first[0] };
-      } catch {
-        return { count: total, exact: false, sample: first[0] };
-      }
+      batch = await sdk.shielded.encryptedNotes(BigInt(total), ask);
+    } catch (e) {
+      // Only reachable after a full chunk, so the pool holds at least what has
+      // been counted; some nodes refuse a read that starts past the last note
+      // instead of answering with none.
+      return { count: total, exact: false, sample: first, reason: e?.message || String(e) };
     }
-    total += page.length;
-    if (page.length < chunk) return { count: total, exact: true, sample: first[0] };
+    if (page === 0) first = batch[0];
+    total += batch.length;
+    // Nothing left, or a part-chunk that no ceiling could have produced.
+    if (batch.length === 0 || batch.length % CHUNK !== 0) {
+      return { count: total, exact: true, sample: first, pages: page + 1 };
+    }
   }
-  return { count: total, exact: false, sample: first[0] };
+  return { count: total, exact: false, sample: first, reason: `stopped after ${maxPages} pages` };
 }

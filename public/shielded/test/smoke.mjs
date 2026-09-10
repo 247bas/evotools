@@ -13,6 +13,7 @@ import { pearson, spearman, ranks, residuals, partial, pValue, analyse, eventStu
 import { loadDataset, dailyRows, daily, weekly, isIn, isOut } from '../js/store.js';
 import { readFileSync } from 'node:fs';
 import { poolState } from '../js/pool.js';
+import { countNotes, CHUNK as NOTE_CHUNK } from '../../shared/shielded-notes.js';
 import { loadEvo, getSdkFor } from '../js/sdk.js';
 import { l1FromHash } from '../../map/js/addresses.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
@@ -22,6 +23,11 @@ let failed = 0;
 const check = (c, m) => (c ? ok(m) : (failed++, console.log(`  ❌ ${m}`)));
 const safe = async (l, fn) => {
   try { return await fn(); } catch (e) { failed++; console.log(`  ❌ ${l}: ${e?.message || e}`); }
+};
+// For corroboration from somebody else's server: their being down says nothing
+// about our code, so it must not turn this suite red. Their disagreeing does.
+const optional = async (l, fn) => {
+  try { return await fn(); } catch (e) { console.log(`  ⚪ ${l} unreachable, skipped: ${e?.message || e}`); }
 };
 
 console.log('\n1. A shielded address: 43 bytes, a z after the 1, and back again');
@@ -108,16 +114,42 @@ console.log('\n7. The chain, and the index held against it');
 const m = await safe('poolState(mainnet)', () => poolState('mainnet'));
 check(m?.balance > 0n, `mainnet pool holds ${dash(m?.balance, 2)} DASH`);
 check(m?.notes > 0 && m?.notesExact, `${m?.notes} notes, ${m?.anchors} anchors`);
-// The note count is the one number here that cannot be read straight off an
-// endpoint: it has to be counted by paging, and a node hands back its
-// per-request ceiling looking exactly like a complete answer. This page
-// published 2,048 (the ceiling) while the pool held 2,301. So it is held
-// against somebody else's count, arrived at by their own code.
-const mno = await safe('mnowatch.org', async () => {
+
+// The note count is the one number on this page that cannot be read off an
+// endpoint. It has to be counted by paging, and a node hands its per-request
+// ceiling back looking exactly like a complete answer — which is how 2,048 got
+// published while the pool held 2,301. So the count is checked three ways, and
+// the first two need nobody's help.
+//
+// One: it must not depend on how much we asked for. That is precisely the bug.
+const sdkM = await safe('sdk for the note count', () => getSdkFor('mainnet'));
+if (sdkM) {
+  const counts = [];
+  for (const ask of [1 << 20, 8192, 4096]) counts.push(await countNotes(sdkM, { ask }));
+  check(counts.every((c) => c.count === counts[0].count && c.exact),
+    `counted ${counts[0].count} notes whether we ask for 1,048,576, 8,192 or 4,096 at a time`);
+  check(counts[0].count === m.notes, 'and the page shows that same number');
+  // Two: it ends on a part-chunk. A ceiling is always whole chunks, because a
+  // node that stopped mid-chunk could not be resumed — startIndex has to be a
+  // multiple of the chunk. So a part-chunk is the end of the pool and nothing
+  // else, and this is the whole argument the count rests on.
+  check(m.notes % NOTE_CHUNK !== 0, `${m.notes} is not a whole number of ${NOTE_CHUNK}-note chunks, so the last read was the end of the pool`);
+  await safe('the alignment rule still holds', async () => {
+    let refused = false;
+    try { await sdkM.shielded.encryptedNotes(BigInt(m.notes), 4096); } catch (e) { refused = /chunk-aligned|multiple/i.test(e?.message || ''); }
+    check(refused, 'and a read that starts off a chunk boundary is still refused, which is why that argument works');
+  });
+}
+
+// Three: somebody else's count, arrived at by their own code against their own
+// node. Corroboration, not the basis — if MNOwatch is down that says nothing
+// about us, so it is allowed to be absent but not to disagree.
+const mno = await optional('mnowatch.org', async () => {
   const r = await fetch('https://mnowatch.org/evonodes/shieldedBalance.php');
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   return r.json();
 });
-if (mno) {
+if (mno && m) {
   const theirs = Number(mno.totalshieldednotescount);
   check(Math.abs(theirs - m.notes) <= 3, `MNOwatch counts ${theirs} notes against our ${m.notes}`);
   const theirBalance = Math.round(Number(mno.totalshieldedbalance) * 1e5);
@@ -214,6 +246,15 @@ for (const t of TYPES) {
 const days = daily(ev, { includeToday: true });
 const chainDash = m ? Number(m.balance) / Number(CREDITS_PER_DASH) : null;
 check(chainDash == null || Math.abs(days[days.length - 1].balance - chainDash) < 25, `the rows add up to ${days[days.length - 1].balance.toFixed(2)} DASH against the chain's ${chainDash?.toFixed(2)}`);
+
+// Every Orchard bundle carries at least two actions and every action writes one
+// output note, so the pool cannot hold fewer notes than twice the transitions
+// we store. A count that ever falls under this floor is a truncated read, and
+// this needs nothing outside our own file and the chain.
+if (m?.notes && ev.length) {
+  check(m.notes >= 2 * ev.length, `${m.notes} notes against ${ev.length} transitions: at or above the two-per-bundle floor of ${2 * ev.length}`);
+  check(m.notes < 6 * ev.length, `and ${(m.notes / ev.length).toFixed(2)} notes per transition, in the range a bundle of two to a few actions gives`);
+}
 
 // The strongest check there is: our per-transition rows, bucketed by day, must
 // equal the index's own daily buckets, which section 8 already read — a

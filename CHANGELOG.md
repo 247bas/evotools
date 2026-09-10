@@ -12,16 +12,25 @@ rather than installable releases.
   2,048 and hands the ceiling back looking exactly like a complete answer. The
   old guard asked whether the answer had reached 8,192 and so never fired.
   Testnet was right by luck, its node giving more than the pool holds.
-  Counting properly means paging, and `startIndex` has to be a multiple of the
-  count asked for ("start_index is not chunk-aligned; must be a multiple of
-  max_elements"), so `shared/shielded-notes.js` takes a chunk at a time: short
-  chunk and that is the lot, full chunk and it asks for the next. Where paging
-  is refused it asks once for twice as much and reads whether the answer grew.
-  Where neither settles it the count is rendered with a trailing "+" instead of
-  a wrong exact number. Both pages use it. The smoke test now holds our count
-  against MNOwatch's, which reaches 2,301 through its own code — thanks to zkcd
-  for spotting it. Anchors were checked for the same trap and are genuine: 64
-  kept on mainnet against 61 blocks carrying a transition in the last 1,000,
+  Counting properly means paging, and `startIndex` must be a multiple of 2,048
+  ("start_index is not chunk-aligned"). That constant is what gives the count
+  away without knowing any node's ceiling: a ceiling can only ever be a whole
+  number of chunks, because a node that stopped mid-chunk could not be resumed
+  at all. So `shared/shielded-notes.js` asks for far more than any pool holds
+  and reads the answer's shape — a length that is not a multiple of 2,048 is the
+  end of the pool, one that is might be a ceiling, so it resumes there and asks
+  again. Mainnet settles in two calls, testnet in one, and the answer no longer
+  depends on how much was asked for. Where it cannot be settled the count
+  renders with a trailing "+" rather than a wrong exact number. Both pages use
+  it.
+  Verification is our own: the count must not change with the request size
+  (that is the bug, stated as a test), it must end on a part-chunk, a read off a
+  chunk boundary must still be refused, and the pool cannot hold fewer notes
+  than two per stored transition, every Orchard bundle carrying at least two
+  actions. MNOwatch is asked too and agrees at 2,301, but only as
+  corroboration: it is allowed to be unreachable, not to disagree. Thanks to
+  zkcd for spotting it. Anchors were checked for the same trap and are genuine:
+  64 kept on mainnet against 61 blocks carrying a transition in the last 1,000,
   which is what the retention rule predicts.
 
 - **/shielded keeps its own history, and asks the price a sharper question.**

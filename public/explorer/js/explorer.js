@@ -3,7 +3,7 @@
 // object the UI renders + a raw JSON dump.
 
 import { tokenHolders, nameHolders } from '../../shared/token-holders.js';
-import { countNotes, NOTE_CHUNK } from '../../shared/shielded-notes.js';
+import { countNotes } from '../../shared/shielded-notes.js';
 import { getSdk, getSdkFor, loadEvo } from './sdk.js';
 import { contestState, contestEndsAt } from '../../shared/dpns-register.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
@@ -241,7 +241,7 @@ export async function shieldedPool(network, { proof = false, notes = true } = {}
   const [anchors, latest, noteList] = await Promise.all([
     sdk.shielded.anchors().catch(() => []),
     sdk.shielded.mostRecentAnchor().catch(() => undefined),
-    notes ? countNotes(sdk, { chunk: NOTE_CHUNK }).catch(() => null) : null,
+    notes ? countNotes(sdk).catch(() => null) : null,
   ]);
 
   return {
