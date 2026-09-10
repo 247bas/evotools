@@ -165,3 +165,6 @@
 #addKeyPanel #akOut .box { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 #addKeyPanel #akRoleUse { margin: 7px 0 0; }
+
+/* The network mirror is one word wide next to a 44-character id. */
+#addKeyPanel #akNetField { flex: 0 0 150px; }

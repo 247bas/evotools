@@ -30,6 +30,16 @@ rather than installable releases.
   One way only. The SDK's own note on `disablePublicKeys`: "Cannot disable
   master, critical auth, or transfer keys." The page says so before the button.
 
+  The network sits beside the identity field now, mirroring the one at the top
+  of the page rather than being a second setting that can disagree with it. It
+  was only up there, next to generating a phrase, which is a long way from this
+  section and left no way to tell which chain a lookup went to. And a real bug
+  behind it: the connected SDK was cached without the network in the key, so
+  switching the selector kept querying the chain of the first lookup — a
+  mainnet identity came back "not found" from a testnet node. "Not found" now
+  names the network it looked on, and a malformed id says so instead of
+  surfacing the SDK's "byte length not 32 bytes".
+
   A key can also be bound to a single contract, or to one document type inside
   it, and some contracts insist: DashPay's `contactRequest` sets
   `requiresIdentityEncryptionBoundedKey` and `…DecryptionBoundedKey`, so the

@@ -181,9 +181,18 @@
         this is possible at all.
       </div>
 
-      <div class="field">
-        <label for="akIdentity">Identity id</label>
-        <input id="akIdentity" type="text" placeholder="base58 identity id" autocomplete="off" spellcheck="false" />
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="akIdentity">Identity id</label>
+          <input id="akIdentity" type="text" placeholder="base58 identity id" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field" id="akNetField">
+          <label for="akNet">Network</label>
+          <select id="akNet">
+            <option value="mainnet">mainnet</option>
+            <option value="testnet">testnet</option>
+          </select>
+        </div>
       </div>
       <button class="btn ghost" id="akLookupBtn">Look it up</button>
       <p class="fineprint" id="akOfflineHint" hidden>

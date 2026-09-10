@@ -213,15 +213,29 @@ renderSnippet();
 // The only place on this page that wants a network, and it is optional: the
 // three numbers it fetches can be typed in by hand, which is what the offline
 // copy does. Connected lazily so the page still costs nothing to open.
-let _sdk = null;
+// One connected SDK per network, not one full stop. Caching without the
+// network in the key meant switching the selector kept querying the old chain,
+// so a mainnet identity came back "not found" from a testnet node.
+const _sdks = {};
 async function connected() {
   if (isOffline()) throw new Error('This copy has no network. Type the identity\'s revision, nonce and master key id in yourself — the explorer shows all three.');
-  if (_sdk) return _sdk;
+  const net = $('netsel').value;
+  if (_sdks[net]) return _sdks[net];
   const { EvoSDK } = await loadEvo();
-  _sdk = $('netsel').value === 'mainnet' ? EvoSDK.mainnetTrusted() : EvoSDK.testnetTrusted();
-  await _sdk.connect();
-  return _sdk;
+  const sdk = net === 'mainnet' ? EvoSDK.mainnetTrusted() : EvoSDK.testnetTrusted();
+  await sdk.connect();
+  _sdks[net] = sdk;
+  return sdk;
 }
+
+// The network lives at the top of the page, next to generating a phrase, and
+// this section is a long way below it. Rather than a second setting that can
+// disagree with the first, this one mirrors it both ways.
+const netMirrors = () => [$('netsel'), $('akNet')];
+function syncNetwork(from) {
+  for (const select of netMirrors()) if (select !== from) select.value = from.value;
+}
+for (const select of netMirrors()) select.addEventListener('change', () => syncNetwork(select));
 
 // MASTER is not offered. An identity update is the only way to add a key and
 // it can only be signed by a master key, so an identity without one can never
@@ -275,8 +289,19 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
   if (!identityId) throw new Error('Paste the identity id first.');
   const sdk = await connected();
 
-  const identity = await sdk.identities.fetch(identityId);
-  if (!identity) throw new Error('No identity with that id on this network.');
+  const net = $('netsel').value;
+  let identity;
+  try {
+    identity = await sdk.identities.fetch(identityId);
+  } catch {
+    // The SDK's own complaint here is "byte length not 32 bytes", which reads
+    // like something broke rather than like a typo in the box.
+    throw new Error('That is not a valid identity id — it should be 43 or 44 base58 characters.');
+  }
+  if (!identity) {
+    throw new Error(`No identity with that id on ${net}. `
+      + `The network selector sits at the top of this page and beside this field, and it is on ${net} now.`);
+  }
   const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
   const nonce = (await sdk.identities.nonce(identityId)) ?? 0n;
 
