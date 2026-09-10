@@ -2,6 +2,7 @@
 // documents, plus proofs, aggregations and network info. Each returns a plain
 // object the UI renders + a raw JSON dump.
 
+import { tokenHolders, nameHolders } from '../../shared/token-holders.js';
 import { getSdk, getSdkFor, loadEvo } from './sdk.js';
 import { contestState, contestEndsAt } from '../../shared/dpns-register.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
@@ -109,6 +110,17 @@ async function getContest(label) {
     pending,
     endsAt: pending ? await contestEndsAt({ sdk, normalizedLabel: norm }).catch(() => undefined) : undefined,
   };
+}
+
+// Who holds a token, from its history — Platform has no query for it. Kept
+// behind a button rather than run with the rest of the lookup: it walks every
+// history document the token has, which is a handful of round trips for a quiet
+// token and rather more for a busy one.
+export async function tokenHoldersFor(tokenId, onProgress) {
+  const sdk = await getSdk();
+  const result = await tokenHolders(sdk, { tokenId }, onProgress);
+  await nameHolders(sdk, result.holders);
+  return result;
 }
 
 export async function lookupToken(tokenId) {

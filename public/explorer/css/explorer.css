@@ -131,3 +131,17 @@
 }
 .ex-dev-body textarea:focus { outline: none; border-color: var(--blue); }
 .ex-dev-btns { display: flex; gap: 10px; margin: 10px 0; }
+
+/* Holders of a token, worked out from its history. The identity column carries
+   a 44-character id, so the table scrolls on its own rather than widening the
+   page. */
+.ex-holders { width: 100%; overflow-x: auto; margin-top: 12px; }
+.ex-holders table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.ex-holders th, .ex-holders td { text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.ex-holders th { color: var(--muted); font-weight: 500; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.ex-holders tr:last-child td { border-bottom: 0; }
+.ex-holders td.who { font-family: var(--mono); overflow-wrap: anywhere; }
+.ex-holders td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.ex-holders td.share { text-align: right; color: var(--muted); white-space: nowrap; }
+.ex-tag { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-size: 0.65rem; border: 1px solid var(--border); color: var(--muted); }
+.ex-note { margin-top: 10px; font-size: 0.78rem; color: var(--muted); }

@@ -7,8 +7,9 @@ import {
   lookupIdentity, lookupName, lookupContract, queryDocuments,
   countDocuments, networkInfo, lookupToken, creditsToDash,
   decodeStateTransition, broadcastStateTransition,
-  shieldedPool, checkNullifier,
+  shieldedPool, checkNullifier, tokenHoldersFor,
 } from './explorer.js';
+import { formatAmount, shareOf } from '../../shared/token-holders.js';
 import { setNetwork, getNetwork, NETWORKS } from './sdk.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
 
@@ -242,12 +243,86 @@ function renderToken(data) {
   cf.append(row);
   card.append(cf);
 
+  card.append(holdersBlock(data));
+
   card.append(snippet(
     `const info = await sdk.tokens.contractInfo('${data.id}');\nconst supply = await sdk.tokens.totalSupply('${data.id}');`,
   ));
   if (data.config) card.append(rawBlock(data.config, 'Token config (JSON)'));
   if (data.supply) card.append(rawBlock(data.supply, 'Supply (JSON)'));
   return card;
+}
+
+// Holders are not a lookup, they are a walk: Platform stores balances in a tree
+// keyed by identity and offers no way to list it, so the only route is the
+// token's own history. Behind a button because it costs a run of queries, and
+// because a token published without history cannot answer at all.
+function holdersBlock(data) {
+  const wrap = el('div', 'ex-field');
+  wrap.append(el('div', 'ex-label', 'Holders'));
+
+  const out = el('div');
+  const btn = el('button', 'btn ghost sm', 'Work out who holds it');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Reading history…';
+    out.replaceChildren(el('div', 'note info', 'Reading the token history…'));
+    try {
+      const result = await tokenHoldersFor(data.id, (type, seen) => {
+        out.replaceChildren(el('div', 'note info', `Reading the token history — ${type}, ${seen} events so far…`));
+      });
+      out.replaceChildren(renderHolders(result));
+    } catch (e) {
+      out.replaceChildren(el('div', 'note warn', e?.message || String(e)));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Work out who holds it';
+    }
+  });
+
+  wrap.append(btn);
+  wrap.append(out);
+  return wrap;
+}
+
+function renderHolders(result) {
+  const host = el('div');
+  if (!result.holders.length) {
+    host.append(el('div', 'note info', `Nobody holds any of it — ${result.events} history events read.`));
+    return host;
+  }
+
+  const scroll = el('div', 'ex-holders');
+  const table = document.createElement('table');
+  const head = document.createElement('tr');
+  for (const [label, cls] of [['Holder', ''], ['Name', ''], ['Balance', 'num'], ['Share', 'share']]) {
+    head.append(el('th', cls, label));
+  }
+  table.append(head);
+
+  for (const h of result.holders) {
+    const tr = document.createElement('tr');
+    const who = el('td', 'who', h.identityId);
+    if (h.identityId === result.ownerId) who.append(el('span', 'ex-tag', 'issuer'));
+    tr.append(who);
+    tr.append(el('td', null, h.names?.length ? h.names.join(', ') : '\u2014'));
+    tr.append(el('td', 'num', formatAmount(h.balance, result.decimals)));
+    tr.append(el('td', 'share', shareOf(h.balance, result.held)));
+    table.append(tr);
+  }
+  scroll.append(table);
+  host.append(scroll);
+
+  host.append(el('div', 'ex-note',
+    `${result.holders.length} holder${result.holders.length === 1 ? '' : 's'}, `
+    + `${formatAmount(result.held, result.decimals)} between them, from ${result.events} history event`
+    + `${result.events === 1 ? '' : 's'}.`));
+
+  if (!result.complete) {
+    host.append(el('div', 'note warn',
+      'This token keeps no history, so there is no trail to walk and this list is probably not everyone.'));
+  }
+  return host;
 }
 
 function renderContract(data) {

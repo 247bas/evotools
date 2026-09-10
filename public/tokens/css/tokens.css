@@ -1,0 +1,45 @@
+/* tokens — publishing and moving a token. Leans on shared/theme.css. */
+
+.tk-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.tk-head h1 { font-size: 1.5rem; }
+.tk-head select {
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-size: 0.88rem;
+}
+
+.field input[type="text"], .field input[type="password"] {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text); font-family: var(--mono); font-size: 0.85rem;
+}
+.field input:focus { outline: none; border-color: var(--blue); }
+.field > label { display: block; margin-bottom: 7px; }
+/* A position is one digit, and next to a 44-character id it should look it. */
+.field.tk-narrow { flex: 0 0 110px; }
+
+.tk-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; margin: 18px 0; }
+.tk-cell { background: rgba(0, 0, 0, 0.22); border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; }
+.tk-cell .k { display: block; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.tk-cell .v { font-family: var(--mono); font-size: 0.9rem; overflow-wrap: anywhere; }
+.tk-cell .v.big { font-size: 1.25rem; }
+.tk-cell.wide { grid-column: 1 / -1; }
+.tk-cell.wide .v { white-space: pre-line; line-height: 1.7; font-size: 0.82rem; }
+
+.tk-checks { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 14px; }
+.tk-checks label { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; }
+.tk-checks input { width: auto; accent-color: var(--blue); }
+
+.keys + .keys { margin-top: 10px; }
+#actions .keys > summary { font-weight: 600; }
+#actions .fineprint { margin-bottom: 12px; }
+
+/* Holders. The identity column carries a 44-character id, so it scrolls on its
+   own rather than pushing the page sideways. */
+.tk-holders { width: 100%; overflow-x: auto; margin-top: 16px; }
+.tk-holders table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.tk-holders th, .tk-holders td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.tk-holders th { color: var(--muted); font-weight: 500; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.tk-holders tr:last-child td { border-bottom: 0; }
+.tk-holders td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.tk-holders td.share { text-align: right; color: var(--muted); white-space: nowrap; }
+.tk-holders td.who { font-family: var(--mono); overflow-wrap: anywhere; }
+.tk-holders .tag { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-size: 0.65rem; border: 1px solid var(--border); color: var(--muted); }

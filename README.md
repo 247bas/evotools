@@ -26,6 +26,7 @@ Live at **[evotools.dev](https://evotools.dev)** · `evotools.dash` on Platform.
 | [Credits](public/credits/) | An identity's balance and every way to move it: top up, pay out, convert, withdraw to layer 1 | Live |
 | [Playground](public/playground/) | Run the cookbook recipes live in the browser | Live |
 | [Explorer](public/explorer/) | Identities, DPNS names, contracts, tokens, documents and the shielded pool, with proofs | Live |
+| [Tokens](public/tokens/) | Publish a token, mint it, send it by name, and work out who holds it | Live |
 | [dash-name](public/name/) | Check and claim a `.dash` username for your identity | Live |
 | [Contests](public/contests/) | Every `.dash` name masternodes are voting on, and every one they decided | Live |
 | [Shielded](public/shielded/) | The Orchard pool: what is in it, how it moves week by week, what the six shielded moves cost, and whether an address is a shielded one | Live |
@@ -51,6 +52,7 @@ evotools/
 │  │  ├─ secrets.js      one rule for "this is a key, refuse it"
 │  │  ├─ assetlock.js    build a layer-1 asset lock in the browser
 │  │  ├─ dpns-register.js   resumable .dash registration (derived salt)
+│  │  ├─ token-holders.js   who holds a token, walked from its history
 │  │  └─ vendor/         @dashevo/evo-sdk v4 + dashcore-lib, shared by all tools
 │  ├─ map/               → /map
 │  ├─ onboard/           → /onboard
@@ -68,6 +70,20 @@ evotools/
 
 Each web tool imports `/shared/theme.css`, `/shared/nav.js`, and the SDK from
 `../../shared/vendor/`. Adding a tool is a new folder + a card on the hub.
+
+## Platform cannot list, so some things have to be walked
+
+Platform proves a thing you name and cannot enumerate. `/contests` and `/map`
+work around that with an external indexer. `/tokens` does not need one: a token
+published with history writes a document for every mint, transfer, burn and
+purchase into one system contract, and tokens cannot move any other way — so
+walking that history finds everyone who ever held it, and their balances are
+then a normal lookup. The base supply is the one thing no document records; it
+goes to the contract owner at publish time and is added by hand.
+
+That lives in `public/shared/token-holders.js` and both `/tokens` and
+`/explorer` call it. It only works for a token that keeps history; when one does
+not, the tools say so rather than presenting a short list as the whole truth.
 
 ## Keys never leave the browser
 
@@ -89,6 +105,7 @@ npm run test:onboard   # onboard's core flow against testnet
 npm run test:explorer  # the explorer lookups
 npm run test:name      # dash-name check/register + the secret guards
 npm run test:credits   # the credits guards and live reads
+npm run test:tokens    # the token guards, contract building and the holder walk
 npm run test:contests  # the contests list and its indexer quirks
 npm run test:keygen    # offline key derivation + builds the offline copy
 npm run test:assetlock # builds a real signed asset lock

@@ -5,6 +5,45 @@ rather than installable releases.
 
 ## Unreleased
 
+- **A page for tokens, and a way to ask who holds one.** `/tokens` publishes a
+  token, mints it and sends it by `.dash` name, signed in the browser with a key
+  pasted per action the way `/credits` does it. Four things cost time to find
+  out and are written down where they bite. A data contract carrying a token but
+  no document type is refused by the constructor — the tokens are not counted by
+  that check — so it is built with a throwaway document type and read back
+  without it, which `fromJSON` accepts; the contract ID comes from owner and
+  nonce and survives the round trip. Every token transition needs an
+  AUTHENTICATION key at CRITICAL, not the HIGH one, which the chain refuses with
+  "Invalid public key security level HIGH. The state transition requires one of
+  CRITICAL" — surprising, because document transitions do take HIGH. Purpose and
+  security level are separate, so the TRANSFER key at CRITICAL looks strong and
+  cannot touch a token. And `identity.publicKeys` is an array whose positions
+  are not key IDs, so `keyId` has to be read off the key.
+
+  Holders are the part Platform cannot answer: balances sit in a tree keyed by
+  identity and nothing enumerates it, `system.pathElements` wanting exactly the
+  keys you are trying to discover. But a token with history writes a document
+  for every mint, transfer, burn and purchase into one system contract, and
+  tokens cannot move any other way, so walking that history names everyone who
+  ever held it. The base supply is the exception — it goes to the contract owner
+  at publish time and no document records it — so the owner is added by hand.
+  The history contract is `43gujrzZgXqcKBiScLa4T8XTDnRhenR9BLx8GWVHjPxF`, the
+  same on both networks; it appears nowhere in the SDK as a string, and was
+  found by locating the DPNS contract's bytes in the wasm and testing the
+  32-byte windows around it against the network, where the seven system
+  contracts turn out to sit side by side. The walk lives in
+  `public/shared/token-holders.js` and `/explorer` calls it too, behind a button
+  on the token card. A token published without history gets a plain "this is
+  probably not everyone" rather than a short list presented as the truth.
+
+  One trap in the shared module: a document's identifier fields do not come back
+  in one encoding. `$ownerId` renders as base58 while a contract-defined field
+  like `toIdentityId` renders as base64, and both are 44 characters, so the
+  length tells you nothing — a base64 ID fed to a balance lookup fails on an
+  invalid character rather than on being the wrong encoding. It reads
+  `toObject()` instead, where every identifier is raw bytes, and encodes base58
+  itself.
+
 - **A page for the shielded pool.** `/shielded` reads the Orchard pool on both
   networks: balance, notes, anchors and protocol from the chain through the SDK,
   and from pshenmic's index the count and amount per transition type and a

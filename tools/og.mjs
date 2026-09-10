@@ -26,6 +26,7 @@ const CARDS = {
   onboard: ['Onboard', 'From nothing to a funded testnet identity + a .dash name'],
   playground: ['Playground', 'Run the evo-cookbook recipes live in your browser'],
   explorer: ['Explorer', 'Browse identities, names, contracts & tokens on Dash Platform'],
+  tokens: ['Tokens', 'Publish a token, send it by name, and see who holds it'],
   shielded: ['Shielded', 'The Orchard pool on Dash Platform: what is in it, how it moves, what it costs'],
 };
 
