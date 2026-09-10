@@ -61,6 +61,53 @@ export async function history(network, { direction = 'in', start = LAUNCH, end =
   }));
 }
 
+// One bucket a day, since launch, in and out on the same days.
+//
+// The page does not draw from this any more — it has every transition in its
+// own file and buckets them itself. It stays because the smoke test holds the
+// two against each other: if our stored rows and the index's own daily sums
+// ever disagree, one of them is wrong, and this is how that shows up.
+//
+// Two limits shape this. The API takes at most 100 buckets per call, and it
+// sizes a bucket as ceil(range / count) and then walks from the start — so a
+// range that is not a whole multiple of the bucket loses its last bucket (the
+// trap flows() documents above). Both are handled the same way: ask in blocks
+// of whole days, at most 100 at a time, each block starting and ending on a UTC
+// midnight. A block of n days with n intervals makes the bucket exactly one day
+// and the walk cover the whole block.
+export const MAX_BUCKETS = 100;
+const DAY = 86400000;
+const midnight = (d) => Math.floor(d / DAY) * DAY;
+
+export function dayBlocks(start, end, max = MAX_BUCKETS) {
+  const from = midnight(start.getTime());
+  const to = midnight(end.getTime());
+  const blocks = [];
+  for (let t = from; t < to; t += max * DAY) {
+    const stop = Math.min(to, t + max * DAY);
+    blocks.push({ start: new Date(t), end: new Date(stop), days: Math.round((stop - t) / DAY) });
+  }
+  return blocks;
+}
+
+// `now` counts as a whole day: the bucket for today is included and comes back
+// with the day so far in it. What is done with a half-written day is the
+// caller's business (the correlation drops it, the chart draws it).
+export async function dailyFlows(network, { now = new Date() } = {}) {
+  const end = new Date(midnight(now.getTime()) + DAY);
+  const blocks = dayBlocks(LAUNCH, end);
+  const per = await Promise.all(blocks.map((b) => Promise.all([
+    history(network, { direction: 'in', start: b.start, end: b.end, intervals: b.days }),
+    history(network, { direction: 'out', start: b.start, end: b.end, intervals: b.days }),
+  ])));
+  return {
+    in: per.flatMap(([i]) => i),
+    out: per.flatMap(([, o]) => o),
+    days: blocks.reduce((s, b) => s + b.days, 0),
+    end,
+  };
+}
+
 // In and out on the same buckets, since launch, one bucket a week.
 //
 // The end is pushed out to a whole number of weeks on purpose. The API sizes a

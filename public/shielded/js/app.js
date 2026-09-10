@@ -2,6 +2,8 @@
 // the six shielded transitions cost, and whether an address is a shielded one.
 // Every value from the chain or the index is rendered with textContent.
 import { statistic, flows, apiHost, LAUNCH } from './api.js';
+import { loadDataset, dailyRows, weekly, isIn, isOut } from './store.js';
+import { analyse, eventStudy, byPrice } from './correlate.js';
 import { poolState } from './pool.js';
 import {
   TYPES, DENOMINATIONS, POOL, FEES, minimumFor, dash, PROTOCOL_THESE_HOLD_FOR, CREDITS_PER_DASH,
@@ -189,20 +191,334 @@ function renderTypes(s, net) {
   }
 }
 
+// Mainnet buckets the transitions this site stores; testnet has no such file
+// and asks the index for its weekly series. Same shape either way.
 async function loadFlows(net) {
   const box = $('chart');
   box.replaceChildren(el('div', 'sh-sub', `Reading ${net}…`));
   $('chartNote').textContent = '';
   try {
-    const f = await flows(net);
+    const f = net === 'mainnet'
+      ? weekly((await dataset()).events, { launch: LAUNCH })
+      : await flows(net);
     if (net !== currentNet()) return;
     renderChart(box, f, net);
-    $('chartNote').textContent = `${f.weeks} weeks since ${fmtDay(LAUNCH)}; the last bar is the week in progress`;
+    $('chartNote').textContent = `${f.weeks} weeks since ${fmtDay(LAUNCH)}; the last bar is the week in progress, ${net === 'mainnet' ? 'bucketed from this site\u2019s own rows' : 'from the index'}`;
     const s = indexByNet[net] ?? await statistic(net);
     indexByNet[net] = s;
     renderTypes(s, net);
   } catch (e) {
     box.replaceChildren(el('div', 'error', `Could not read the series: ${e?.message || e}`));
+  }
+}
+
+// ── the pool against the price ───────────────────────────────────────────────
+// The pool's balance is a chain fact; the price is not, and nothing on Platform
+// knows it. So this section is the only one that reads a source outside Dash,
+// and it says so under the chart. Testnet has no price: tDASH is not traded,
+// and pretending otherwise would be the one dishonest number on the page.
+const money = (v) => {
+  const abs = Math.abs(v);
+  if (abs >= 1e6) return `$${(v / 1e6).toFixed(abs >= 1e7 ? 0 : 1)}M`;
+  if (abs >= 1000) return `$${Math.round(v).toLocaleString('en-US')}`;
+  return `$${v.toFixed(2)}`;
+};
+// Axis labels want the short form: $400k, not $400,000.00.
+const compactUsd = (v) => {
+  const abs = Math.abs(v);
+  if (abs < 1) return '$0';
+  if (abs >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (abs >= 1000) return `$${Math.round(v / 1000)}k`;
+  return `$${Math.round(v)}`;
+};
+const signed = (r) => (Number.isFinite(r) ? `${r >= 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}` : '—');
+const pText = (p) => (!Number.isFinite(p) ? '—' : p < 0.001 ? '<0.001' : p.toFixed(3));
+// In a sentence the operator has to read right: "p < 0.001", not "p = <0.001".
+const pPhrase = (p) => (!Number.isFinite(p) ? '' : p < 0.001 ? 'p < 0.001' : `p = ${p.toFixed(3)}`);
+
+// The file is read once and both charts draw from it. Asking twice would mean
+// two top-up round trips for the same handful of new transitions.
+let datasetPromise = null;
+const dataset = () => (datasetPromise ??= loadDataset());
+
+let priceState = null;      // { chartRows, a }, kept so the unit toggle and a resize can redraw
+let priceUnit = 'dash';
+
+function poolAt(row, unit) { return unit === 'usd' ? row.balance * row.usd : row.balance; }
+
+function renderPoolPrice(box, rows, unit) {
+  const W = Math.max(320, Math.round(box.clientWidth || 640));
+  const H = 240; const L = 58; const R = 54; const T = 14; const B = 28;
+  if (rows.length < 2) { box.replaceChildren(el('div', 'sh-sub', 'Not enough days yet.')); return; }
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H });
+  const pool = rows.map((r) => poolAt(r, unit));
+  const px = rows.map((r) => r.usd);
+  const poolMax = niceMax(Math.max(...pool));
+  const pxLo = Math.min(...px); const pxHi = Math.max(...px);
+  const pad = (pxHi - pxLo) * 0.15 || 1;
+  const pxMin = Math.max(0, pxLo - pad); const pxMax = pxHi + pad;
+  const x = (i) => L + ((W - L - R) * i) / (rows.length - 1);
+  const yPool = (v) => T + (H - T - B) * (1 - v / poolMax);
+  const yPx = (v) => T + (H - T - B) * (1 - (v - pxMin) / (pxMax - pxMin));
+
+  for (const v of [0, poolMax / 2, poolMax]) {
+    svg.append(svgEl('line', { x1: L, x2: W - R, y1: yPool(v), y2: yPool(v), class: 'axis' }));
+    const t = svgEl('text', { x: L - 8, y: yPool(v) + 4, 'text-anchor': 'end', class: 'tick' });
+    t.textContent = unit === 'usd' ? compactUsd(v) : num(Math.round(v));
+    svg.append(t);
+  }
+  const span = pxMax - pxMin;
+  const dec = span >= 20 ? 0 : span >= 2 ? 1 : 2;
+  for (const v of [pxMin, (pxMin + pxMax) / 2, pxMax]) {
+    const t = svgEl('text', { x: W - R + 8, y: yPx(v) + 4, class: 'tick right' });
+    t.textContent = `$${v.toFixed(dec)}`;
+    svg.append(t);
+  }
+  const path = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const poolPts = rows.map((r, i) => [x(i), yPool(pool[i])]);
+  svg.append(svgEl('path', { class: 'area', d: `${path(poolPts)} L${x(rows.length - 1).toFixed(1)},${yPool(0).toFixed(1)} L${L},${yPool(0).toFixed(1)} Z` }));
+  svg.append(svgEl('path', { class: 'line pool', d: path(poolPts) }));
+  svg.append(svgEl('path', { class: 'line price', d: path(rows.map((r, i) => [x(i), yPx(r.usd)])) }));
+
+  // Six dates need room the price axis has taken; on a phone, three.
+  const every = Math.ceil(rows.length / (W < 520 ? 3 : 6));
+  rows.forEach((r, i) => {
+    if (i % every === 0) {
+      const t = svgEl('text', { x: x(i), y: H - 9, class: 'tick', 'text-anchor': i === 0 ? 'start' : 'middle' });
+      t.textContent = fmtDay(new Date(`${r.day}T00:00:00Z`));
+      svg.append(t);
+    }
+    const w = (W - L - R) / rows.length;
+    const hit = svgEl('rect', { x: x(i) - w / 2, y: T, width: w, height: H - T - B, class: 'hit' });
+    const title = svgEl('title');
+    title.textContent = `${r.day}: pool ${num(Math.round(r.balance))} DASH (${money(r.balance * r.usd)}) at $${r.usd.toFixed(2)}, net ${r.net >= 0 ? '+' : '−'}${Math.abs(r.net).toFixed(1)} DASH that day`;
+    hit.append(title);
+    svg.append(hit);
+  });
+  box.replaceChildren(svg);
+}
+
+function renderWorth(a, chainBalance, priceRow) {
+  const balance = chainBalance != null ? Number(chainBalance) / Number(CREDITS_PER_DASH) : a.balance;
+  const w = (k, v, n) => {
+    const b = el('div', 'w');
+    b.append(el('div', 'w-k', k), el('div', 'w-v', v));
+    if (n) b.append(el('div', 'w-n', n));
+    return b;
+  };
+  $('worth').replaceChildren(
+    w('In the pool', `${num(Math.round(balance))} DASH`, chainBalance != null ? 'from the chain' : 'from the index'),
+    w('DASH', `$${priceRow.usd.toFixed(2)}`, `close of ${priceRow.day}`),
+    w('The pool is worth', money(balance * priceRow.usd), 'balance × price, nothing more'),
+  );
+}
+
+function renderCorr(a) {
+  const tb = $('corr').querySelector('tbody');
+  const row = (label, why, s, weak) => {
+    const tr = el('tr');
+    const td = el('td');
+    td.append(el('div', null, label), el('div', 'why', why));
+    tr.append(td);
+    tr.append(el('td', `num${weak ? ' weak' : ''}`, signed(s.r)));
+    tr.append(el('td', `num${weak ? ' weak' : ''}`, pText(s.p)));
+    tb.append(tr);
+  };
+  tb.replaceChildren();
+  row('Pool balance against price', 'Both have only gone up since July. Any two rising lines score high here, so this number says almost nothing on its own.', a.level, true);
+  row("A day's net flow against that day's price move", 'The question that can actually move: more in than out on a day the price rose?', a.daily, false);
+  if (a.controlled) {
+    row('The same, with trading volume held out', 'A busy market day lifts the volume and the traffic into the pool at once. What survives removing it is the honest figure.', a.controlled, false);
+  }
+}
+
+function renderVerdict(a) {
+  const c = a.controlled ?? a.daily;
+  const held = a.controlled ? ' once trading volume is held out' : '';
+  const lead = c.p < 0.05
+    ? `Day to day the two do move together${held}: r = ${signed(c.r)}, p = ${pText(c.p)} over ${c.n} days. `
+    : `Day to day the link does not survive${held}: r = ${signed(c.r)}, p = ${pText(c.p)} over ${c.n} days, which is what chance looks like. `;
+  const also = c.p < 0.05
+    ? 'It is a weak link, not a lever: the flow explains a small share of the day, and the causality could run either way.'
+    : 'What is left is the plainer reading: days that are busy for the market are busy for the pool.';
+  const conc = `${Math.round(a.concentration * 100)}% of everything that ever entered the pool arrived on its ${a.topN} busiest days, so the shape of that line is set by a handful of large moves, not by a crowd.`;
+  $('corrVerdict').textContent = `${lead}${also} ${conc}`;
+}
+
+function renderLags(a) {
+  const box = $('lagStrip');
+  box.replaceChildren();
+  if (!a.lags.length) return;
+  const use = (l) => (l.partial ?? l);
+  const top = Math.max(...a.lags.map((l) => Math.abs(use(l).r)), 0.05);
+  box.append(el('div', 'sh-sub', a.controlled
+    ? 'The same day-to-day figure at a shift, with volume held out: the pool against the price move a few days earlier or later.'
+    : 'The same day-to-day figure at a shift: the pool against the price move a few days earlier or later.'));
+  const bars = el('div', 'bars');
+  const axis = el('div', 'axis');
+  for (const l of a.lags) {
+    const s = use(l);
+    const cell = el('div');
+    const i = el('i');
+    i.style.height = `${Math.max(2, (Math.abs(s.r) / top) * 100)}%`;
+    if (s.r < 0) i.className = 'neg';
+    if (a.best && l.k === a.best.k) i.className = `${i.className} best`.trim();
+    const t = l.k === 0 ? 'the same day' : l.k < 0 ? `the price moved ${-l.k} day${l.k === -1 ? '' : 's'} first` : `the pool moved ${l.k} day${l.k === 1 ? '' : 's'} first`;
+    i.title = `${t}: r = ${signed(s.r)}, p = ${pText(s.p)}, ${s.n} days`;
+    cell.append(i);
+    bars.append(cell);
+    axis.append(el('span', null, l.k === 0 ? '0' : `${l.k > 0 ? '+' : '−'}${Math.abs(l.k)}`));
+  }
+  box.append(bars, axis);
+  // The shift lives on the sweep entry; r and p may come from its partial, which
+  // carries neither. Read each from the one that has it.
+  const k = a.best?.k;
+  const best = a.best ? use(a.best) : null;
+  const which = k == null ? '' : k < 0
+    ? `the price leading by ${-k} day${k === -1 ? '' : 's'}`
+    : `the pool leading by ${k} day${k === 1 ? '' : 's'}`;
+  box.append(el('div', 'cap', `Price first on the left, pool first on the right.${best ? ` The tallest is ${which} at r = ${signed(best.r)}, p = ${pText(best.p)}.` : ''} Fifteen shifts are measured at once, so the tallest bar flatters itself; a bar has to stay tall for weeks before it means anything.`));
+}
+
+const priceSectionNote = (msg) => {
+  $('worth').replaceChildren();
+  $('priceChart').replaceChildren(el('div', 'sh-sub', msg));
+  $('corr').querySelector('tbody').replaceChildren();
+  $('corrVerdict').textContent = '';
+  $('lagStrip').replaceChildren();
+  $('priceChartNote').textContent = '';
+};
+
+async function loadPriceView(net) {
+  if (net !== 'mainnet') {
+    priceState = null;
+    priceSectionNote('tDASH is not traded, so there is no price to hold the testnet pool against. Switch to mainnet.');
+    $('priceSource').textContent = '';
+    responseNote('Mainnet only, for the same reason.');
+    return;
+  }
+  priceSectionNote('Reading the stored history…');
+  try {
+    const data = await dataset();
+    if (currentNet() !== 'mainnet') return;
+    const rows = dailyRows(data.events, data.hours);
+    const chartRows = dailyRows(data.events, data.hours, { includeToday: true });
+    const a = analyse(rows);
+    priceState = { chartRows, a, data };
+    const lastHour = data.hours[data.hours.length - 1];
+    const latest = lastHour ? { usd: lastHour[4], day: new Date(lastHour[0] * 1000).toISOString().slice(0, 10) } : null;
+    if (!a.enough) {
+      priceSectionNote(`Only ${a.days} full days line up so far, too few to say anything.`);
+    } else {
+      renderWorth(a, chainByNet[net]?.balance, latest ?? { usd: a.price, day: a.to });
+      renderPoolPrice($('priceChart'), chartRows, priceUnit);
+      $('priceChartNote').textContent = `${a.days} full days, ${a.from} to ${a.to}`;
+      renderCorr(a);
+      renderVerdict(a);
+      renderLags(a);
+    }
+    $('priceSource').textContent = `Both series come from this site's own file: every shielded transition with the price at the block it landed in, and hourly candles built from Kraken's trade tape. Correlations are computed in this page, on full days only.`;
+    renderResponse(data);
+  } catch (e) {
+    priceSectionNote(`Could not put the two together: ${e?.message || e}`);
+    $('priceSource').textContent = '';
+    responseNote(`Could not read the stored history: ${e?.message || e}`);
+  }
+}
+
+// ── what a price move does to the pool ───────────────────────────────────────
+const responseNote = (msg) => {
+  $('response').querySelector('tbody').replaceChildren();
+  $('responseVerdict').textContent = msg;
+  $('priceBuckets').replaceChildren();
+  $('dataNote').textContent = '';
+};
+
+const dashN = (v, d = 0) => `${Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })}`;
+
+function renderResponse(data) {
+  const study = eventStudy(data.events, data.hours, { isIn, isOut, window: 6 });
+  const tb = $('response').querySelector('tbody');
+  tb.replaceChildren();
+  if (!study) { responseNote('Not enough hours yet.'); return; }
+
+  const row = (label, cls, n, r) => {
+    const tr = el('tr', cls);
+    tr.append(el('td', null, label));
+    tr.append(el('td', 'num', n == null ? '—' : num(n)));
+    tr.append(el('td', 'num', dashN(r.in, 1)));
+    tr.append(el('td', 'num', dashN(r.out, 1)));
+    tr.append(el('td', 'num', r.out > 0 ? `${(r.in / r.out).toFixed(2)}` : '—'));
+    tr.append(el('td', 'num', r.p == null ? '' : pText(r.p)));
+    tb.append(tr);
+  };
+  row('any hour at all', 'base', null, { ...study.baseline, p: null });
+  for (const r of study.rows) {
+    const pct = `${r.threshold > 0 ? '+' : '−'}${Math.abs(r.threshold * 100).toFixed(0)}%`;
+    row(`the price ${r.threshold > 0 ? 'up' : 'down'} ${pct} or more`, r.threshold > 0 ? 'up' : 'down', r.n, r);
+  }
+
+  const up = study.rows.filter((r) => r.threshold > 0).sort((x, y) => y.threshold - x.threshold)[0];
+  const down = study.rows.filter((r) => r.threshold < 0).sort((x, y) => x.threshold - y.threshold)[0];
+  const base = study.baseline.out > 0 ? study.baseline.in / study.baseline.out : NaN;
+  const parts = [];
+  if (up) {
+    parts.push(up.p < 0.05
+      ? `A rise pulls credits in: after an hour up ${Math.abs(up.threshold * 100).toFixed(0)}% or more, ${dashN(up.in, 0)} DASH went into the pool over the next six hours against ${dashN(study.baseline.in, 0)} for an ordinary hour, and where an ordinary hour is followed by ${base.toFixed(1)} times as much going in as coming out, this one is followed by ${(up.in / up.out).toFixed(1)} times. That holds up against six-hour windows drawn at random (${pPhrase(up.p)}).`
+      : `After a rise the pool is busier, but not beyond what a randomly chosen six hours does (${pPhrase(up.p)}).`);
+  }
+  if (down) {
+    parts.push(down.p < 0.05
+      ? `A fall pushes them out: the same window after an hour down ${Math.abs(down.threshold * 100).toFixed(0)}% or more nets ${dashN(down.net, 0)} DASH (${pPhrase(down.p)}).`
+      : `A fall makes both directions busy at once and the pool roughly breaks even: ${dashN(down.in, 0)} in against ${dashN(down.out, 0)} out, a net the random windows match easily (${pPhrase(down.p)}). Money leaving on a drop is what the daily figure was hiding, because it arrives alongside money coming in and a day-sized bucket adds the two to nothing.`);
+  }
+  // With a sample this size one large transition lands in a handful of windows
+  // and moves every average in the table. Say how heavy the heaviest one is,
+  // because the reader cannot see it in a mean.
+  const inflow = data.events.filter((e) => isIn(e.type));
+  const biggest = inflow.reduce((a, e) => (e.dash > (a?.dash ?? 0) ? e : a), null);
+  const total = inflow.reduce((a, e) => a + e.dash, 0);
+  const share = biggest && total ? biggest.dash / total : 0;
+  if (share > 0.1) {
+    parts.push(`One transition carries ${Math.round(share * 100)}% of everything that has ever gone in (${dashN(biggest.dash, 0)} DASH on ${new Date(biggest.ts).toISOString().slice(0, 10)}), and it sits inside a handful of these windows, so it moves every average in the table by itself.`);
+  }
+  parts.push('Six hours and these thresholds were fixed before looking, and the same run measures every threshold, so no one line is a discovery on its own.');
+  $('responseVerdict').textContent = parts.join(' ');
+
+  renderBuckets(data);
+  const added = data.added ? `, plus ${data.added} read from the index since` : '';
+  const behind = data.behind ? ` The file is ${data.behind} transitions behind; run npm run data:shielded.` : '';
+  const err = data.topUpError ? ` The index did not answer for the newest ones: ${data.topUpError}` : '';
+  $('dataNote').textContent = `${num(data.events.length)} transitions and ${num(data.hours.length)} hourly candles, stored on this site through block ${data.through?.height ?? 0} (built ${new Date(data.updated).toISOString().slice(0, 16).replace('T', ' ')} UTC)${added}.${behind}${err} The index is asked for nothing older than that block. Significance is a permutation test over ${num(study.draws)} draws, seeded, so the number does not wander between reloads.`;
+}
+
+function renderBuckets(data) {
+  const box = $('priceBuckets');
+  box.replaceChildren();
+  const buckets = byPrice(data.events, { isIn, isOut, bucket: 5 });
+  if (!buckets.length) return;
+  const max = Math.max(...buckets.map((b) => Math.max(b.in, b.out)));
+  const head = el('div', 'head');
+  head.append(el('span', null, ''), el('span', 'l', 'out of the pool'), el('span', 'r', 'into the pool'));
+  box.append(head);
+  // Mark the band DASH is trading in right now, off the newest candle rather
+  // than the newest transition: the pool can be quiet for a day.
+  const now = data.hours[data.hours.length - 1]?.[4];
+  for (const b of buckets) {
+    const rowEl = el('div', `sh-bucket${now != null && now >= b.from && now < b.to ? ' now' : ''}`);
+    rowEl.append(el('div', 'lbl', `$${b.from}–${b.to}`));
+    const side = (cls, value) => {
+      const d = el('div', `side ${cls}`);
+      const bar = el('b');
+      bar.style.width = `${Math.max(value > 0 ? 2 : 0, (value / max) * 100).toFixed(1)}%`;
+      d.append(bar);
+      d.append(el('span', null, value >= 1 ? dashN(value, 0) : value > 0 ? value.toFixed(1) : ''));
+      return d;
+    };
+    rowEl.append(side('l', b.out), side('r', b.in));
+    const title = `$${b.from}–${b.to}: ${dashN(b.in, 1)} DASH in over ${b.nIn} moves, ${dashN(b.out, 1)} out over ${b.nOut}`;
+    rowEl.title = title;
+    box.append(rowEl);
   }
 }
 
@@ -328,11 +644,23 @@ $('netsel').addEventListener('change', () => {
   else url.searchParams.set('net', 'testnet');
   history.replaceState(null, '', url);
   loadFlows(currentNet());
+  loadPriceView(currentNet());
+});
+
+$('unitToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-unit]');
+  if (!btn || btn.dataset.unit === priceUnit) return;
+  priceUnit = btn.dataset.unit;
+  for (const b of $('unitToggle').querySelectorAll('button')) b.classList.toggle('on', b.dataset.unit === priceUnit);
+  if (priceState?.a?.enough) renderPoolPrice($('priceChart'), priceState.chartRows, priceUnit);
 });
 let resizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (lastFlows) renderChart($('chart'), lastFlows.f, lastFlows.net); }, 150);
+  resizeTimer = setTimeout(() => {
+    if (lastFlows) renderChart($('chart'), lastFlows.f, lastFlows.net);
+    if (priceState?.a?.enough) renderPoolPrice($('priceChart'), priceState.chartRows, priceUnit);
+  }, 150);
 });
 $('addrBtn').addEventListener('click', runCheck);
 $('addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') runCheck(); });
@@ -340,5 +668,8 @@ $('addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') runCheck()
 renderMoves();
 renderDenoms(PROTOCOL_THESE_HOLD_FOR);
 renderSnippet();
-$('source').textContent = `Chain reads go through @dashevo/evo-sdk to the masternodes; counts and the weekly series come from the public platform-explorer API (${apiHost('mainnet').replace('https://', '')}, testnet at ${apiHost('testnet').replace('https://', '')}).`;
-Promise.all([loadPools(), loadFlows(currentNet())]).catch(showError);
+$('source').textContent = `Chain reads go through @dashevo/evo-sdk to the masternodes. The history is this site's own: every mainnet shielded transition with the price at its block, in /shielded/data, rebuilt by tools/shielded-history.mjs. The public platform-explorer API (${apiHost('mainnet').replace('https://', '')}, testnet at ${apiHost('testnet').replace('https://', '')}) is asked for three things only — its own totals, so the two can be held against each other; the transitions newer than the file's last block; and testnet, which has no file.`;
+Promise.all([
+  loadPools().then(() => loadPriceView(currentNet())),
+  loadFlows(currentNet()),
+]).catch(showError);

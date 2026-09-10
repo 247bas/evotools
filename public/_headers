@@ -5,6 +5,10 @@
 # line to try is
 #   script-src 'self' blob: 'unsafe-eval' 'wasm-unsafe-eval'
 # and getting that wrong takes the whole site down without an error anyone sees.
+#
+# connect-src is left out too, and /shielded now depends on that: it reads the
+# DASH price from api.kraken.com, with api.coingecko.com as the fallback. Adding
+# connect-src 'self' would kill that section without a visible error.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

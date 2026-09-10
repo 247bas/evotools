@@ -4,18 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shielded — the Orchard pool on Dash Platform · evotools</title>
-  <meta name="description" content="How much sits in Dash Platform's shielded pool, how it moves week by week, what the six shielded transitions do and cost, and whether an address is a shielded one. Mainnet and testnet, read live." />
+  <meta name="description" content="How much sits in Dash Platform's shielded pool, what it is worth, how it moves week by week, whether it follows the DASH price, what the six shielded transitions cost, and whether an address is a shielded one. Mainnet and testnet, read live." />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="evotools" />
   <meta property="og:title" content="Shielded — the Orchard pool on Dash Platform" />
-  <meta property="og:description" content="What is in the shielded pool, how it moves, what the six shielded transitions cost, and whether an address is a shielded one. Both networks, read live." />
+  <meta property="og:description" content="What is in the shielded pool, what it is worth, how it moves, whether it tracks the DASH price, and what the six shielded transitions cost. Both networks, read live." />
   <meta property="og:url" content="https://evotools.dev/shielded/" />
   <meta property="og:image" content="https://evotools.dev/og/shielded.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Shielded — the Orchard pool on Dash Platform" />
-  <meta name="twitter:description" content="What is in the shielded pool, how it moves, what the six shielded transitions cost, and whether an address is a shielded one." />
+  <meta name="twitter:description" content="What is in the shielded pool, what it is worth, how it moves, and whether it tracks the DASH price." />
   <meta name="twitter:image" content="https://evotools.dev/og/shielded.png" />
   <link rel="stylesheet" href="/shared/theme.css" />
   <link rel="stylesheet" href="css/shielded.css" />
@@ -56,6 +56,69 @@
         <thead><tr><th>Move</th><th>Type</th><th class="num">Count</th><th class="num">Amount</th></tr></thead>
         <tbody></tbody>
       </table>
+    </section>
+
+    <section class="sh-section" id="priceSection">
+      <div class="sh-heading">
+        <h2>The pool and the price</h2>
+        <div class="sh-toggle" id="unitToggle" role="group" aria-label="Show the pool in">
+          <button type="button" data-unit="dash" class="on">DASH</button>
+          <button type="button" data-unit="usd">USD</button>
+        </div>
+      </div>
+      <p class="sh-sub">
+        The chain knows what the pool holds. It has no idea what a DASH is
+        worth, so the price here comes from an exchange, one close a day, and is
+        lined up with the index's daily buckets. Both lines have climbed since
+        July, which is the trap: two rising lines always correlate. The
+        arithmetic below asks the narrower question that can actually answer
+        something: on a day when more went into the pool than came out, did the
+        price move with it?
+      </p>
+      <div class="sh-worth" id="worth"></div>
+      <div id="priceChart" class="sh-chart" role="img" aria-label="The shielded pool's balance and the DASH price, day by day since launch"></div>
+      <div class="sh-legend">
+        <span><i class="pool"></i> pool balance</span>
+        <span><i class="price"></i> DASH price</span>
+        <span id="priceChartNote"></span>
+      </div>
+      <table class="sh-table sh-corr" id="corr">
+        <thead><tr><th>Correlation</th><th class="num">r</th><th class="num">p</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="sh-verdict" id="corrVerdict"></p>
+      <div class="sh-lags" id="lagStrip"></div>
+      <p class="sh-fine" id="priceSource"></p>
+    </section>
+
+    <section class="sh-section" id="responseSection">
+      <h2>What a price move does to the pool</h2>
+      <p class="sh-sub">
+        The day-to-day figure above finds nothing once volume is out, and that
+        is an artefact of the bucket: one day holds both a rise and the selling
+        into it, so the two directions cancel before they are counted. Every
+        transition is stored here with the block it landed in and the price at
+        that block, so the same question can be asked per hour and with the two
+        directions kept apart. Below: after an hour that moved the price, how
+        much DASH went into the pool and how much left over the next six hours,
+        against the same six hours measured from hours picked at random.
+      </p>
+      <table class="sh-table sh-response" id="response">
+        <thead><tr><th>After an hour that moved</th><th class="num">times</th><th class="num">in</th><th class="num">out</th><th class="num">in : out</th><th class="num">p</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="sh-verdict" id="responseVerdict"></p>
+
+      <h3 class="sh-h3">Where the price stood when credits moved</h3>
+      <p class="sh-sub">
+        Every transition sorted into a five-dollar band by the price at its
+        block. Read it as a description, not a trigger: over ten weeks DASH
+        visits a level once, so a band and a date are the same fact here. It
+        takes a price that comes back to tell them apart, and the file keeps
+        growing.
+      </p>
+      <div class="sh-buckets" id="priceBuckets"></div>
+      <p class="sh-fine" id="dataNote"></p>
     </section>
 
     <section class="sh-section">

@@ -15,7 +15,7 @@
 .sh-section li a { overflow-wrap: anywhere; }
 
 /* The Orchard colour the map already uses for the pool */
-:root { --orchard: #9b7dea; }
+:root { --orchard: #9b7dea; --price: #f0b429; }
 
 .sh-netsel {
   background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border); border-radius: 8px;
@@ -52,6 +52,40 @@
 .sh-legend i.in { background: var(--orchard); }
 .sh-legend i.out { background: var(--blue); }
 
+/* ── the pool against the price ─────────────────────────────────────────── */
+.sh-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.sh-toggle button {
+  background: transparent; border: 0; color: var(--muted); cursor: pointer;
+  font-family: var(--mono); font-size: 0.78rem; padding: 7px 12px;
+}
+.sh-toggle button.on { background: rgba(155, 125, 234, 0.18); color: var(--text); }
+.sh-worth { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
+.sh-worth .w { flex: 1; min-width: 120px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: rgba(0, 0, 0, 0.18); }
+.sh-worth .w-k { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.sh-worth .w-v { font-family: var(--mono); font-size: 1.05rem; margin-top: 4px; }
+.sh-worth .w-n { color: var(--muted); font-size: 0.72rem; margin-top: 3px; }
+.sh-chart .area { fill: var(--orchard); opacity: 0.16; }
+.sh-chart .line.pool { fill: none; stroke: var(--orchard); stroke-width: 1.8; }
+.sh-chart .line.price { fill: none; stroke: var(--price); stroke-width: 1.6; }
+.sh-chart .tick.right { fill: var(--price); }
+.sh-chart .hit { fill: transparent; }
+.sh-chart .hit:hover { fill: rgba(255, 255, 255, 0.06); }
+.sh-legend i.pool { background: var(--orchard); }
+.sh-legend i.price { background: var(--price); }
+.sh-corr td:first-child { font-size: 0.84rem; }
+.sh-corr .why { color: var(--muted); font-size: 0.76rem; margin-top: 3px; }
+.sh-corr .weak { color: var(--muted); }
+.sh-verdict { font-size: 0.9rem; margin-top: 14px; border-left: 2px solid var(--orchard); padding-left: 12px; }
+.sh-lags { margin-top: 16px; }
+.sh-lags .bars { display: flex; align-items: flex-end; gap: 3px; height: 54px; }
+.sh-lags .bars > div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.sh-lags .bars i { display: block; background: var(--orchard); border-radius: 2px 2px 0 0; min-height: 1px; }
+.sh-lags .bars i.neg { background: var(--blue); }
+.sh-lags .bars i.best { outline: 1px solid var(--text); outline-offset: 1px; }
+.sh-lags .axis { display: flex; gap: 3px; margin-top: 4px; }
+.sh-lags .axis span { flex: 1; text-align: center; color: var(--muted); font-family: var(--mono); font-size: 0.62rem; }
+.sh-lags .cap { color: var(--muted); font-size: 0.76rem; margin-top: 8px; }
+
 /* ── tables ─────────────────────────────────────────────────────────────── */
 .sh-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .sh-table th { text-align: left; color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
@@ -61,6 +95,24 @@
 .sh-table .dir { color: var(--muted); font-size: 0.78rem; }
 .sh-table .in .dir { color: var(--orchard); }
 .sh-table .out .dir { color: var(--blue); }
+
+/* ── what a price move does ─────────────────────────────────────────────── */
+.sh-h3 { font-size: 0.95rem; margin: 26px 0 6px; }
+.sh-response .up { color: var(--orchard); }
+.sh-response .down { color: var(--blue); }
+.sh-response .base td { color: var(--muted); }
+.sh-buckets { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.sh-bucket { display: grid; grid-template-columns: 62px 1fr 1fr; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.75rem; }
+.sh-bucket .lbl { color: var(--muted); text-align: right; white-space: nowrap; }
+.sh-bucket .side { display: flex; align-items: center; gap: 6px; height: 16px; }
+.sh-bucket .side.l { justify-content: flex-end; flex-direction: row-reverse; }
+.sh-bucket .side b { display: block; height: 12px; border-radius: 2px; font-weight: 400; }
+.sh-bucket .side.l b { background: var(--blue); }
+.sh-bucket .side.r b { background: var(--orchard); }
+.sh-bucket .side span { color: var(--muted); font-size: 0.7rem; white-space: nowrap; }
+.sh-bucket.now .lbl { color: var(--text); }
+.sh-buckets .head { display: grid; grid-template-columns: 62px 1fr 1fr; gap: 8px; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.sh-buckets .head .l { text-align: right; }
 
 /* ── the six moves ──────────────────────────────────────────────────────── */
 .sh-moves { display: flex; flex-direction: column; gap: 8px; }
@@ -107,6 +159,9 @@
 
 @media (max-width: 620px) {
   .sh-pools, .sh-two { grid-template-columns: 1fr; }
+  .sh-worth .w { min-width: 100%; }
+  .sh-bucket, .sh-buckets .head { grid-template-columns: 52px 1fr 1fr; gap: 5px; }
+  .sh-lags .axis span { font-size: 0.55rem; }
   .sh-two { gap: 8px; }
   .sh-move { grid-template-columns: 1fr; gap: 4px; }
   .sh-move-fee { text-align: left; white-space: normal; }

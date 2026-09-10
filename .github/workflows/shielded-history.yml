@@ -1,0 +1,50 @@
+# Top up the stored shielded history.
+#
+# The dataset under public/shielded/data is what the page reads; the index is
+# only asked for what came after its last block. This keeps that gap small
+# without anyone running anything: it fetches the new transitions, extends the
+# price candles and commits the result. A commit to main is a deploy, so the
+# site carries the new rows a couple of minutes later.
+#
+# The script uses nothing but node's own fetch, so there is no npm install here
+# and no lockfile to keep in step.
+#
+# Note: GitHub pauses a scheduled workflow on a repository with no activity for
+# 60 days. Run it once from the Actions tab to wake it up again.
+name: shielded history
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'   # four times a day, off the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shielded-history
+  cancel-in-progress: false
+
+jobs:
+  top-up:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch what is new
+        run: node tools/shielded-history.mjs
+      - name: Commit if anything moved
+        run: |
+          # The script leaves a file alone when its rows did not change, so a
+          # clean tree here means there was genuinely nothing to store.
+          if git diff --quiet -- public/shielded/data; then
+            echo "nothing new"
+            exit 0
+          fi
+          git config user.name 'evotools-bot'
+          git config user.email 'noreply@evotools.dev'
+          git add public/shielded/data
+          git commit -m "shielded: top up the stored history"
+          git push

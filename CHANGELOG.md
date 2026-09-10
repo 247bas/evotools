@@ -5,6 +5,60 @@ rather than installable releases.
 
 ## Unreleased
 
+- **/shielded keeps its own history, and asks the price a sharper question.**
+  Every shielded transition mainnet ever had is stored in
+  `public/shielded/data`, one row each: the block it landed in, what it moved,
+  and the DASH price at that block. The amount is why this exists — the index
+  will list a transition but only its per-transition endpoint carries
+  `shielded: { amount }`, one call each, and Kraken's trade tape has to be
+  walked from July to know what a DASH cost at the minute. That is 200-odd
+  Kraken calls and 1,100 index calls, paid once by `npm run data:shielded`, and
+  none of it ever changes again. The page reads the file and asks the index for
+  one thing: the transitions newer than the file's last block, which is a
+  handful. A scheduled workflow tops it up four times a day.
+  Resolution: not a bucket size at all. A transition is stamped with its block,
+  mainnet blocks are 2.55 minutes apart, and 99% of shielded transitions are
+  alone in their block, so this is an event list and any interval can be cut
+  from it afterwards.
+  What that buys: the day-to-day correlation found nothing once volume was out,
+  and that turns out to be the bucket's fault — a day holds both a rise and the
+  selling into it, so the two directions cancel before they are counted. Split
+  them and ask per hour, and after an hour that took DASH up 2% or more the pool
+  took in 203 DASH over the next six hours against 40 for an ordinary hour, with
+  4.5 going in for every one leaving instead of the usual 2.0 (permutation test
+  over 2,000 seeded draws, p < 0.001). After a fall both directions run hot at
+  once and the pool roughly breaks even. There is also a band chart of where the
+  price stood when credits moved, labelled as the description it is: over ten
+  weeks DASH visits a level once, so a band and a date are the same fact until
+  the price comes back.
+  The weekly chart is bucketed from the same rows now, so the two charts cannot
+  disagree; testnet still reads the index, having no file. The smoke test holds
+  the stored rows against the index's own daily and weekly sums, and the stored
+  prices against CoinGecko.
+
+- **Does the pool follow the DASH price?** /shielded holds the two against each
+  other now: the pool's balance day by day since launch, the price on a second
+  axis, what the pool is worth in dollars, and three correlations instead of the
+  one that flatters. The level correlation is +0.88 and means almost nothing —
+  the pool has grown from zero since July and DASH rose over the same weeks, and
+  any two rising lines score that. The figure that can move is day to day, a
+  day's net flow against that day's price move: +0.30 over 70 days. It does not
+  survive holding trading volume out (+0.16, p = 0.20), which is the honest
+  reading: a busy market day is busy for the pool too. A ±7-day strip shows the
+  same figure shifted, and the page says out loud that fifteen shifts measured at
+  once make the tallest bar flatter itself. It also says that 81% of everything
+  that ever entered arrived on ten days, because a handful of large moves and a
+  steady crowd give the same r and mean different things. Correlations are
+  computed in the page (`js/correlate.js`, including the incomplete beta behind
+  the p-values, pinned against scipy in the test). The price comes from Kraken,
+  CoinGecko as fallback, daily closes in USD lined up on the same UTC midnights
+  the index buckets on; volume travels with it because it is the control. Two
+  things this depends on: `_headers` sets no `connect-src`, and the index caps a
+  history call at 100 buckets, so daily buckets are asked for in blocks of whole
+  days (`dayBlocks`) — which is also what keeps the last bucket from being
+  dropped. Testnet has no price and the section says so rather than inventing
+  one.
+
 - **Two changes to one identity in a row.** Switching a second key off failed,
   and the message came from the node and talked about a revision. Every change
   to an identity spends its revision and its nonce, and both sat in the form
