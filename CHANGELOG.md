@@ -3,7 +3,7 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
-## Unreleased
+## 2.2.1 — 2026-09-10
 
 - **DASH or moves, on the same six hours.** The event study on /shielded can be
   read two ways now, and they disagree on purpose. Weighted by DASH, a rise
