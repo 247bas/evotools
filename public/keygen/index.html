@@ -162,6 +162,76 @@
         in <a href="/onboard/">onboard</a> and claim names in <a href="/name/">dash-name</a>.
       </div>
     </section>
+
+    <!-- Adding a key to an identity that already exists. Inside #kgWrap, so the
+         offline copy carries it too — which is the whole point: the phrase never
+         has to touch a machine with a network. -->
+    <section class="panel" id="addKeyPanel">
+      <h2>Add a missing key to an identity</h2>
+      <p class="fineprint">
+        An identity's keys are not fixed at creation. If one of the five is
+        missing — say the CRITICAL authentication key, without which tokens
+        cannot be moved — it can be added later. This is the one transition the
+        MASTER key signs, and it is what that key is for.
+      </p>
+      <div class="note warn kg-noprint">
+        It only goes one way. A CRITICAL authentication key, the master key and
+        the transfer key can never be disabled once they are on an identity, so
+        the one you add is the one you keep. And without the master key none of
+        this is possible at all.
+      </div>
+
+      <div class="field">
+        <label for="akIdentity">Identity id</label>
+        <input id="akIdentity" type="text" placeholder="base58 identity id" autocomplete="off" spellcheck="false" />
+      </div>
+      <button class="btn ghost" id="akLookupBtn">Look it up</button>
+      <p class="fineprint" id="akOfflineHint" hidden>
+        This copy has no network, so the three numbers below have to be read off
+        the identity elsewhere — <a href="/explorer/">the explorer</a> shows all
+        three. Nothing you type here leaves this machine.
+      </p>
+      <div id="akKeys"></div>
+
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="akRevision">Revision</label>
+          <input id="akRevision" type="text" placeholder="2" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="akNonce">Identity nonce</label>
+          <input id="akNonce" type="text" placeholder="5" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="akMasterId">Master key id</label>
+          <input id="akMasterId" type="text" value="0" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="akRole">Key to add</label>
+          <select id="akRole"></select>
+        </div>
+        <div class="field">
+          <label for="akNewId">New key id</label>
+          <input id="akNewId" type="text" placeholder="4" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+
+      <p class="fineprint">
+        The phrase above is what the new key is derived from, so generate or
+        restore it first. The key id is the identity's own numbering — the next
+        free slot — and the derivation path follows it, which means on an
+        identity that does not use the standard layout the path and the role no
+        longer line up. That is bookkeeping, not a problem: what counts on chain
+        is the key id.
+      </p>
+
+      <button class="btn primary" id="akBuildBtn">Build the transition</button>
+      <button class="btn primary kg-noprint" id="akBroadcastBtn" hidden>Broadcast it</button>
+      <div id="akOut"></div>
+    </section>
   </div>
 
   <script type="module" src="/shared/nav.js"></script>

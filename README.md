@@ -22,7 +22,7 @@ Live at **[evotools.dev](https://evotools.dev)** · `evotools.dash` on Platform.
 |------|--------------|--------|
 | [Map](public/map/) | Where DASH, credits and identities sit, what each move costs, and where any identity's money came from | Live |
 | [Onboard](public/onboard/) | Wallet → fund → identity → `.dash` name → ready `.env` | Live |
-| [Keygen](public/keygen/) | One phrase → funding address + the five DIP-13 identity keys, fully offline, with a downloadable offline copy | Live |
+| [Keygen](public/keygen/) | One phrase → funding address + the five DIP-13 identity keys, fully offline, and adding one that is missing to an identity that already exists | Live |
 | [Credits](public/credits/) | An identity's balance and every way to move it: top up, pay out, convert, withdraw to layer 1 | Live |
 | [Playground](public/playground/) | Run the cookbook recipes live in the browser | Live |
 | [Explorer](public/explorer/) | Identities, DPNS names, contracts, tokens, documents and the shielded pool, with proofs | Live |

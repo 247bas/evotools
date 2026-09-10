@@ -1,6 +1,9 @@
 // keygen — UI wiring. Nothing here touches the network except the explicit
 // "download offline copy" action, which reads this page's own assets.
-import { generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet } from './keys.js';
+import {
+  generateMnemonic, isValidMnemonic, deriveAll, derivationSnippet,
+  buildAddKeyTransition, missingRoles, loadEvo, KEY_ROLES,
+} from './keys.js';
 import { qrSvg } from '../../shared/qr.js';
 // offline.js is imported on demand: the offline copy hides the download button
 // and has no files to resolve a relative import against.
@@ -203,3 +206,146 @@ if (isOffline()) {
 }
 
 renderSnippet();
+
+
+/* ── adding a key to an identity that already exists ──────────────────────── */
+
+// The only place on this page that wants a network, and it is optional: the
+// three numbers it fetches can be typed in by hand, which is what the offline
+// copy does. Connected lazily so the page still costs nothing to open.
+let _sdk = null;
+async function connected() {
+  if (isOffline()) throw new Error('This copy has no network. Type the identity\'s revision, nonce and master key id in yourself — the explorer shows all three.');
+  if (_sdk) return _sdk;
+  const { EvoSDK } = await loadEvo();
+  _sdk = $('netsel').value === 'mainnet' ? EvoSDK.mainnetTrusted() : EvoSDK.testnetTrusted();
+  await _sdk.connect();
+  return _sdk;
+}
+
+function fillRoles(missing) {
+  const select = $('akRole');
+  select.replaceChildren();
+  const roles = missing?.length ? missing : KEY_ROLES;
+  for (const role of roles) {
+    const option = el('option', null, `${role.purpose} / ${role.securityLevel} — ${role.use}`);
+    option.value = `${role.purpose}|${role.securityLevel}|${role.keyId}`;
+    select.append(option);
+  }
+  if (!$('akNewId').value.trim() && roles[0]) $('akNewId').value = String(roles[0].keyId);
+}
+
+$('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking…', async () => {
+  clearError();
+  const identityId = $('akIdentity').value.trim();
+  if (!identityId) throw new Error('Paste the identity id first.');
+  const sdk = await connected();
+
+  const identity = await sdk.identities.fetch(identityId);
+  if (!identity) throw new Error('No identity with that id on this network.');
+  const keys = await sdk.identities.getKeys({ identityId, request: { type: 'all' } });
+  const nonce = (await sdk.identities.nonce(identityId)) ?? 0n;
+
+  $('akRevision').value = String((identity.revision ?? 0n) + 1n);
+  $('akNonce').value = String(nonce + 1n);
+  const master = keys.find((k) => k.securityLevel === 'MASTER' && !k.disabledAt);
+  if (master) $('akMasterId').value = String(master.keyId);
+
+  const shaped = keys.map((k) => ({ keyId: k.keyId, purpose: k.purpose, securityLevel: k.securityLevel, disabled: Boolean(k.disabledAt) }));
+  const missing = missingRoles(shaped);
+
+  const box = el('div', 'box small mono');
+  box.style.whiteSpace = 'pre-line';
+  box.textContent = shaped
+    .map((k) => `#${k.keyId}  ${k.purpose} / ${k.securityLevel}${k.disabled ? '  (disabled)' : ''}`)
+    .join('\n');
+  const summary = el('div', missing.length ? 'note warn' : 'note ok',
+    missing.length
+      ? `Missing: ${missing.map((m) => `${m.purpose}/${m.securityLevel}`).join(', ')}.`
+      : 'This identity has all five standard keys.');
+  $('akKeys').replaceChildren(box, summary);
+
+  // The next free slot, which is what a new key has to use — the role's own
+  // number is often taken by something else on an identity like this.
+  const taken = new Set(shaped.map((k) => k.keyId));
+  let free = 0;
+  while (taken.has(free)) free++;
+  $('akNewId').value = String(free);
+
+  fillRoles(missing);
+  if (!master) {
+    throw new Error('This identity has no master key, so nothing can be added to it. That is permanent.');
+  }
+}));
+
+$('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…', async () => {
+  clearError();
+  const mnemonic = ($('mnemonicInput').value || '').trim();
+  if (!mnemonic) throw new Error('Generate or restore a phrase first — the new key comes from it.');
+  if (!(await isValidMnemonic(mnemonic))) throw new Error('That phrase is not valid.');
+
+  const [purpose, securityLevel] = ($('akRole').value || 'AUTHENTICATION|CRITICAL|2').split('|');
+  const built = await buildAddKeyTransition({
+    mnemonic,
+    network: $('netsel').value,
+    identityId: $('akIdentity').value.trim(),
+    revision: $('akRevision').value.trim(),
+    nonce: $('akNonce').value.trim(),
+    masterKeyId: Number($('akMasterId').value.trim() || '0'),
+    newKeyId: Number($('akNewId').value.trim()),
+    purpose,
+    securityLevel,
+  });
+
+  const out = $('akOut');
+  out.replaceChildren();
+
+  const added = el('div', 'note ok',
+    `Signed. Adds key #${built.added.keyId} — ${built.added.purpose} / ${built.added.securityLevel}, `
+    + `derived at ${built.added.path}.`);
+  out.append(added);
+
+  for (const [label, value] of [
+    ['New key, public', built.added.publicKeyHex],
+    ['New key, private (WIF) — write this down', built.added.wif],
+    ['Signed transition (hex)', built.hex],
+  ]) {
+    const field = el('div', 'field');
+    const head = el('div', 'field-head');
+    head.append(el('label', null, label));
+    const copy = el('button', 'btn ghost sm kg-noprint', 'Copy');
+    copy.addEventListener('click', () => copyToButton(copy, value));
+    head.append(copy);
+    field.append(head);
+    const box = el('div', 'mono box small', value);
+    field.append(box);
+    out.append(field);
+  }
+
+  out.append(el('div', 'fineprint',
+    isOffline()
+      ? 'Carry the hex to a machine with a network and broadcast it there — the explorer\'s developer tools take a raw state transition. Nothing else has to travel, and the phrase stays here.'
+      : 'Broadcast it below, or paste the hex into the explorer\'s developer tools.'));
+
+  $('akBroadcastBtn').hidden = isOffline();
+  $('akBroadcastBtn').dataset.hex = built.hex;
+}));
+
+$('akBroadcastBtn').addEventListener('click', withBusy($('akBroadcastBtn'), 'Broadcasting…', async () => {
+  clearError();
+  const hex = $('akBroadcastBtn').dataset.hex;
+  if (!hex) throw new Error('Build the transition first.');
+  const sdk = await connected();
+  await sdk.stateTransitions.broadcastAndWait(hex);
+  $('akOut').append(el('div', 'note ok', 'Accepted. Look the identity up again to see the key on it.'));
+  $('akBroadcastBtn').hidden = true;
+}));
+
+// The offline copy cannot look anything up or broadcast, so it says what to do
+// instead rather than showing dead buttons.
+if (isOffline()) {
+  $('akLookupBtn').hidden = true;
+  $('akBroadcastBtn').hidden = true;
+  $('akOfflineHint').hidden = false;
+}
+fillRoles();

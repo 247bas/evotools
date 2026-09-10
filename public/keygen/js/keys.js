@@ -109,3 +109,116 @@ export async function deriveAll(mnemonic, network) {
 
   return { mnemonic, network, address, coreAddress, fundingPath: fp.path, fundingWif, keys };
 }
+
+/* ------------------------------------------------------------------ *
+ * Adding a key to an identity that already exists
+ *
+ * An identity's key set is not fixed at creation. `IdentityUpdate` adds keys,
+ * and it is the one transition the MASTER key signs — the SDK says so itself:
+ * `getKeyLevelRequirement('AUTHENTICATION')` on an update returns ["MASTER"],
+ * where a contract create returns ["CRITICAL","HIGH"]. So the master key, which
+ * can sign nothing else, exists for exactly this.
+ *
+ * It only goes one way. The SDK's own note on `disablePublicKeys`: "Cannot
+ * disable master, critical auth, or transfer keys." A CRITICAL authentication
+ * key you add can never be taken off again, so it had better be one you keep.
+ *
+ * Nothing below touches the network, which is the point: the phrase stays on
+ * the machine that holds it and only a signed transition travels. What the
+ * chain has to supply — the identity's revision, its nonce, and which key is
+ * the master — are arguments, so an offline copy can be handed them on paper.
+ * ------------------------------------------------------------------ */
+
+const hexToBytes = (hex) => Uint8Array.from(hex.match(/../g).map((b) => parseInt(b, 16)));
+
+/**
+ * Build and sign an IdentityUpdate that adds one key. No network, no SDK
+ * connection — the same guarantee the rest of this file makes.
+ *
+ * Returns the signed transition as hex, ready to be broadcast from anywhere,
+ * plus the key that was added so it can be written down before it is used.
+ */
+export async function buildAddKeyTransition({
+  mnemonic, network, identityId, revision, nonce,
+  masterKeyId = 0, newKeyId, purpose = 'AUTHENTICATION', securityLevel = 'CRITICAL',
+}) {
+  const Evo = await loadEvo();
+  const {
+    wallet, PrivateKey, IdentityPublicKey, IdentityPublicKeyInCreation,
+    IdentityUpdateTransition, KeyType,
+  } = Evo;
+
+  if (!Number.isInteger(newKeyId) || newKeyId < 0) throw new Error('The new key needs a key id.');
+  if (newKeyId === masterKeyId) throw new Error('That slot is the master key.');
+
+  const base = await identityBase(network);
+  const at = async (keyId) => {
+    const path = `${base.path}/0'/0'/0'/${keyId}'`;
+    const k = await wallet.deriveKeyFromSeedWithPath({ mnemonic, path, network });
+    return { path, ...k.toObject() };
+  };
+
+  const master = await at(masterKeyId);
+  const fresh = await at(newKeyId);
+
+  const added = new IdentityPublicKeyInCreation({
+    keyId: newKeyId,
+    purpose,
+    securityLevel,
+    keyType: KeyType.ECDSA_SECP256K1,
+    data: hexToBytes(fresh.publicKey),
+  });
+
+  // Proof of possession: the key being added signs the transition, proving
+  // whoever adds it holds it. Two things about this are easy to get wrong.
+  // It has to be signed over the transition with the key signatures still
+  // empty, or the bytes change under it; and it has to be set on the key
+  // object *before* the transition is built, because `publicKeyIdsToAdd` hands
+  // back copies and writing to those is lost at serialisation.
+  const probe = new IdentityUpdateTransition({
+    identityId, revision: BigInt(revision), nonce: BigInt(nonce),
+    addPublicKeys: [added], disablePublicKeys: [],
+  }).toStateTransition();
+  probe.signByPrivateKey(PrivateKey.fromWIF(fresh.privateKeyWif), newKeyId, KeyType.ECDSA_SECP256K1);
+  added.signature = probe.signature;
+
+  const transition = new IdentityUpdateTransition({
+    identityId, revision: BigInt(revision), nonce: BigInt(nonce),
+    addPublicKeys: [added], disablePublicKeys: [],
+  }).toStateTransition();
+
+  const masterPublicKey = new IdentityPublicKey({
+    keyId: masterKeyId,
+    purpose: 'AUTHENTICATION',
+    securityLevel: 'MASTER',
+    keyType: KeyType.ECDSA_SECP256K1,
+    data: hexToBytes(master.publicKey),
+    readOnly: false,
+  });
+  transition.sign(PrivateKey.fromWIF(master.privateKeyWif), masterPublicKey);
+
+  return {
+    hex: transition.toHex(),
+    masterKeyHash: masterPublicKey.getPublicKeyHash(),
+    added: {
+      keyId: newKeyId,
+      purpose,
+      securityLevel,
+      path: fresh.path,
+      publicKeyHex: fresh.publicKey,
+      wif: fresh.privateKeyWif,
+    },
+  };
+}
+
+/** What the five standard slots are for, and which of them an identity is missing. */
+export function missingRoles(existingKeys) {
+  const taken = new Set((existingKeys ?? []).map((k) => k.keyId));
+  const filled = (role) => (existingKeys ?? []).some(
+    (k) => k.purpose === role.purpose && k.securityLevel === role.securityLevel && !k.disabled,
+  );
+  return KEY_ROLES
+    .filter((role) => !filled(role))
+    // A slot another key already sits in cannot be reused, whatever its purpose.
+    .map((role) => ({ ...role, slotTaken: taken.has(role.keyId) }));
+}

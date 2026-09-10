@@ -73,7 +73,8 @@ function renderIdentity(info) {
     ? `Tokens are signed with key #${info.criticalKeys.join(' or #')} — AUTHENTICATION at CRITICAL.`
     : info.signingKeys.length
       ? `This identity's authentication keys are ${info.signingKeys.map((k) => `#${k.keyId} (${k.securityLevel})`).join(', ')}. `
-        + 'A token transfer is known to need CRITICAL, so the chain may refuse these — it decides, not this page.'
+        + 'That is enough to publish a token contract, which takes CRITICAL or HIGH, but not to move one, which takes CRITICAL. '
+        + 'A missing key can be added in keygen.'
       : 'This identity has no authentication key other than MASTER, so it cannot sign token transitions.';
   $('identityOut').append(el('div', 'note info', note));
   $('actions').hidden = false;

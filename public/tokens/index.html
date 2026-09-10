@@ -50,11 +50,12 @@
     <section class="panel" id="actions" hidden>
       <h2>Make and move</h2>
       <p class="fineprint">
-        All three need the same key: the identity's AUTHENTICATION key at
-        CRITICAL. Not the HIGH one, which the chain refuses outright, and not the
-        TRANSFER key, which is also CRITICAL and only moves credits. On a
-        standard identity that is key #2 — <a href="/keygen/">keygen</a> lays out
-        all five.
+        All three want an AUTHENTICATION key, and the level differs: publishing
+        a contract takes CRITICAL <em>or</em> HIGH, moving a token takes CRITICAL.
+        The TRANSFER key is CRITICAL too and can do neither — it only moves
+        credits. On a standard identity the key you want is #2;
+        <a href="/keygen/">keygen</a> lays out all five, and can add one that is
+        missing.
       </p>
 
       <details class="keys" open>

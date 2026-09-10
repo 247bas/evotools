@@ -5,6 +5,36 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Keygen can add a key an identity is missing.** An identity's key set is not
+  fixed at creation, and one without an AUTHENTICATION key at CRITICAL cannot
+  move tokens — mainnet's thedesertlynx.dash is exactly that. `IdentityUpdate`
+  adds one, and it is the single transition the MASTER key signs, which is what
+  that key is for: `getKeyLevelRequirement('AUTHENTICATION')` returns ["MASTER"]
+  on an update against ["CRITICAL","HIGH"] on a contract create. That method
+  also settled a guess made earlier in this release — publishing a token
+  contract takes CRITICAL *or* HIGH, and only moving a token is strict about
+  CRITICAL, so /tokens no longer says otherwise.
+
+  It works in the offline copy, which is the point: building and signing the
+  transition needs no network, so the phrase stays on the machine that holds it
+  and only a signed hex string travels. What the chain has to supply — revision,
+  nonce, which key is the master — are typed in there and looked up
+  automatically online. Two traps are pinned by the smoke test. The proof of
+  possession, where the key being added signs the transition to prove it is
+  held, has to be set on the key object *before* the transition is built:
+  `publicKeyIdsToAdd` hands back copies, so writing to those is lost at
+  serialisation and the signature silently comes out empty. And it has to be
+  signed over the transition with the key signatures still empty, or the bytes
+  move under it.
+
+  One way only. The SDK's own note on `disablePublicKeys`: "Cannot disable
+  master, critical auth, or transfer keys." The page says so before the button.
+
+  **Untested against a live chain:** no update has been broadcast. Everything
+  that can be checked without one is — both signatures are 65 bytes and survive
+  a round trip through the hex, and the transition decodes back to what went in
+  — but whether a node accepts it is unproven, and one testnet run settles it.
+
 - **The security level is the chain's call, not the page's.** /tokens refused to
   sign unless the identity had an AUTHENTICATION key at CRITICAL, which is what
   a token transfer is proven to need — a HIGH key comes back "Invalid public key

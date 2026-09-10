@@ -66,13 +66,14 @@ export async function lookupIdentity(idOrName) {
 
 // Which key may sign is the chain's call, not this file's.
 //
-// What is proven: a token transfer signed with an AUTHENTICATION key at HIGH
-// comes back "Invalid public key security level HIGH. The state transition
-// requires one of CRITICAL", and the same identity's CRITICAL key goes through.
-// What is not proven is whether every other transition here draws the line in
-// the same place, and guessing it wrong in this direction blocks something that
-// would have worked — an identity with only a HIGH authentication key is
-// unusual but real.
+// The levels differ per transition, and the SDK will tell you which: calling
+// `getKeyLevelRequirement('AUTHENTICATION')` on a state transition returns
+// ["CRITICAL","HIGH"] for a contract create and ["MASTER"] for an identity
+// update. A token transfer is the strict one — signing with HIGH comes back
+// "Invalid public key security level HIGH. The state transition requires one of
+// CRITICAL". So an identity with only a HIGH authentication key can publish a
+// token and not move it, which is a real shape (mainnet: thedesertlynx.dash)
+// and not something to guess at from here.
 //
 // So this refuses only what cannot possibly work: a key that is not on this
 // identity, one that is disabled, or one whose purpose is something else. A

@@ -12,6 +12,10 @@ import { setNetwork } from '../../onboard/js/sdk.js';
 
 const ok = (m) => console.log(`  ✅ ${m}`);
 let failed = 0;
+const refusesTo = async (fn, want, label) => {
+  try { await fn(); failed++; console.log(`  ❌ ${label}: did not refuse`); }
+  catch (e) { check(String(e.message).includes(want), `${label} — ${e.message.slice(0, 80)}`); }
+};
 const check = (cond, m) => (cond ? ok(m) : (failed++, console.log(`  ❌ ${m}`)));
 
 console.log('\n1. Generate + derive (offline)');
@@ -98,6 +102,54 @@ check(/beforeprint/.test(sources.appJs) && /secretBlock'\)\.open = true/.test(so
 check(sources.appJs.includes("printing.addEventListener") || sources.appJs.includes('matchMedia'), 'a media-query fallback exists for browsers without beforeprint');
 check(!/@media print[\s\S]*#secretBlock\s*{\s*display:\s*block/.test(sources.css), 'the print stylesheet no longer pretends CSS can open a <details>');
 check(sources.page.includes('kg-printonly') && /\.kg-printonly\s*{\s*display:\s*block/.test(sources.css), 'the print-only heading exists and is shown in print');
+
+console.log('\n9. Adding a key to an identity that already exists');
+{
+  const { buildAddKeyTransition, missingRoles } = await import('../js/keys.js');
+  const Evo = await import('../../shared/vendor/evo-sdk.module.js');
+  const PHRASE = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+  const built = await buildAddKeyTransition({
+    mnemonic: PHRASE, network: 'testnet',
+    identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 4,
+  });
+  check(/^[0-9a-f]+$/.test(built.hex), `built a signed transition, ${built.hex.length} hex chars`);
+  check(built.added.path === "m/9'/1'/5'/0'/0'/0'/4'", `the new key comes off ${built.added.path}`);
+
+  // The two signatures are the whole point. The master's says who authorised
+  // the change; the added key's proves whoever added it holds it. Both have to
+  // survive serialisation, and the second one only does when it is set on the
+  // key before the transition is built — writing to publicKeyIdsToAdd
+  // afterwards is lost, which is the trap this pins.
+  const back = Evo.IdentityUpdateTransition.fromStateTransition(Evo.StateTransition.fromHex(built.hex));
+  const object = back.toObject();
+  check(object.signature?.length === 65, `master signature carried: ${object.signature?.length} bytes, key #${object.signaturePublicKeyId}`);
+  check(object.addPublicKeys?.[0]?.signature?.length === 65, `proof of possession carried: ${object.addPublicKeys?.[0]?.signature?.length} bytes`);
+  check(object.signaturePublicKeyId === 0, 'signed by the master key, which is the only key an identity update accepts');
+
+  // Straight from the SDK rather than from memory: what each transition needs.
+  const levels = back.toStateTransition().getKeyLevelRequirement('AUTHENTICATION');
+  check(JSON.stringify(levels) === '["MASTER"]', `an identity update requires ${JSON.stringify(levels)}`);
+
+  // Which of the five an identity is missing, and whether the slot is free.
+  const lynx = [
+    { keyId: 0, purpose: 'AUTHENTICATION', securityLevel: 'MASTER' },
+    { keyId: 1, purpose: 'AUTHENTICATION', securityLevel: 'HIGH' },
+    { keyId: 2, purpose: 'ENCRYPTION', securityLevel: 'MEDIUM' },
+    { keyId: 3, purpose: 'TRANSFER', securityLevel: 'CRITICAL' },
+  ];
+  const missing = missingRoles(lynx);
+  check(missing.length === 1 && missing[0].securityLevel === 'CRITICAL',
+    'thedesertlynx.dash is missing exactly the CRITICAL authentication key');
+  check(missing[0].slotTaken === true, 'and its usual slot #2 is taken, so a new key needs a free one');
+  check(missingRoles([]).length === 5, 'an empty identity is missing all five');
+
+  await refusesTo(() => buildAddKeyTransition({
+    mnemonic: PHRASE, network: 'testnet', identityId: 'GLFyDxwzoKBC1dr9HQYtrYCJfoDeNjm3JA2EGKZyjgn7',
+    revision: 2, nonce: 5, masterKeyId: 0, newKeyId: 0,
+  }), 'master key', 'adding a key into the master key\'s own slot');
+}
 
 console.log('\n8. The SDK snippet in the dropdown actually runs');
 // Take the code we show developers, point the import at the vendored SDK, feed
