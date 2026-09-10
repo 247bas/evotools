@@ -5,6 +5,16 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The add-key panel is in the order you need it.** The Switch off buttons sat
+  above the field that says how the change gets signed, so the first click
+  landed on "give either a recovery phrase or the private key" — about a box
+  further down the page, with the message itself at the top where you could not
+  see it. Three headed steps now: who the identity is, how this will be signed,
+  the keys it has, then what to add. An error from a key row appears under that
+  row instead of the page-wide box. And the summary said "all five standard
+  keys" while showing seven of them; it counts what is there now and says
+  separately whether any of the five roles is missing.
+
 - **A key can be switched off, never removed.** The key list from a lookup is
   rows now rather than a printout, and each one either carries a Switch off
   button or the word permanent. That is the rule made visible instead of

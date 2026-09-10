@@ -208,3 +208,12 @@
 .kg-keyid { color: var(--muted); flex: 0 0 34px; }
 .kg-keywhat { flex: 1 1 220px; }
 .kg-keynote { color: var(--muted); font-size: 0.78rem; }
+
+/* Three steps inside one panel: who, how it signs, what you want. Headings
+   rather than dividers, so the panel still reads as one thing. */
+#addKeyPanel .kg-sub {
+  font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 26px 0 10px; font-weight: 600;
+}
+#addKeyPanel .kg-sub:first-of-type { margin-top: 22px; }
+#addKeyPanel #akKeysMsg:not(:empty) { margin-top: 12px; }

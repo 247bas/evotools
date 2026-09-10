@@ -284,35 +284,20 @@ const addable = (roles) => {
   return list;
 };
 
-// The phrase lives in a collapsed block in the section above this one, so from
-// down here there is no field to see and nothing to fill in. Rather than an
-// error that says "restore a phrase first" and leaves you hunting, this shows
-// whether one is loaded and opens the block for you.
-function openPhraseBlock() {
-  $('restoreBlock').hidden = false;
-  $('mnemonicInput').focus();
-  $('restoreBlock').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
 const loadedPhrase = () => ($('akMnemonic').value || '').trim().replace(/\s+/g, ' ');
 
+// Each flow has its own phrase field. This one used to reach into the other
+// flow's restore box, which stopped being reachable the moment the two were
+// split — the button here opened a field inside a hidden section.
 function renderPhraseState() {
-  const loaded = Boolean(loadedPhrase());
-  const host = $('akPhraseState');
-  if (loaded) {
-    host.replaceChildren(el('div', 'note ok',
-      `A phrase is loaded${current ? ' — the one showing above' : ''}. The new key is derived from it.`));
-    return;
-  }
-  const note = el('div', 'note warn');
-  note.append(el('span', null, 'No phrase loaded yet — the new key has to come from one. '));
-  const open = el('button', 'btn ghost sm kg-noprint', 'Enter the phrase');
-  open.addEventListener('click', openPhraseBlock);
-  note.append(open);
-  host.replaceChildren(note);
+  $('akPhraseState').replaceChildren(loadedPhrase()
+    ? el('div', 'note ok', 'That is a phrase. Both keys come from it, and nothing is sent anywhere.')
+    : el('div', 'fineprint', 'This has to be the phrase the identity was made from — the key being '
+      + 'added is derived from it, and so is the master key that signs the change. '
+      + 'No phrase? Switch the line above to pasting your master key.'));
 }
 
-$('mnemonicInput').addEventListener('input', renderPhraseState);
+$('akMnemonic').addEventListener('input', renderPhraseState);
 
 // Two routes to the same transition. The phrase one reproduces both keys
 // forever; the pasted one works for an identity that never came from a phrase.
@@ -453,12 +438,15 @@ $('akLookupBtn').addEventListener('click', withBusy($('akLookupBtn'), 'Looking�
     }
     box.append(row);
   }
+  const live = shaped.filter((k) => !k.disabled).length;
   const summary = el('div', missing.length ? 'note warn' : 'note ok',
     (resolved.name ? `${resolved.name} is ${identityId}. ` : '')
+    + `${live} key${live === 1 ? '' : 's'} in use. `
     + (missing.length
       ? `Missing: ${missing.map((m) => `${m.purpose}/${m.securityLevel}`).join(', ')}.`
-      : 'This identity has all five standard keys.'));
-  $('akKeys').replaceChildren(box, summary);
+      : 'None of the five standard roles is missing.'));
+  $('akKeys').replaceChildren(summary, box);
+  $('akKeysMsg').replaceChildren();
 
   // The next free slot, which is what a new key has to use — the role's own
   // number is often taken by something else on an identity like this.
@@ -522,7 +510,10 @@ async function disableKey(key, identityId) {
     $('akBroadcastBtn').dataset.hex = built.hex;
     $('akBroadcastBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (e) {
-    showError(e);
+    // Under the list that was clicked, not at the top of the page — the global
+    // box scrolls you away from the button you just pressed.
+    $('akKeysMsg').replaceChildren(el('div', 'note bad', e?.message || String(e)));
+    $('akKeysMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
