@@ -5,6 +5,16 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Keygen asks which job you came for.** The page had grown two things that
+  share only a subject — making keys for an identity that does not exist yet,
+  and adding one to an identity that does — stacked so the second read as a
+  continuation of the first. Now two cards at the top and one flow at a time.
+  `/keygen#add` opens straight on the second, which is the link to send someone
+  whose identity is missing a key. The split turned up a fault it had created:
+  the add panel reached into the other flow for the recovery phrase, so once
+  that flow was hidden the field it pointed at could not be shown at all. Each
+  flow carries its own phrase field now, which is what it should have been.
+
 - **Keygen can add a key an identity is missing.** An identity's key set is not
   fixed at creation, and one without an AUTHENTICATION key at CRITICAL cannot
   move tokens — mainnet's thedesertlynx.dash is exactly that. `IdentityUpdate`

@@ -98,10 +98,30 @@ function render(result) {
 
   $('result').hidden = false;
   $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  // The add-key section derives from whatever phrase is loaded, so it has to
-  // hear about this one. Defined below; this runs long after load.
-  renderPhraseState();
 }
+
+// ── which job you came for ───────────────────────────────────────────────────
+//
+// Two things live on this page and they share only a subject. Stacked, the
+// second read as a continuation of the first — you scrolled past making keys to
+// reach adding one, and the add panel spoke about "the phrase above" whether or
+// not there was one. One at a time, chosen rather than scrolled to.
+
+function setFlow(flow) {
+  const adding = flow === 'add';
+  $('flowNew').hidden = adding;
+  $('addKeyPanel').hidden = !adding;
+  // The result panel belongs to making keys, and only exists once some were.
+  $('result').hidden = adding || !current;
+  $('flowNewBtn').setAttribute('aria-pressed', String(!adding));
+  $('flowAddBtn').setAttribute('aria-pressed', String(adding));
+  // A link can point straight at the job, which is what you want when telling
+  // somebody how to fix their identity.
+  history.replaceState(null, '', adding ? '#add' : location.pathname);
+}
+
+$('flowNewBtn').addEventListener('click', () => setFlow('new'));
+$('flowAddBtn').addEventListener('click', () => setFlow('add'));
 
 // ── actions ──────────────────────────────────────────────────────────────────
 $('genBtn').addEventListener('click', withBusy($('genBtn'), 'Deriving…', async () => {
@@ -273,11 +293,7 @@ function openPhraseBlock() {
   $('restoreBlock').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// A generated phrase never lands in the restore box — it goes to `current` and
-// is rendered into the result panel. Reading only the box would refuse to build
-// while the phrase is sitting on screen a section above.
-const loadedPhrase = () =>
-  (current?.mnemonic || $('mnemonicInput').value || '').trim().replace(/\s+/g, ' ');
+const loadedPhrase = () => ($('akMnemonic').value || '').trim().replace(/\s+/g, ' ');
 
 function renderPhraseState() {
   const loaded = Boolean(loadedPhrase());
@@ -302,7 +318,7 @@ $('mnemonicInput').addEventListener('input', renderPhraseState);
 function renderSource() {
   const wif = $('akSource').value === 'wif';
   $('akWifBlock').hidden = !wif;
-  $('akPhraseState').hidden = wif;
+  $('akPhraseBlock').hidden = wif;
   // The key id drives the derivation path, which a pasted key does not have.
   $('akNewId').closest('.field').hidden = false;
 }
@@ -441,9 +457,8 @@ $('akBuildBtn').addEventListener('click', withBusy($('akBuildBtn'), 'Building…
   const usingWif = $('akSource').value === 'wif';
   const mnemonic = loadedPhrase();
   if (!usingWif && !mnemonic) {
-    openPhraseBlock();
-    throw new Error('The new key is derived from your recovery phrase, and none is loaded yet. '
-      + 'The field is open now, in the section above — paste the phrase of this identity there and try again. '
+    $('akMnemonic').focus();
+    throw new Error('Paste the recovery phrase of this identity — the key being added is derived from it. '
       + 'No phrase? Switch "Where the keys come from" to pasting your master key.');
   }
   if (usingWif && !$('akMasterWif').value.trim()) {
@@ -546,3 +561,4 @@ fillRoles();
 renderPhraseState();
 renderSource();
 renderAddKeySnippet();
+setFlow(location.hash === '#add' ? 'add' : 'new');

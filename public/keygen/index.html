@@ -67,6 +67,18 @@
         </ol>
       </div>
 
+      <div class="kg-flow" role="group" aria-label="What are you here for?">
+        <button type="button" class="kg-flow-card" id="flowNewBtn" aria-pressed="true">
+          <span class="kg-flow-title">A new identity</span>
+          <span class="kg-flow-sub">Make a fresh set of keys, and the address that funds it. Nothing exists yet.</span>
+        </button>
+        <button type="button" class="kg-flow-card" id="flowAddBtn" aria-pressed="false">
+          <span class="kg-flow-title">An identity I already have</span>
+          <span class="kg-flow-sub">Add a key it is missing — a CRITICAL one for tokens, or a bound one for DashPay.</span>
+        </button>
+      </div>
+
+      <div id="flowNew">
       <div class="kg-controls">
         <div class="field">
           <label for="netsel">Network</label>
@@ -87,6 +99,7 @@
         <label for="mnemonicInput">Recovery phrase</label>
         <textarea id="mnemonicInput" rows="2" placeholder="twelve or twenty-four words, separated by spaces" autocomplete="off" spellcheck="false"></textarea>
         <button class="btn primary" id="deriveBtn">Derive from this phrase</button>
+      </div>
       </div>
     </section>
 
@@ -166,7 +179,7 @@
     <!-- Adding a key to an identity that already exists. Inside #kgWrap, so the
          offline copy carries it too — which is the whole point: the phrase never
          has to touch a machine with a network. -->
-    <section class="panel" id="addKeyPanel">
+    <section class="panel" id="addKeyPanel" hidden>
       <h2>Add a missing key to an identity</h2>
       <p class="fineprint">
         An identity's keys are not fixed at creation. If one of the five is
@@ -267,7 +280,13 @@
         </select>
       </div>
 
-      <div id="akPhraseState"></div>
+      <div id="akPhraseBlock">
+        <div class="field">
+          <label for="akMnemonic">Recovery phrase of this identity</label>
+          <textarea id="akMnemonic" rows="2" placeholder="twelve or twenty-four words, separated by spaces" autocomplete="off" spellcheck="false"></textarea>
+        </div>
+        <div id="akPhraseState"></div>
+      </div>
 
       <div id="akWifBlock" hidden>
         <p class="fineprint">

@@ -169,3 +169,31 @@
 
 /* The network mirror is one word wide next to a 44-character id. */
 #addKeyPanel #akNetField { flex: 0 0 150px; }
+
+/* The page does two jobs that only share a subject: making keys for an identity
+   that does not exist yet, and adding one to an identity that does. Stacked,
+   the second read as a continuation of the first. Two cards, one live at a
+   time — a choice, not a heading. */
+.kg-flow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0 6px; }
+@media (max-width: 620px) { .kg-flow { grid-template-columns: 1fr; } }
+.kg-flow-card {
+  display: flex; flex-direction: column; gap: 6px; text-align: left; cursor: pointer;
+  padding: 16px 18px; border-radius: 12px;
+  border: 1px solid var(--border); background: rgba(0, 0, 0, 0.22); color: var(--text);
+  font: inherit; transition: border-color 0.15s, background 0.15s;
+}
+.kg-flow-card:hover { border-color: rgba(0, 141, 228, 0.45); }
+.kg-flow-card:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.kg-flow-card[aria-pressed="true"] {
+  border-color: var(--blue); background: rgba(0, 141, 228, 0.10);
+}
+.kg-flow-title { font-weight: 600; font-size: 0.98rem; }
+.kg-flow-card[aria-pressed="true"] .kg-flow-title { color: var(--blue); }
+.kg-flow-sub { color: var(--muted); font-size: 0.84rem; line-height: 1.5; }
+
+#addKeyPanel textarea {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;
+  background: rgba(0, 0, 0, 0.35); color: var(--text);
+  font-family: var(--mono, ui-monospace, monospace); font-size: 0.86rem; resize: vertical;
+}
+#addKeyPanel textarea:focus { outline: none; border-color: var(--blue); }
