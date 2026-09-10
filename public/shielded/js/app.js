@@ -668,7 +668,7 @@ $('addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') runCheck()
 renderMoves();
 renderDenoms(PROTOCOL_THESE_HOLD_FOR);
 renderSnippet();
-$('source').textContent = `Chain reads go through @dashevo/evo-sdk to the masternodes. The history is this site's own: every mainnet shielded transition with the price at its block, in /shielded/data, rebuilt by tools/shielded-history.mjs. The public platform-explorer API (${apiHost('mainnet').replace('https://', '')}, testnet at ${apiHost('testnet').replace('https://', '')}) is asked for three things only — its own totals, so the two can be held against each other; the transitions newer than the file's last block; and testnet, which has no file.`;
+$('source').textContent = `Chain reads go through @dashevo/evo-sdk to the masternodes, proof-verified: the SDK fetches the quorum public keys up front and checks each answer's proof against the quorum-signed state root, so a node cannot make a number up. What a proof does not carry is completeness — it says the notes you were given are real, not that there are no more, which is why the note count is paged rather than read in one go. The history is this site's own: every mainnet shielded transition with the price at its block, in /shielded/data, rebuilt by tools/shielded-history.mjs. The public platform-explorer API (${apiHost('mainnet').replace('https://', '')}, testnet at ${apiHost('testnet').replace('https://', '')}) is asked for three things only — its own totals, so the two can be held against each other; the transitions newer than the file's last block; and testnet, which has no file.`;
 Promise.all([
   loadPools().then(() => loadPriceView(currentNet())),
   loadFlows(currentNet()),

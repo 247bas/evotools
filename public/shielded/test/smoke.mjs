@@ -329,5 +329,50 @@ const buckets = byPrice(ev, { isIn, isOut, bucket: 5 });
 const bIn = buckets.reduce((x, b) => x + b.in, 0);
 check(Math.abs(bIn - ourIn / 1e11) < 0.01, `the price buckets hold every credit that went in (${bIn.toFixed(2)} DASH over ${buckets.length} bands)`);
 
+console.log('\n12. These reads are proof-verified, and the naming says the opposite');
+// `EvoSDK.mainnetTrusted()` sounds like the mode that takes a node at its word.
+// It is the other one. Per the SDK's own README: "Trusted mode is required for
+// all queries. It pre-fetches quorum public keys so the SDK can verify Platform
+// proofs", `trusted: true` means "pre-fetches quorum keys for proof
+// verification", and `proofs` defaults to true. What is trusted is the source
+// of the quorum keys, not the node answering the query — every answer arrives
+// with a proof that is checked against the quorum-signed state root.
+//
+// The evidence, rather than the label: without quorum keys the SDK refuses to
+// answer at all. A mode that merely believed the node would have nothing to
+// refuse. If this ever starts working, the SDK has grown an unverified path and
+// every page that says "verified" needs re-reading.
+const evo = await safe('loadEvo', () => loadEvo());
+if (evo) {
+  // It refuses every time, though not always with the same complaint: sometimes
+  // the context provider stops it, sometimes the transport gives out first. The
+  // property is that no answer comes back, so that is what is asserted rather
+  // than any one message.
+  let answered = false;
+  let why = '';
+  try {
+    const bare = evo.EvoSDK.mainnet();      // trusted: false, so no quorum keys
+    await bare.connect();
+    const v = await bare.shielded.poolState();
+    answered = v != null;
+  } catch (e) { why = (e?.message || String(e)).replace(/\s+/g, ' ').slice(0, 70); }
+  check(!answered, `without quorum keys the SDK will not answer ("${why}"), which is what tells you the answers are checked`);
+  if (answered) {
+    console.log('     ↑ an unverified read just succeeded: re-read every page that claims proofs are checked.');
+  }
+}
+
+// And proof metadata still comes back on demand, which is what the explorer
+// shows next to a lookup.
+if (m) {
+  const withProof = await safe('poolStateWithProof', async () => {
+    const sdk = await getSdkFor('mainnet');
+    return sdk.shielded.poolStateWithProof();
+  });
+  check(withProof?.proof?.quorumHash?.length === 32 && withProof?.proof?.signature?.length > 0,
+    `the proof carries a 32-byte quorum hash and a ${withProof?.proof?.signature?.length}-byte BLS signature over the state root`);
+  check(BigInt(withProof?.data ?? 0n) === m.balance, 'and the proved balance is the one the page shows');
+}
+
 console.log(`\n${failed === 0 ? '✅ ALL PASSED' : `❌ ${failed} FAILED`}\n`);
 process.exit(failed === 0 ? 0 : 1);

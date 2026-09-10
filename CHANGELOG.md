@@ -5,6 +5,19 @@ rather than installable releases.
 
 ## Unreleased
 
+- **Said out loud that the reads are proof-verified.** /shielded's source line
+  now explains what the SDK actually does, because the naming invites the
+  opposite reading: `EvoSDK.mainnetTrusted()` sounds like the mode that takes a
+  node at its word and is in fact the one that can check it. Per the SDK's own
+  README, `trusted: true` pre-fetches the quorum public keys so proofs can be
+  verified, `proofs` defaults to true, and the non-trusted mode is not supported
+  in WASM at all. What is trusted is the source of the quorum keys, not the node
+  answering the query. The smoke test pins the evidence rather than the label:
+  an SDK built without quorum keys refuses to answer, and a mode that merely
+  believed a node would have nothing to refuse. The line also says what a proof
+  does not carry, which is completeness: it says the notes you were handed are
+  real, not that there are no more, and that is why the note count is paged.
+
 - **The note count was the query's ceiling, not the pool's.** /shielded and the
   explorer both showed 2,048 notes on mainnet. The pool held 2,301. There is no
   endpoint that counts notes, so counting means fetching them, and a node
