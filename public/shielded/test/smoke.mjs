@@ -107,7 +107,23 @@ check(Array.isArray(hour), 'a short range answers too');
 console.log('\n7. The chain, and the index held against it');
 const m = await safe('poolState(mainnet)', () => poolState('mainnet'));
 check(m?.balance > 0n, `mainnet pool holds ${dash(m?.balance, 2)} DASH`);
-check(m?.notes > 0 && !m?.notesCapped, `${m?.notes} notes, ${m?.anchors} anchors`);
+check(m?.notes > 0 && m?.notesExact, `${m?.notes} notes, ${m?.anchors} anchors`);
+// The note count is the one number here that cannot be read straight off an
+// endpoint: it has to be counted by paging, and a node hands back its
+// per-request ceiling looking exactly like a complete answer. This page
+// published 2,048 (the ceiling) while the pool held 2,301. So it is held
+// against somebody else's count, arrived at by their own code.
+const mno = await safe('mnowatch.org', async () => {
+  const r = await fetch('https://mnowatch.org/evonodes/shieldedBalance.php');
+  return r.json();
+});
+if (mno) {
+  const theirs = Number(mno.totalshieldednotescount);
+  check(Math.abs(theirs - m.notes) <= 3, `MNOwatch counts ${theirs} notes against our ${m.notes}`);
+  const theirBalance = Math.round(Number(mno.totalshieldedbalance) * 1e5);
+  const ours = Math.round((Number(m.balance) / Number(CREDITS_PER_DASH)) * 1e5);
+  check(Math.abs(theirBalance - ours) <= 100, `and ${Number(mno.totalshieldedbalance).toFixed(5)} DASH against our ${(Number(m.balance) / Number(CREDITS_PER_DASH)).toFixed(5)}`);
+}
 check(m?.noteBytes === POOL.noteBytes, `a note is ${m?.noteBytes} bytes`);
 check(m?.protocolVersion === PROTOCOL_THESE_HOLD_FOR, `mainnet runs protocol ${m?.protocolVersion} — the fee constants above were read at ${PROTOCOL_THESE_HOLD_FOR}; re-check them if this fails`);
 if (m && s) {

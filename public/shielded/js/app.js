@@ -66,7 +66,7 @@ function poolCard(net) {
     card,
     chain(d) {
       amount.replaceChildren(document.createTextNode(dash(d.balance, 2)), el('small', null, unit(net)));
-      notes.textContent = d.notes == null ? '—' : `${num(d.notes)}${d.notesCapped ? '+' : ''}`;
+      notes.textContent = d.notes == null ? '—' : `${num(d.notes)}${d.notesExact ? '' : '+'}`;
       anchors.textContent = num(d.anchors);
       protocol.textContent = d.protocolVersion ? `v${d.protocolVersion}` : '—';
     },

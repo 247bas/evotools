@@ -3,6 +3,7 @@
 // object the UI renders + a raw JSON dump.
 
 import { tokenHolders, nameHolders } from '../../shared/token-holders.js';
+import { countNotes, NOTE_CHUNK } from '../../shared/shielded-notes.js';
 import { getSdk, getSdkFor, loadEvo } from './sdk.js';
 import { contestState, contestEndsAt } from '../../shared/dpns-register.js';
 import { looksLikeSecret } from '../../shared/secrets.js';
@@ -224,7 +225,6 @@ export async function networkInfo() {
 // The note query has no count endpoint, so the note total comes from fetching
 // the set. It only accepts startIndex 0 (ranges must be MMR-aligned), so this
 // is one request with a ceiling rather than real paging.
-const NOTE_FETCH_CAP = 8192;
 
 export async function shieldedPool(network, { proof = false, notes = true } = {}) {
   const sdk = await getSdkFor(network);
@@ -241,7 +241,7 @@ export async function shieldedPool(network, { proof = false, notes = true } = {}
   const [anchors, latest, noteList] = await Promise.all([
     sdk.shielded.anchors().catch(() => []),
     sdk.shielded.mostRecentAnchor().catch(() => undefined),
-    notes ? sdk.shielded.encryptedNotes(0n, NOTE_FETCH_CAP).catch(() => null) : null,
+    notes ? countNotes(sdk, { chunk: NOTE_CHUNK }).catch(() => null) : null,
   ]);
 
   return {
@@ -249,9 +249,9 @@ export async function shieldedPool(network, { proof = false, notes = true } = {}
     balance: balance ?? 0n,
     anchors: anchors.length,
     latestAnchor: bytesToHex(latest),
-    notes: noteList ? noteList.length : undefined,
-    notesCapped: noteList ? noteList.length >= NOTE_FETCH_CAP : false,
-    noteBytes: noteList?.[0]?.encryptedNote?.length,
+    notes: noteList ? noteList.count : undefined,
+    notesExact: noteList ? noteList.exact : false,
+    noteBytes: noteList?.sample?.encryptedNote?.length,
     proof: pm,
   };
 }

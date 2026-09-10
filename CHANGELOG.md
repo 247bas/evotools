@@ -5,6 +5,25 @@ rather than installable releases.
 
 ## Unreleased
 
+- **The note count was the query's ceiling, not the pool's.** /shielded and the
+  explorer both showed 2,048 notes on mainnet. The pool held 2,301. There is no
+  endpoint that counts notes, so counting means fetching them, and a node
+  returns at most so many per request whatever you ask for: mainnet stops at
+  2,048 and hands the ceiling back looking exactly like a complete answer. The
+  old guard asked whether the answer had reached 8,192 and so never fired.
+  Testnet was right by luck, its node giving more than the pool holds.
+  Counting properly means paging, and `startIndex` has to be a multiple of the
+  count asked for ("start_index is not chunk-aligned; must be a multiple of
+  max_elements"), so `shared/shielded-notes.js` takes a chunk at a time: short
+  chunk and that is the lot, full chunk and it asks for the next. Where paging
+  is refused it asks once for twice as much and reads whether the answer grew.
+  Where neither settles it the count is rendered with a trailing "+" instead of
+  a wrong exact number. Both pages use it. The smoke test now holds our count
+  against MNOwatch's, which reaches 2,301 through its own code — thanks to zkcd
+  for spotting it. Anchors were checked for the same trap and are genuine: 64
+  kept on mainnet against 61 blocks carrying a transition in the last 1,000,
+  which is what the retention rule predicts.
+
 - **/shielded keeps its own history, and asks the price a sharper question.**
   Every shielded transition mainnet ever had is stored in
   `public/shielded/data`, one row each: the block it landed in, what it moved,

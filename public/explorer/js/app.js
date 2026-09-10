@@ -528,7 +528,7 @@ function poolCard(net, data) {
 
   const notes = data.notes == null
     ? '—'
-    : `${data.notes}${data.notesCapped ? '+' : ''}`;
+    : `${data.notes}${data.notesExact ? '' : '+'}`;
   card.append(stats([
     ['Notes', notes],
     ['Anchors', String(data.anchors)],

@@ -4,10 +4,7 @@
 // leaves out on purpose (dashpay/platform#3235).
 
 import { getSdkFor } from './sdk.js';
-
-// The note query only accepts startIndex 0 and has no count endpoint, so the
-// total comes from fetching the set with a ceiling.
-export const NOTE_CAP = 8192;
+import { countNotes } from '../../shared/shielded-notes.js';
 
 const hex = (u8) => (u8 ? Array.from(u8, (b) => b.toString(16).padStart(2, '0')).join('') : '');
 
@@ -18,16 +15,16 @@ export async function poolState(network) {
     sdk.shielded.anchors().catch(() => []),
     sdk.shielded.mostRecentAnchor().catch(() => undefined),
     sdk.epoch.current().catch(() => null),
-    sdk.shielded.encryptedNotes(0n, NOTE_CAP).catch(() => null),
+    countNotes(sdk).catch(() => null),
   ]);
   return {
     network,
     balance: balance ?? 0n,
     anchors: anchors.length,
     latestAnchor: hex(latest),
-    notes: notes ? notes.length : undefined,
-    notesCapped: notes ? notes.length >= NOTE_CAP : false,
-    noteBytes: notes?.[0]?.encryptedNote?.length,
+    notes: notes ? notes.count : undefined,
+    notesExact: notes ? notes.exact : false,
+    noteBytes: notes?.sample?.encryptedNote?.length,
     protocolVersion: epoch?.protocolVersion,
     epoch: epoch?.index,
   };
