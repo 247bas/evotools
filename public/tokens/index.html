@@ -4,190 +4,313 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tokens — make one, send it, see who has it · evotools</title>
-  <meta name="description" content="Publish a token on Dash Platform, mint it, send it by .dash name, and work out who holds it — in the browser, with your own key." />
+  <meta name="description" content="Make a token on Dash Platform in four questions, mint it, send it by .dash name, and work out who holds it — in the browser, with your own key." />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="evotools" />
   <meta property="og:title" content="Tokens — make one, send it, see who has it" />
-  <meta property="og:description" content="Publish a token on Dash Platform, mint it, send it by .dash name, and work out who holds it." />
+  <meta property="og:description" content="Make a token on Dash Platform in four questions, mint it, send it by .dash name, and see who holds it." />
   <meta property="og:image" content="https://evotools.dev/og/tokens.png" />
   <meta property="og:url" content="https://evotools.dev/tokens/" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Tokens — make one, send it, see who has it" />
-  <meta name="twitter:description" content="Publish a token on Dash Platform, mint it, send it by .dash name, and work out who holds it." />
+  <meta name="twitter:description" content="Make a token on Dash Platform in four questions, mint it, send it by .dash name, and see who holds it." />
   <link rel="stylesheet" href="/shared/theme.css" />
   <link rel="stylesheet" href="css/tokens.css" />
 </head>
 <body>
-  <div class="wrap">
-    <p class="tagline">
-      A token on Platform is a configuration hanging off a data contract, so
-      making one means publishing a contract. What you decide there — decimals,
-      supply, who may ever mint — is fixed the moment it lands.
-    </p>
-
-    <div class="error" id="globalError" hidden></div>
-
-    <section class="panel">
-      <div class="tk-head">
-        <h1>Tokens</h1>
+  <div class="wrap" id="tk" data-mode="wizard">
+    <header class="tk-head">
+      <h1>Tokens</h1>
+      <div class="tk-head-tools">
         <select id="netsel" aria-label="Network">
           <option value="testnet">testnet</option>
           <option value="mainnet">mainnet</option>
         </select>
+        <button class="btn ghost sm" id="modeBtn" type="button">Show everything</button>
       </div>
+    </header>
 
+    <p class="tagline">
+      A token on Platform is a configuration hanging off a data contract, so
+      making one means publishing a contract.
+    </p>
+
+    <ol class="stepper wizard-only" id="stepper" hidden></ol>
+
+    <div class="error" id="globalError" hidden></div>
+
+    <!-- ── the chooser ──────────────────────────────────────────────────── -->
+    <section class="panel step wizard-only" data-step="start">
+      <h2>What do you want to do?</h2>
+      <div class="tk-pick-grid">
+        <button class="tk-pick" type="button" data-flow="make">
+          <span class="tk-pick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8.5v7"/><path d="M8.5 12h7"/></svg></span>
+          <span class="tk-pick-title">Make a token</span>
+          <span class="tk-pick-sub">Name it, say how many there are, publish it. Four questions. Free on testnet, about 0.2 DASH on mainnet.</span>
+        </button>
+        <button class="tk-pick" type="button" data-flow="send">
+          <span class="tk-pick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h13"/><path d="M12.5 7l5 5-5 5"/><path d="M20 5v14"/></svg></span>
+          <span class="tk-pick-title">Mint or send one</span>
+          <span class="tk-pick-sub">You already have a token: add to its supply, or hand some to a <code>.dash</code> name.</span>
+        </button>
+        <button class="tk-pick" type="button" data-flow="holders">
+          <span class="tk-pick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.6a3.2 3.2 0 0 1 0 5.8"/><path d="M17.5 19a5.5 5.5 0 0 0-2.2-4.4"/></svg></span>
+          <span class="tk-pick-title">See who holds a token</span>
+          <span class="tk-pick-sub">Works on any token, yours or somebody else's. No key, nothing signed.</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── identity ─────────────────────────────────────────────────────── -->
+    <section class="panel step" data-step="identity">
+      <h2>Who does this</h2>
+      <p>
+        Every token action is signed by an identity. Give its ID or its
+        <code>.dash</code> name — the key itself comes later, at the step that
+        signs. No identity yet? <a href="/onboard/">Onboard</a> makes one.
+      </p>
       <div class="field">
         <label for="idInput">Identity — id or <code>.dash</code> name</label>
         <input id="idInput" type="text" placeholder="bas.dash or a base58 identity id" autocomplete="off" spellcheck="false" />
       </div>
-      <button class="btn primary" id="lookupBtn">Look up</button>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary" id="lookupBtn" type="button">Look up</button>
+        <button class="btn primary wizard-only" id="idNext" type="button" data-next disabled>Continue →</button>
+      </div>
       <div id="identityOut"></div>
-      <div id="heldOut"></div>
     </section>
 
-    <section class="panel" id="actions" hidden>
-      <h2>Make and move</h2>
-      <p class="fineprint">
-        All three want an AUTHENTICATION key, and the level differs: publishing
-        a contract takes CRITICAL <em>or</em> HIGH, moving a token takes CRITICAL.
-        The TRANSFER key is CRITICAL too and can do neither — it only moves
-        credits. On a standard identity the key you want is #2;
-        <a href="/keygen/">keygen</a> lays out all five, and can add one that is
-        missing.
+    <!-- ── make · 1 name ────────────────────────────────────────────────── -->
+    <section class="panel step" data-step="name">
+      <h2>What it is called</h2>
+      <p>
+        Both spellings are stored on the contract and are what wallets and
+        explorers will show. They cannot be renamed later.
       </p>
-
-      <details class="keys" open>
-        <summary>Make a new token</summary>
-        <p class="fineprint">
-          The whole starting supply is created at publish time and lands on this
-          identity. Nothing here can be changed afterwards and the contract
-          cannot be withdrawn, so read it back before you press the button.
-        </p>
-        <div class="row sm-gap">
-          <div class="field">
-            <label for="mkName">Name — one of them</label>
-            <input id="mkName" type="text" placeholder="Waffle" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field">
-            <label for="mkPlural">Name — more than one</label>
-            <input id="mkPlural" type="text" placeholder="Waffles" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="row sm-gap">
-          <div class="field">
-            <label for="mkDecimals">Decimals</label>
-            <input id="mkDecimals" type="text" value="0" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field">
-            <label for="mkSupply">Starting supply</label>
-            <input id="mkSupply" type="text" placeholder="1000" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field">
-            <label for="mkMax">Maximum, optional</label>
-            <input id="mkMax" type="text" placeholder="no ceiling" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="tk-checks">
-          <label><input type="checkbox" id="mkMintable" checked /> I can mint more later</label>
-          <label><input type="checkbox" id="mkBurnable" checked /> I can burn my own</label>
-          <label><input type="checkbox" id="mkFreezable" /> I can freeze holders</label>
-        </div>
-        <p class="fineprint">
-          Freezing makes someone else's balance unusable, so it is off unless you
-          ask for it. Destroying a frozen balance is never switched on here.
-        </p>
+      <div class="row sm-gap">
         <div class="field">
-          <label for="mkDesc">Description, optional and permanent</label>
-          <input id="mkDesc" type="text" placeholder="What this token is for" autocomplete="off" />
+          <label for="mkName">Name — one of them</label>
+          <input id="mkName" type="text" placeholder="Waffle" autocomplete="off" spellcheck="false" />
         </div>
         <div class="field">
-          <label for="mkWif">CRITICAL authentication key (WIF)</label>
-          <input id="mkWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+          <label for="mkPlural">Name — more than one</label>
+          <input id="mkPlural" type="text" placeholder="Waffles" autocomplete="off" spellcheck="false" />
         </div>
-        <button class="btn primary" id="mkBtn">Publish the token</button>
-        <div id="mkOut"></div>
-      </details>
-
-      <details class="keys">
-        <summary>Mint</summary>
-        <p class="fineprint">
-          Only for a token published with minting left on. A fixed-supply token
-          already handed its whole supply to the issuer — there is nothing to add.
-        </p>
-        <div class="row sm-gap">
-          <div class="field">
-            <label for="mnContract">Contract id</label>
-            <input id="mnContract" type="text" placeholder="base58 contract id" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field tk-narrow">
-            <label for="mnPosition">Position</label>
-            <input id="mnPosition" type="text" value="0" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="row sm-gap">
-          <div class="field">
-            <label for="mnAmount">Amount</label>
-            <input id="mnAmount" type="text" placeholder="100" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field">
-            <label for="mnTo">To — blank means this identity</label>
-            <input id="mnTo" type="text" placeholder="alice.dash or an identity id" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="field">
-          <label for="mnWif">CRITICAL authentication key (WIF)</label>
-          <input id="mnWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
-        </div>
-        <button class="btn primary" id="mnBtn">Mint</button>
-        <div id="mnOut"></div>
-      </details>
-
-      <details class="keys">
-        <summary>Send</summary>
-        <div class="row sm-gap">
-          <div class="field">
-            <label for="sdContract">Contract id</label>
-            <input id="sdContract" type="text" placeholder="base58 contract id" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field tk-narrow">
-            <label for="sdPosition">Position</label>
-            <input id="sdPosition" type="text" value="0" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="row sm-gap">
-          <div class="field">
-            <label for="sdAmount">Amount</label>
-            <input id="sdAmount" type="text" placeholder="10" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="field">
-            <label for="sdTo">To</label>
-            <input id="sdTo" type="text" placeholder="alice.dash or an identity id" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="field">
-          <label for="sdNote">Public note, optional — everyone can read it, forever</label>
-          <input id="sdNote" type="text" maxlength="100" autocomplete="off" />
-        </div>
-        <div class="field">
-          <label for="sdWif">CRITICAL authentication key (WIF)</label>
-          <input id="sdWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
-        </div>
-        <button class="btn primary" id="sdBtn">Send</button>
-        <div id="sdOut"></div>
-      </details>
+      </div>
+      <div class="field">
+        <label for="mkDesc">Description, optional and permanent</label>
+        <input id="mkDesc" type="text" placeholder="What this token is for" autocomplete="off" />
+      </div>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary wizard-only" type="button" data-next>Continue →</button>
+      </div>
     </section>
 
-    <section class="panel">
+    <!-- ── make · 2 supply ──────────────────────────────────────────────── -->
+    <section class="panel step" data-step="supply">
+      <h2>How much there is</h2>
+      <p>
+        The whole starting supply is created at publish time and lands on this
+        identity. Decimals work like cents: 2 means the smallest piece anyone
+        can hold is 0.01. Leave the maximum empty for no ceiling.
+      </p>
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="mkSupply">Starting supply</label>
+          <input id="mkSupply" type="text" placeholder="1000" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field tk-narrow">
+          <label for="mkDecimals">Decimals</label>
+          <input id="mkDecimals" type="text" value="0" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="mkMax">Maximum, optional</label>
+          <input id="mkMax" type="text" placeholder="no ceiling" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary wizard-only" type="button" data-next>Continue →</button>
+      </div>
+    </section>
+
+    <!-- ── make · 3 rules ───────────────────────────────────────────────── -->
+    <section class="panel step" data-step="rules">
+      <h2>What can happen to it later</h2>
+      <p>
+        These three are settled at publish time and never move. Switching
+        minting off now means the starting supply is the whole supply, for good.
+      </p>
+      <div class="tk-checks">
+        <label><input type="checkbox" id="mkMintable" checked /> I can mint more later</label>
+        <label><input type="checkbox" id="mkBurnable" checked /> I can burn my own</label>
+        <label><input type="checkbox" id="mkFreezable" /> I can freeze holders</label>
+      </div>
+      <p class="fineprint">
+        Freezing makes someone else's balance unusable, so it is off unless you
+        ask for it. Destroying a frozen balance is never switched on here.
+        History is always kept — it is what makes the holder list below
+        possible.
+      </p>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary wizard-only" type="button" data-next>Continue →</button>
+      </div>
+    </section>
+
+    <!-- ── make · 4 review + sign ───────────────────────────────────────── -->
+    <section class="panel step" data-step="review">
+      <h2>Check it over</h2>
+      <p>
+        What you decided — decimals, supply, who may ever mint — is fixed the
+        moment it lands. The contract cannot be changed and cannot be withdrawn.
+      </p>
+      <div id="reviewOut"></div>
+      <div class="field">
+        <label for="mkWif">Key that signs this (WIF)</label>
+        <input id="mkWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+      </div>
+      <p class="fineprint">
+        Publishing a contract takes an AUTHENTICATION key at CRITICAL or HIGH.
+        On a standard identity that is #2; <a href="/keygen/">keygen</a> lays out
+        all five and can add one that is missing. The key is used here to sign
+        and is never stored or sent anywhere.
+      </p>
+      <label class="confirm" id="mkAckWrap" hidden>
+        <input type="checkbox" id="mkAck" />
+        I understand this spends real DASH and cannot be undone.
+      </label>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary" id="mkBtn" type="button">Publish the token</button>
+      </div>
+      <div id="mkOut"></div>
+    </section>
+
+    <!-- ── pick a token you hold ────────────────────────────────────────── -->
+    <section class="panel step" data-step="pick">
+      <h2>What this identity holds</h2>
+      <p class="fineprint">
+        Which tokens exist comes from an indexer, because Platform cannot list
+        them. The balances next to them are read from the chain.
+      </p>
+      <div id="heldOut"></div>
+      <details class="keys tk-paste">
+        <summary>Not in the list? Paste a contract id</summary>
+        <div class="row sm-gap">
+          <div class="field">
+            <label for="pkContract">Contract id</label>
+            <input id="pkContract" type="text" placeholder="base58 contract id" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field tk-narrow">
+            <label for="pkPosition">Position</label>
+            <input id="pkPosition" type="text" value="0" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+        <div class="row sm-gap">
+          <button class="btn ghost sm" id="pkMint" type="button">Mint from it</button>
+          <button class="btn ghost sm" id="pkSend" type="button">Send some</button>
+        </div>
+      </details>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+      </div>
+    </section>
+
+    <!-- ── mint ─────────────────────────────────────────────────────────── -->
+    <section class="panel step" data-step="mint">
+      <h2>Mint more</h2>
+      <p class="fineprint">
+        Only for a token published with minting left on. A fixed-supply token
+        already handed its whole supply to the issuer — there is nothing to add.
+        Minting takes an AUTHENTICATION key at CRITICAL.
+      </p>
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="mnContract">Contract id</label>
+          <input id="mnContract" type="text" placeholder="base58 contract id" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field tk-narrow">
+          <label for="mnPosition">Position</label>
+          <input id="mnPosition" type="text" value="0" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="mnAmount">Amount</label>
+          <input id="mnAmount" type="text" placeholder="100" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="mnTo">To — blank means this identity</label>
+          <input id="mnTo" type="text" placeholder="alice.dash or an identity id" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="mnWif">Key that signs this (WIF)</label>
+        <input id="mnWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary" id="mnBtn" type="button">Mint</button>
+      </div>
+      <div id="mnOut"></div>
+    </section>
+
+    <!-- ── send ─────────────────────────────────────────────────────────── -->
+    <section class="panel step" data-step="send">
+      <h2>Send some</h2>
+      <p class="fineprint">
+        Moving a token takes an AUTHENTICATION key at CRITICAL. The TRANSFER key
+        is CRITICAL too and cannot do it — that one only moves credits.
+      </p>
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="sdContract">Contract id</label>
+          <input id="sdContract" type="text" placeholder="base58 contract id" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field tk-narrow">
+          <label for="sdPosition">Position</label>
+          <input id="sdPosition" type="text" value="0" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="row sm-gap">
+        <div class="field">
+          <label for="sdAmount">Amount</label>
+          <input id="sdAmount" type="text" placeholder="10" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="sdTo">To</label>
+          <input id="sdTo" type="text" placeholder="alice.dash or an identity id" autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="sdNote">Public note, optional — everyone can read it, forever</label>
+        <input id="sdNote" type="text" maxlength="100" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="sdWif">Key that signs this (WIF)</label>
+        <input id="sdWif" type="password" placeholder="WIF…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary" id="sdBtn" type="button">Send</button>
+      </div>
+      <div id="sdOut"></div>
+    </section>
+
+    <!-- ── who holds a token ────────────────────────────────────────────── -->
+    <section class="panel step" data-step="holders">
       <h2>Who holds a token</h2>
       <p class="fineprint">
         Platform cannot list holders: balances sit in a tree keyed by identity
         and nothing walks it. So this reads the token's history instead — every
         mint, transfer, burn and purchase — collects everyone who ever touched
         it, and looks up what each one has now. No key, and it works on any
-        token, not only your own. Looking an identity up above fills this in for
-        every token it holds — the box is for one it does not.
+        token, not only your own.
       </p>
       <div class="row sm-gap">
         <div class="field">
@@ -199,8 +322,16 @@
           <input id="hdPosition" type="text" value="0" autocomplete="off" spellcheck="false" />
         </div>
       </div>
-      <button class="btn primary" id="hdBtn">Look up holders</button>
+      <div class="row sm-gap">
+        <button class="btn ghost wizard-only" type="button" data-back>Back</button>
+        <button class="btn primary" id="hdBtn" type="button">Look up holders</button>
+      </div>
       <div id="hdOut"></div>
+    </section>
+
+    <!-- ── done ─────────────────────────────────────────────────────────── -->
+    <section class="panel step" data-step="done">
+      <div id="doneOut"></div>
     </section>
   </div>
 
