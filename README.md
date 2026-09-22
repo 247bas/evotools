@@ -26,7 +26,7 @@ Live at **[evotools.dev](https://evotools.dev)** · `evotools.dash` on Platform.
 | [Credits](public/credits/) | An identity's balance and every way to move it: top up, pay out, convert, withdraw to layer 1 | Live |
 | [Playground](public/playground/) | Run the cookbook recipes live in the browser | Live |
 | [Explorer](public/explorer/) | Identities, DPNS names, contracts, tokens, documents and the shielded pool, with proofs | Live |
-| [Tokens](public/tokens/) | Publish a token, mint it, send it by name, and work out who holds it | Live |
+| [Tokens](public/tokens/) | Make a token in four questions, mint it, send it by name, and work out who holds it | Live |
 | [dash-name](public/name/) | Check and claim a `.dash` username for your identity | Live |
 | [Contests](public/contests/) | Every `.dash` name masternodes are voting on, and every one they decided | Live |
 | [Shielded](public/shielded/) | The Orchard pool: what is in it, how it moves week by week, what the six shielded moves cost, and whether an address is a shielded one | Live |
@@ -60,6 +60,7 @@ evotools/
 │  ├─ credits/           → /credits
 │  ├─ playground/        → /playground
 │  ├─ explorer/          → /explorer
+│  ├─ tokens/            → /tokens (a wizard; see steps.js)
 │  ├─ name/              → /name   (dash-name)
 │  ├─ contests/          → /contests
 │  ├─ shielded/          → /shielded
@@ -110,7 +111,8 @@ npm run test:onboard   # onboard's core flow against testnet
 npm run test:explorer  # the explorer lookups
 npm run test:name      # dash-name check/register + the secret guards
 npm run test:credits   # the credits guards and live reads
-npm run test:tokens    # the token guards, contract building and the holder walk
+npm run test:tokens    # the page flows (offline), then the guards, contract building and the holder walk
+npm run test:tokens:page  # just the page: boots index.html in a shim DOM and clicks through
 npm run test:contests  # the contests list and its indexer quirks
 npm run test:keygen    # offline key derivation, the offline copy, and adding a key
 npm run test:assetlock # builds a real signed asset lock

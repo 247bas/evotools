@@ -3,6 +3,50 @@
 evotools is a continuously deployed static site, so versions mark milestones
 rather than installable releases.
 
+## 2.3.0 — 2026-09-22
+
+- **/tokens asks one thing at a time.** Everything used to be on one screen:
+  look up an identity, publish a contract, mint, send, walk a token's history —
+  with a WIF box in four of them and a wall of options before the first
+  decision. Making a token is the thing most people come to this site to do and
+  it was the hardest screen to start on. It is a wizard now. You pick what you
+  came for, and then it asks who publishes it, what it is called, how much there
+  is, and what can still happen to it later. Four questions, one per screen,
+  with a stepper that lets you walk back into any answer you have already given.
+  The step before signing reads every choice back as a list and will not let the
+  button through while a field is empty, which is also where the permanence
+  warning now sits, next to what it is warning about.
+
+- **What it costs, before you sign rather than after.** The review step prices
+  the publish: 0.1 DASH for the contract and 0.1 for the token on it, off
+  Platform's own fee schedule. If the identity holds less than a publish has
+  actually cost (20,063,143,440 credits, measured), it says so and points at
+  /credits, because Platform refuses the transition and the first anyone knew of
+  it was the refusal. On mainnet the button also waits for a deliberate tick.
+  The `confirm()` dialog is gone — a read-back you can scroll through is a
+  better confirmation than a modal that repeats half of it.
+
+- **The old layout is still there, behind a switch.** "Show everything" puts
+  every section back on one page, and the choice is remembered. It is not a
+  second implementation: both layouts are the same DOM with the same handlers,
+  and `data-mode` decides whether one step is on screen or all of them. Two
+  copies of a form that spends money was never worth the convenience.
+
+- **A page test that actually opens the page.** A wizard hides most of itself,
+  so a step wired to a section that is not there, or a button reaching for an id
+  that was renamed, is invisible to a test that only reads files — and there is
+  no browser here to catch it. `public/tokens/test/dom.mjs` is a DOM small
+  enough to boot a static page and press its buttons; `page.mjs` loads
+  index.html, runs app.js against it and clicks through every flow, offline.
+  It also checks the front page's deep link names a flow this page has.
+  `npm run test:tokens` runs it before the live one.
+
+- **Tokens has the front page's widest row.** The tool grid treated making a
+  token as one card among twelve. It is now a spotlight above the grid, linking
+  straight into the first question rather than the tool's front door. The hero
+  still sends first-time visitors to /onboard, because an identity comes before
+  a token.
+
 ## 2.2.1 — 2026-09-10
 
 - **DASH or moves, on the same six hours.** The event study on /shielded can be
